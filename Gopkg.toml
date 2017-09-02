@@ -1,0 +1,5 @@
+required = ["github.com/gogo/protobuf/protoc-gen-gogo"]
+
+[[constraint]]
+  branch = "fenwick"
+  name = "github.com/zeebo/go-tdigest"

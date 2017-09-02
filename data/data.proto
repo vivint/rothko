@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package sm.rothko.data;
+option go_package = "data";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+
+enum DistributionKind {
+	Random = 0; // gopkg.in/spacemonkeygo/random.v1
+	TDigest = 1; // github.com/zeebo/go-tdigest (fenwick branch for speeds)
+}
+
+// Series represents a collection of Records.
+message Series {
+	string application = 1;
+	string metric = 2;
+}
+
+// Record is an observed distribution over some time period with some
+// additional data about observed minimums and maximums.
+message Record {
+	// start and end time in seconds since unix epoch utc
+	int64 start_time = 1;
+	int64 end_time = 2;
+
+	// the number of observations in the distribution
+	int64 observations = 11;
+
+	// a serialized distribution. the kind tells us which type of distribution
+	// it is.
+	bytes distribution = 3;
+	DistributionKind distribution_kind = 10;
+
+	// minimum and maximum values observed
+	double min = 4;
+	double max = 5;
+
+	// outliers in the observation and who sent them as well as how many
+	// outliers we were attempting to record.
+	repeated Outlier largest = 6 [(gogoproto.nullable) = false];
+	repeated Outlier smallest = 7 [(gogoproto.nullable) = false];
+	int64 outliers = 8;
+
+	// how many records have been merged into this.
+	int64 merged = 9;
+}
+
+// Outlier keeps track of a value and who sent it.
+message Outlier {
+	bytes instance_id = 1;
+	double value = 2;
+}
