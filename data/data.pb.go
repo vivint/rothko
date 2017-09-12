@@ -8,9 +8,7 @@
 		data.proto
 
 	It has these top-level messages:
-		Series
 		Record
-		Outlier
 */
 package data
 
@@ -53,31 +51,6 @@ func (x DistributionKind) String() string {
 }
 func (DistributionKind) EnumDescriptor() ([]byte, []int) { return fileDescriptorData, []int{0} }
 
-// Series represents a collection of Records.
-type Series struct {
-	Application string `protobuf:"bytes,1,opt,name=application,proto3" json:"application,omitempty"`
-	Metric      string `protobuf:"bytes,2,opt,name=metric,proto3" json:"metric,omitempty"`
-}
-
-func (m *Series) Reset()                    { *m = Series{} }
-func (m *Series) String() string            { return proto.CompactTextString(m) }
-func (*Series) ProtoMessage()               {}
-func (*Series) Descriptor() ([]byte, []int) { return fileDescriptorData, []int{0} }
-
-func (m *Series) GetApplication() string {
-	if m != nil {
-		return m.Application
-	}
-	return ""
-}
-
-func (m *Series) GetMetric() string {
-	if m != nil {
-		return m.Metric
-	}
-	return ""
-}
-
 // Record is an observed distribution over some time period with some
 // additional data about observed minimums and maximums.
 type Record struct {
@@ -91,13 +64,10 @@ type Record struct {
 	Distribution     []byte           `protobuf:"bytes,3,opt,name=distribution,proto3" json:"distribution,omitempty"`
 	DistributionKind DistributionKind `protobuf:"varint,10,opt,name=distribution_kind,json=distributionKind,proto3,enum=sm.rothko.data.DistributionKind" json:"distribution_kind,omitempty"`
 	// minimum and maximum values observed
-	Min float64 `protobuf:"fixed64,4,opt,name=min,proto3" json:"min,omitempty"`
-	Max float64 `protobuf:"fixed64,5,opt,name=max,proto3" json:"max,omitempty"`
-	// outliers in the observation and who sent them as well as how many
-	// outliers we were attempting to record.
-	Largest  []Outlier `protobuf:"bytes,6,rep,name=largest" json:"largest"`
-	Smallest []Outlier `protobuf:"bytes,7,rep,name=smallest" json:"smallest"`
-	Outliers int64     `protobuf:"varint,8,opt,name=outliers,proto3" json:"outliers,omitempty"`
+	Min   float64 `protobuf:"fixed64,4,opt,name=min,proto3" json:"min,omitempty"`
+	MinId []byte  `protobuf:"bytes,12,opt,name=min_id,json=minId,proto3" json:"min_id,omitempty"`
+	Max   float64 `protobuf:"fixed64,5,opt,name=max,proto3" json:"max,omitempty"`
+	MaxId []byte  `protobuf:"bytes,13,opt,name=max_id,json=maxId,proto3" json:"max_id,omitempty"`
 	// how many records have been merged into this.
 	Merged int64 `protobuf:"varint,9,opt,name=merged,proto3" json:"merged,omitempty"`
 }
@@ -105,146 +75,12 @@ type Record struct {
 func (m *Record) Reset()                    { *m = Record{} }
 func (m *Record) String() string            { return proto.CompactTextString(m) }
 func (*Record) ProtoMessage()               {}
-func (*Record) Descriptor() ([]byte, []int) { return fileDescriptorData, []int{1} }
-
-func (m *Record) GetStartTime() int64 {
-	if m != nil {
-		return m.StartTime
-	}
-	return 0
-}
-
-func (m *Record) GetEndTime() int64 {
-	if m != nil {
-		return m.EndTime
-	}
-	return 0
-}
-
-func (m *Record) GetObservations() int64 {
-	if m != nil {
-		return m.Observations
-	}
-	return 0
-}
-
-func (m *Record) GetDistribution() []byte {
-	if m != nil {
-		return m.Distribution
-	}
-	return nil
-}
-
-func (m *Record) GetDistributionKind() DistributionKind {
-	if m != nil {
-		return m.DistributionKind
-	}
-	return DistributionKind_Random
-}
-
-func (m *Record) GetMin() float64 {
-	if m != nil {
-		return m.Min
-	}
-	return 0
-}
-
-func (m *Record) GetMax() float64 {
-	if m != nil {
-		return m.Max
-	}
-	return 0
-}
-
-func (m *Record) GetLargest() []Outlier {
-	if m != nil {
-		return m.Largest
-	}
-	return nil
-}
-
-func (m *Record) GetSmallest() []Outlier {
-	if m != nil {
-		return m.Smallest
-	}
-	return nil
-}
-
-func (m *Record) GetOutliers() int64 {
-	if m != nil {
-		return m.Outliers
-	}
-	return 0
-}
-
-func (m *Record) GetMerged() int64 {
-	if m != nil {
-		return m.Merged
-	}
-	return 0
-}
-
-// Outlier keeps track of a value and who sent it.
-type Outlier struct {
-	InstanceId []byte  `protobuf:"bytes,1,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
-	Value      float64 `protobuf:"fixed64,2,opt,name=value,proto3" json:"value,omitempty"`
-}
-
-func (m *Outlier) Reset()                    { *m = Outlier{} }
-func (m *Outlier) String() string            { return proto.CompactTextString(m) }
-func (*Outlier) ProtoMessage()               {}
-func (*Outlier) Descriptor() ([]byte, []int) { return fileDescriptorData, []int{2} }
-
-func (m *Outlier) GetInstanceId() []byte {
-	if m != nil {
-		return m.InstanceId
-	}
-	return nil
-}
-
-func (m *Outlier) GetValue() float64 {
-	if m != nil {
-		return m.Value
-	}
-	return 0
-}
+func (*Record) Descriptor() ([]byte, []int) { return fileDescriptorData, []int{0} }
 
 func init() {
-	proto.RegisterType((*Series)(nil), "sm.rothko.data.Series")
 	proto.RegisterType((*Record)(nil), "sm.rothko.data.Record")
-	proto.RegisterType((*Outlier)(nil), "sm.rothko.data.Outlier")
 	proto.RegisterEnum("sm.rothko.data.DistributionKind", DistributionKind_name, DistributionKind_value)
 }
-func (m *Series) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Series) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.Application) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintData(dAtA, i, uint64(len(m.Application)))
-		i += copy(dAtA[i:], m.Application)
-	}
-	if len(m.Metric) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintData(dAtA, i, uint64(len(m.Metric)))
-		i += copy(dAtA[i:], m.Metric)
-	}
-	return i, nil
-}
-
 func (m *Record) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -286,35 +122,6 @@ func (m *Record) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeFixed64Data(dAtA, i, uint64(math.Float64bits(float64(m.Max))))
 	}
-	if len(m.Largest) > 0 {
-		for _, msg := range m.Largest {
-			dAtA[i] = 0x32
-			i++
-			i = encodeVarintData(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if len(m.Smallest) > 0 {
-		for _, msg := range m.Smallest {
-			dAtA[i] = 0x3a
-			i++
-			i = encodeVarintData(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if m.Outliers != 0 {
-		dAtA[i] = 0x40
-		i++
-		i = encodeVarintData(dAtA, i, uint64(m.Outliers))
-	}
 	if m.Merged != 0 {
 		dAtA[i] = 0x48
 		i++
@@ -330,34 +137,17 @@ func (m *Record) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintData(dAtA, i, uint64(m.Observations))
 	}
-	return i, nil
-}
-
-func (m *Outlier) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Outlier) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.InstanceId) > 0 {
-		dAtA[i] = 0xa
+	if len(m.MinId) > 0 {
+		dAtA[i] = 0x62
 		i++
-		i = encodeVarintData(dAtA, i, uint64(len(m.InstanceId)))
-		i += copy(dAtA[i:], m.InstanceId)
+		i = encodeVarintData(dAtA, i, uint64(len(m.MinId)))
+		i += copy(dAtA[i:], m.MinId)
 	}
-	if m.Value != 0 {
-		dAtA[i] = 0x11
+	if len(m.MaxId) > 0 {
+		dAtA[i] = 0x6a
 		i++
-		i = encodeFixed64Data(dAtA, i, uint64(math.Float64bits(float64(m.Value))))
+		i = encodeVarintData(dAtA, i, uint64(len(m.MaxId)))
+		i += copy(dAtA[i:], m.MaxId)
 	}
 	return i, nil
 }
@@ -389,20 +179,6 @@ func encodeVarintData(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *Series) Size() (n int) {
-	var l int
-	_ = l
-	l = len(m.Application)
-	if l > 0 {
-		n += 1 + l + sovData(uint64(l))
-	}
-	l = len(m.Metric)
-	if l > 0 {
-		n += 1 + l + sovData(uint64(l))
-	}
-	return n
-}
-
 func (m *Record) Size() (n int) {
 	var l int
 	_ = l
@@ -422,21 +198,6 @@ func (m *Record) Size() (n int) {
 	if m.Max != 0 {
 		n += 9
 	}
-	if len(m.Largest) > 0 {
-		for _, e := range m.Largest {
-			l = e.Size()
-			n += 1 + l + sovData(uint64(l))
-		}
-	}
-	if len(m.Smallest) > 0 {
-		for _, e := range m.Smallest {
-			l = e.Size()
-			n += 1 + l + sovData(uint64(l))
-		}
-	}
-	if m.Outliers != 0 {
-		n += 1 + sovData(uint64(m.Outliers))
-	}
 	if m.Merged != 0 {
 		n += 1 + sovData(uint64(m.Merged))
 	}
@@ -446,18 +207,13 @@ func (m *Record) Size() (n int) {
 	if m.Observations != 0 {
 		n += 1 + sovData(uint64(m.Observations))
 	}
-	return n
-}
-
-func (m *Outlier) Size() (n int) {
-	var l int
-	_ = l
-	l = len(m.InstanceId)
+	l = len(m.MinId)
 	if l > 0 {
 		n += 1 + l + sovData(uint64(l))
 	}
-	if m.Value != 0 {
-		n += 9
+	l = len(m.MaxId)
+	if l > 0 {
+		n += 1 + l + sovData(uint64(l))
 	}
 	return n
 }
@@ -474,114 +230,6 @@ func sovData(x uint64) (n int) {
 }
 func sozData(x uint64) (n int) {
 	return sovData(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (m *Series) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowData
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Series: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Series: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Application", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthData
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Application = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Metric", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthData
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Metric = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipData(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthData
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
 }
 func (m *Record) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -717,87 +365,6 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			v |= uint64(dAtA[iNdEx-2]) << 48
 			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.Max = float64(math.Float64frombits(v))
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Largest", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthData
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Largest = append(m.Largest, Outlier{})
-			if err := m.Largest[len(m.Largest)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Smallest", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthData
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Smallest = append(m.Smallest, Outlier{})
-			if err := m.Smallest[len(m.Smallest)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 8:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Outliers", wireType)
-			}
-			m.Outliers = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Outliers |= (int64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		case 9:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Merged", wireType)
@@ -855,59 +422,9 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipData(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthData
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Outlier) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowData
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Outlier: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Outlier: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
+		case 12:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InstanceId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field MinId", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -931,29 +448,42 @@ func (m *Outlier) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.InstanceId = append(m.InstanceId[:0], dAtA[iNdEx:postIndex]...)
-			if m.InstanceId == nil {
-				m.InstanceId = []byte{}
+			m.MinId = append(m.MinId[:0], dAtA[iNdEx:postIndex]...)
+			if m.MinId == nil {
+				m.MinId = []byte{}
 			}
 			iNdEx = postIndex
-		case 2:
-			if wireType != 1 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MaxId", wireType)
 			}
-			var v uint64
-			if (iNdEx + 8) > l {
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowData
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthData
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			iNdEx += 8
-			v = uint64(dAtA[iNdEx-8])
-			v |= uint64(dAtA[iNdEx-7]) << 8
-			v |= uint64(dAtA[iNdEx-6]) << 16
-			v |= uint64(dAtA[iNdEx-5]) << 24
-			v |= uint64(dAtA[iNdEx-4]) << 32
-			v |= uint64(dAtA[iNdEx-3]) << 40
-			v |= uint64(dAtA[iNdEx-2]) << 48
-			v |= uint64(dAtA[iNdEx-1]) << 56
-			m.Value = float64(math.Float64frombits(v))
+			m.MaxId = append(m.MaxId[:0], dAtA[iNdEx:postIndex]...)
+			if m.MaxId == nil {
+				m.MaxId = []byte{}
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipData(dAtA[iNdEx:])
@@ -1083,32 +613,27 @@ var (
 func init() { proto.RegisterFile("data.proto", fileDescriptorData) }
 
 var fileDescriptorData = []byte{
-	// 427 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0xc1, 0x6a, 0xdb, 0x40,
-	0x10, 0x86, 0xb3, 0xb1, 0x23, 0xd9, 0x23, 0x13, 0xd4, 0xa5, 0xb4, 0xdb, 0x40, 0x1d, 0xe1, 0x93,
-	0x68, 0xa9, 0x02, 0xe9, 0xa1, 0xf4, 0x56, 0x4c, 0x2e, 0xa5, 0x94, 0xc2, 0x36, 0xa7, 0x5e, 0xcc,
-	0x4a, 0xbb, 0x55, 0x96, 0x48, 0xbb, 0x66, 0x77, 0x15, 0xf2, 0x42, 0x7d, 0x97, 0x1c, 0xfb, 0x04,
-	0xa5, 0xf8, 0x49, 0x8a, 0x46, 0x4e, 0xb0, 0x7d, 0xea, 0x6d, 0xfe, 0xef, 0x9f, 0xd1, 0x68, 0x66,
-	0x16, 0x40, 0x8a, 0x20, 0x8a, 0xb5, 0xb3, 0xc1, 0xd2, 0x53, 0xdf, 0x16, 0xce, 0x86, 0x9b, 0x5b,
-	0x5b, 0xf4, 0xf4, 0xec, 0x5d, 0xad, 0xc3, 0x4d, 0x57, 0x16, 0x95, 0x6d, 0x2f, 0x6a, 0x5b, 0xdb,
-	0x0b, 0x4c, 0x2b, 0xbb, 0x9f, 0xa8, 0x50, 0x60, 0x34, 0x94, 0x2f, 0x96, 0x10, 0x7d, 0x57, 0x4e,
-	0x2b, 0x4f, 0x33, 0x48, 0xc4, 0x7a, 0xdd, 0xe8, 0x4a, 0x04, 0x6d, 0x0d, 0x23, 0x19, 0xc9, 0xa7,
-	0x7c, 0x17, 0xd1, 0x17, 0x10, 0xb5, 0x2a, 0x38, 0x5d, 0xb1, 0x63, 0x34, 0xb7, 0x6a, 0xf1, 0x6b,
-	0x04, 0x11, 0x57, 0x95, 0x75, 0x92, 0xbe, 0x06, 0xf0, 0x41, 0xb8, 0xb0, 0x0a, 0xba, 0x55, 0xf8,
-	0x8d, 0x11, 0x9f, 0x22, 0xb9, 0xd6, 0xad, 0xa2, 0xaf, 0x60, 0xa2, 0x8c, 0x1c, 0xcc, 0x63, 0x34,
-	0x63, 0x65, 0x24, 0x5a, 0x0b, 0x98, 0x49, 0xed, 0x83, 0xd3, 0x65, 0x87, 0xfd, 0x47, 0x19, 0xc9,
-	0x67, 0x7c, 0x8f, 0xd1, 0x14, 0x46, 0xad, 0x36, 0x6c, 0x9c, 0x91, 0x9c, 0xf0, 0x3e, 0x44, 0x22,
-	0xee, 0xd9, 0xc9, 0x96, 0x88, 0x7b, 0xfa, 0x01, 0xe2, 0x46, 0xb8, 0x5a, 0xf9, 0xc0, 0xa2, 0x6c,
-	0x94, 0x27, 0x97, 0x2f, 0x8b, 0xfd, 0x0d, 0x15, 0xdf, 0xba, 0xd0, 0x68, 0xe5, 0x96, 0xe3, 0x87,
-	0x3f, 0xe7, 0x47, 0xfc, 0x31, 0x9b, 0x7e, 0x84, 0x89, 0x6f, 0x45, 0xd3, 0xf4, 0x95, 0xf1, 0xff,
-	0x54, 0x3e, 0xa5, 0xd3, 0x33, 0x98, 0xd8, 0xc1, 0xf2, 0x6c, 0x82, 0x63, 0x3d, 0xe9, 0x61, 0x69,
-	0xae, 0x56, 0x92, 0x4d, 0xd1, 0xd9, 0x2a, 0xfa, 0x15, 0x9e, 0xed, 0xce, 0xb6, 0xba, 0xd5, 0x46,
-	0x32, 0xc8, 0x48, 0x7e, 0x7a, 0x99, 0x1d, 0xf6, 0xbd, 0xda, 0x49, 0xfc, 0xa2, 0x8d, 0xe4, 0xa9,
-	0x3c, 0x20, 0xfd, 0xfa, 0x6c, 0xe9, 0x95, 0xbb, 0xc3, 0x53, 0x79, 0x96, 0x60, 0xb3, 0x3d, 0xb6,
-	0xf8, 0x04, 0xf1, 0x76, 0x02, 0x7a, 0x0e, 0x89, 0x36, 0x3e, 0x08, 0x53, 0xa9, 0x95, 0x96, 0x78,
-	0xa8, 0x19, 0x87, 0x47, 0xf4, 0x59, 0xd2, 0xe7, 0x70, 0x72, 0x27, 0x9a, 0x6e, 0x38, 0x13, 0xe1,
-	0x83, 0x78, 0xf3, 0x16, 0xd2, 0xc3, 0x7f, 0xa1, 0x00, 0x11, 0x17, 0x46, 0xda, 0x36, 0x3d, 0xa2,
-	0x09, 0xc4, 0xd7, 0x57, 0xba, 0x5f, 0x67, 0x4a, 0x96, 0xf4, 0x61, 0x33, 0x27, 0xbf, 0x37, 0x73,
-	0xf2, 0x77, 0x33, 0x27, 0x3f, 0xc6, 0xfd, 0x24, 0x65, 0x84, 0xaf, 0xee, 0xfd, 0xbf, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0x44, 0xea, 0x69, 0x4a, 0xc2, 0x02, 0x00, 0x00,
+	// 340 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x91, 0xb1, 0x6e, 0xfa, 0x30,
+	0x10, 0xc6, 0x31, 0x84, 0x24, 0x1c, 0xfc, 0x91, 0xff, 0x96, 0x8a, 0xdc, 0x4a, 0x8d, 0x22, 0xa6,
+	0xa8, 0x55, 0x83, 0xd4, 0xbe, 0x41, 0xc5, 0x02, 0x55, 0x97, 0x88, 0xa9, 0x0b, 0x72, 0xb0, 0x1b,
+	0x2c, 0x64, 0xbb, 0x4a, 0x4c, 0x95, 0x47, 0x64, 0xec, 0xd2, 0xbd, 0xe5, 0x49, 0xaa, 0x18, 0x06,
+	0x60, 0xbb, 0xef, 0xf7, 0x9d, 0x7d, 0xf7, 0xe9, 0x00, 0x38, 0xb3, 0x2c, 0xfd, 0x28, 0x8d, 0x35,
+	0x64, 0x58, 0xa9, 0xb4, 0x34, 0x76, 0xbd, 0x31, 0x69, 0x43, 0x6f, 0x1e, 0x0a, 0x69, 0xd7, 0xdb,
+	0x3c, 0x5d, 0x19, 0x35, 0x29, 0x4c, 0x61, 0x26, 0xae, 0x2d, 0xdf, 0xbe, 0x3b, 0xe5, 0x84, 0xab,
+	0x0e, 0xcf, 0xc7, 0xdf, 0x6d, 0xf0, 0x33, 0xb1, 0x32, 0x25, 0x27, 0xb7, 0x00, 0x95, 0x65, 0xa5,
+	0x5d, 0x5a, 0xa9, 0x04, 0x45, 0x31, 0x4a, 0x3a, 0x59, 0xcf, 0x91, 0x85, 0x54, 0x82, 0x5c, 0x43,
+	0x28, 0x34, 0x3f, 0x98, 0x6d, 0x67, 0x06, 0x42, 0x73, 0x67, 0x8d, 0x61, 0xc0, 0x65, 0x65, 0x4b,
+	0x99, 0x6f, 0xad, 0x34, 0x9a, 0x76, 0x62, 0x94, 0x0c, 0xb2, 0x33, 0x46, 0x30, 0x74, 0x94, 0xd4,
+	0xd4, 0x8b, 0x51, 0x82, 0xb2, 0xa6, 0x74, 0x84, 0xd5, 0xb4, 0x7b, 0x24, 0xac, 0x26, 0x23, 0xf0,
+	0x95, 0x28, 0x0b, 0xc1, 0x69, 0xcf, 0x0d, 0x38, 0x2a, 0xf2, 0x0a, 0xff, 0x4f, 0xff, 0x5a, 0x6e,
+	0xa4, 0xe6, 0x14, 0x62, 0x94, 0x0c, 0x1f, 0xe3, 0xf4, 0x3c, 0x7f, 0x3a, 0x3d, 0x69, 0x7c, 0x91,
+	0x9a, 0x67, 0x98, 0x5f, 0x90, 0x66, 0x5d, 0x93, 0x57, 0xa2, 0xfc, 0x64, 0x0d, 0xaa, 0x68, 0xdf,
+	0x0d, 0x3b, 0x63, 0xe4, 0x0a, 0x7c, 0x25, 0xf5, 0x52, 0x72, 0x3a, 0x70, 0x61, 0xba, 0x4a, 0xea,
+	0x19, 0x77, 0x98, 0xd5, 0x0d, 0xfe, 0x77, 0xc4, 0xac, 0x9e, 0xf1, 0xb9, 0x17, 0xfa, 0x38, 0x98,
+	0x7b, 0x61, 0x80, 0xc3, 0xb9, 0x17, 0x86, 0xb8, 0x77, 0x77, 0x0f, 0xf8, 0x72, 0x13, 0x02, 0xe0,
+	0x67, 0x4c, 0x73, 0xa3, 0x70, 0x8b, 0xf4, 0x21, 0x58, 0x4c, 0x65, 0x21, 0x2a, 0x8b, 0xd1, 0xf3,
+	0x68, 0xf7, 0x1b, 0xb5, 0x76, 0xfb, 0x08, 0x7d, 0xed, 0x23, 0xf4, 0xb3, 0x8f, 0xd0, 0x9b, 0xd7,
+	0x64, 0xc9, 0x7d, 0x77, 0xa3, 0xa7, 0xbf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x89, 0x42, 0xca, 0x53,
+	0xf0, 0x01, 0x00, 0x00,
 }

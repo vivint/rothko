@@ -1,3 +1,5 @@
+// Copyright (C) 2017. See AUTHORS.
+
 syntax = "proto3";
 
 package sm.rothko.data;
@@ -6,23 +8,22 @@ option go_package = "data";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 option (gogoproto.marshaler_all) = true;
-option (gogoproto.sizer_all) = true;
 option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_getters_all) = false;
 
 enum DistributionKind {
 	Random = 0; // gopkg.in/spacemonkeygo/random.v1
 	TDigest = 1; // github.com/zeebo/go-tdigest (fenwick branch for speeds)
 }
 
-// Series represents a collection of Records.
-message Series {
-	string application = 1;
-	string metric = 2;
-}
-
 // Record is an observed distribution over some time period with some
 // additional data about observed minimums and maximums.
 message Record {
+	// these fields used to store outlier information, but it's mostly as good
+	// and far cheaper to just store the maximum and minimum.
+	reserved 6, 7, 8;
+
 	// start and end time in seconds since unix epoch utc
 	int64 start_time = 1;
 	int64 end_time = 2;
@@ -37,20 +38,10 @@ message Record {
 
 	// minimum and maximum values observed
 	double min = 4;
+	bytes min_id = 12;
 	double max = 5;
-
-	// outliers in the observation and who sent them as well as how many
-	// outliers we were attempting to record.
-	repeated Outlier largest = 6 [(gogoproto.nullable) = false];
-	repeated Outlier smallest = 7 [(gogoproto.nullable) = false];
-	int64 outliers = 8;
+	bytes max_id = 13;
 
 	// how many records have been merged into this.
 	int64 merged = 9;
-}
-
-// Outlier keeps track of a value and who sent it.
-message Outlier {
-	bytes instance_id = 1;
-	double value = 2;
 }

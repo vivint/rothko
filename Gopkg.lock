@@ -21,6 +21,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/zeebo/tdigest"
+  packages = ["."]
+  revision = "1a19267602be352711f90a3c190b20ee1e452e81"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
   revision = "66aacef3dd8a676686c7ae3716979581e8b03c47"
@@ -31,9 +37,15 @@
   packages = ["."]
   revision = "446f79d465d0b7b11ae33cd2914ac47ce14d7bad"
 
+[[projects]]
+  branch = "v1"
+  name = "gopkg.in/spacemonkeygo/random.v1"
+  packages = ["."]
+  revision = "ef957be85a22b33f1a64c7d188d5fd2d5ab0aad1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3831b35d056e5bf90a74d65dea9a7f3ac462555c29db31e2d0f0218949bd4fa0"
+  inputs-digest = "7085a3b2e0cfc7bc80d26d758d3d36fb5ff56de2714b60e5523b61f1ddb7775b"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -9,15 +9,14 @@ import (
 )
 
 type Writer interface {
-	Queue(ctx context.Context, series data.Series, record *data.Record) (
+	Queue(ctx context.Context, metric string, record *data.Record) (
 		err error)
 }
 
 type Source interface {
-	Query(ctx context.Context, series data.Series, start, end int64) (
+	Query(ctx context.Context, metric string, start, end int64) (
 		Iterator, error)
-	QueryLatest(ctx context.Context, series data.Series) (
-		[]byte, error)
+	QueryLatest(ctx context.Context, metric string) ([]byte, error)
 
 	Applications(ctx context.Context) (Iterator, error)
 	Metrics(ctx context.Context, application string) (Iterator, error)
