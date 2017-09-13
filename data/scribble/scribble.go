@@ -11,27 +11,34 @@ import (
 	"github.com/spacemonkeygo/rothko/data"
 )
 
+// page keeps track of a mapping of metric name strings to *agg with a time
+// that all of the aggs will start at.
+type page struct {
+	m   *sync.Map
+	now time.Time
+}
+
+// newPage creates a new page for the scribbler.
+func newPage() page {
+	return page{
+		m:   new(sync.Map),
+		now: time.Now(),
+	}
+}
+
 // Scribbler keeps track of the distributions of a collection of metrics.
 type Scribbler struct {
-	val atomic.Value // contains sync.Map of string -> *agg
+	val atomic.Value // contains a page
 
 	params data.DistParams
-	hooks  struct {
-		now func() time.Time
-	}
 }
 
 // NewScribbler makes a Scribbler that will return distributions using the
 // associated compression.
 func NewScribbler(params data.DistParams) *Scribbler {
-	s := &Scribbler{
+	return &Scribbler{
 		params: params,
 	}
-
-	// set the hooks
-	s.hooks.now = time.Now
-
-	return s
 }
 
 // Scribble adds the metric value to the current set of records. It will be
@@ -41,21 +48,21 @@ func (s *Scribbler) Scribble(ctx context.Context, metric string,
 	value float64, id []byte) {
 
 	// warning: there is a race here where values can be lost. two people can
-	// create the map and one will use the wrong one.
-	mi := s.val.Load()
-	if mi == nil {
-		mi = new(sync.Map)
-		s.val.Store(mi)
+	// create the page and one will use the wrong one.
+	pi := s.val.Load()
+	if pi == nil {
+		pi = newPage()
+		s.val.Store(pi)
 	}
-	m := mi.(*sync.Map)
+	p := pi.(page)
 
 	// warning: there is a race here where values can be lost. two people can
 	// create the agg and one will use the wrong one.
-	ai, ok := m.Load(metric)
+	ai, ok := p.m.Load(metric)
 	if !ok {
-		a := newAgg(s.params, s.hooks.now())
+		a := newAgg(s.params, p.now)
 		ai = &a
-		m.Store(metric, ai)
+		p.m.Store(metric, ai)
 	}
 	a := ai.(*agg)
 
@@ -69,17 +76,18 @@ func (s *Scribbler) Capture(ctx context.Context,
 
 	// warning: there is a race here where values can be lost. a scribbler can
 	// have a reference to this map instead of the new map we will be putting
-	// into the atomic value.
-	mi := s.val.Load()
-	if mi == nil {
+	// into the atomic value. they could then write to that map after the
+	// Range call.
+	pi := s.val.Load()
+	if pi == nil {
 		return
 	}
-	s.val.Store(new(sync.Map))
 
-	m := mi.(*sync.Map)
-	now := s.hooks.now()
+	pn := newPage()
+	s.val.Store(pn)
 
-	m.Range(func(key, ai interface{}) bool {
-		return fn(key.(string), ai.(*agg).Finish(now))
+	p := pi.(page)
+	p.m.Range(func(key, ai interface{}) bool {
+		return fn(key.(string), ai.(*agg).Finish(pn.now))
 	})
 }
