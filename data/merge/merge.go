@@ -7,7 +7,7 @@ import (
 
 	"github.com/spacemonkeygo/errors"
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/zeebo/tdigest"
+	tdigest_wrapper "github.com/spacemonkeygo/rothko/data/dists/tdigest"
 	monkit "gopkg.in/spacemonkeygo/monkit.v2"
 )
 
@@ -17,23 +17,30 @@ var (
 	Error = errors.NewClass("merge")
 )
 
-// MergeCompression is the compression value for a tdigest that will be the
-// output distribution for any merge operation.
-const MergeCompression = 10
+// MergeOptions are the arguments passed to Merge.
+type MergeOptions struct {
+	// Params are the parameters for the output distribution the merged record
+	// should have.
+	Params tdigest_wrapper.Params
+
+	// Records are the set of records to merge.
+	Records []data.Record
+}
 
 // Merge combines the records into one large record. The seed is used to do
 // deterministic merging.
-func Merge(ctx context.Context, seed uint64, rs ...data.Record) (
+func Merge(ctx context.Context, opts MergeOptions) (
 	out data.Record, err error) {
 	defer mon.Task()(&ctx)(&err)
 
-	if len(rs) == 0 {
+	if len(opts.Records) == 0 {
 		return out, Error.New("passed no records")
 	}
 
 	// merge the start and end time
-	out.StartTime, out.EndTime = rs[0].StartTime, rs[0].EndTime
-	for _, r := range rs[1:] {
+	out.StartTime = opts.Records[0].StartTime
+	out.EndTime = opts.Records[0].EndTime
+	for _, r := range opts.Records[1:] {
 		if r.StartTime < out.StartTime {
 			out.StartTime = r.StartTime
 		}
@@ -43,13 +50,13 @@ func Merge(ctx context.Context, seed uint64, rs ...data.Record) (
 	}
 
 	// merge the observations
-	for _, r := range rs {
+	for _, r := range opts.Records {
 		out.Observations += r.Observations
 	}
 
 	// merge the distributions
-	res := newResampler(tdigest.New(MergeCompression))
-	for _, r := range rs {
+	res := newResampler(opts.Params.NewUnwrapped())
+	for _, r := range opts.Records {
 		err := res.Sample(ctx, r)
 		if err != nil {
 			return out, err
@@ -61,8 +68,8 @@ func Merge(ctx context.Context, seed uint64, rs ...data.Record) (
 	}
 
 	// merge the max and min values
-	out.Min, out.Max = rs[0].Min, rs[0].Max
-	for _, r := range rs[1:] {
+	out.Min, out.Max = opts.Records[0].Min, opts.Records[0].Max
+	for _, r := range opts.Records[1:] {
 		if r.Min < out.Min {
 			out.Min = r.Min
 			out.MinId = r.MinId
@@ -74,7 +81,7 @@ func Merge(ctx context.Context, seed uint64, rs ...data.Record) (
 	}
 
 	// merge how many we've merged
-	for _, r := range rs {
+	for _, r := range opts.Records {
 		// back compat: there may have been records without the merged field.
 		// if merged is 0, that means it actually is 1.
 		if r.Merged == 0 {

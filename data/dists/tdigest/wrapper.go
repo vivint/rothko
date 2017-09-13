@@ -20,7 +20,12 @@ func (p Params) Kind() data.DistributionKind {
 
 // New returns a new TDigest as a data.Dist.
 func (p Params) New() data.Dist {
-	return wrapper{tdigest.New(p.Compression)}
+	return wrapper{p.NewUnwrapped()}
+}
+
+// NewUnwrapped returns a new TDigest.
+func (p Params) NewUnwrapped() *tdigest.TDigest {
+	return tdigest.New(p.Compression)
 }
 
 //
