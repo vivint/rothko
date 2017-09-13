@@ -19,3 +19,11 @@ func Equal(t testing.TB, a, b interface{}) {
 		t.Fatalf("%#v != %#v", a, b)
 	}
 }
+
+func That(t testing.TB, v bool) {
+	t.Helper()
+
+	if !v {
+		t.Fatal("expected condition failed")
+	}
+}

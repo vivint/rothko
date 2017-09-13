@@ -11,6 +11,17 @@ import (
 	"github.com/zeebo/tdigest"
 )
 
+//
+// a resampler is used to merge a bunch of unknown distribution kinds into a
+// single t-digest, since t-digest seems to be the best so far. hopefully
+// it will always be the case that we can support this operation with whatever
+// distributions we have in the future.
+//
+
+// TODO(jeff): this can probably use some refactoring to use the Dist
+// abstraction and data/dists/... packages. At the same time, these details
+// are going to be specific to the concrete distributions, so perhaps it's ok.
+
 type resampler struct {
 	dig *tdigest.TDigest
 }
