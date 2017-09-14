@@ -1,16 +1,15 @@
 // Copyright (C) 2017. See AUTHORS.
 
-package rothko
+// package disk provides interfaces to disk storage of data.
+package disk // import "github.com/spacemonkeygo/rothko/disk"
 
 import (
 	"context"
-
-	"github.com/spacemonkeygo/rothko/data"
 )
 
 type Writer interface {
-	Queue(ctx context.Context, metric string, record *data.Record) (
-		err error)
+	Queue(ctx context.Context, metric string, start, end int64,
+		data []byte) (err error)
 }
 
 type Source interface {

@@ -2,7 +2,10 @@
 
 package assert
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func NoError(t testing.TB, err error) {
 	t.Helper()
@@ -16,6 +19,14 @@ func Equal(t testing.TB, a, b interface{}) {
 	t.Helper()
 
 	if a != b {
+		t.Fatalf("%#v != %#v", a, b)
+	}
+}
+
+func DeepEqual(t testing.TB, a, b interface{}) {
+	t.Helper()
+
+	if !reflect.DeepEqual(a, b) {
 		t.Fatalf("%#v != %#v", a, b)
 	}
 }
