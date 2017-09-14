@@ -90,6 +90,7 @@ func parse(buf []byte) (out record, err error) {
 	if data[0] != recordVersion {
 		return out, Error.New("invalid version: %d", buf[0])
 	}
+	out.version = recordVersion
 
 	data, buf, err = consume(buf, 1)
 	if err != nil {
