@@ -43,7 +43,7 @@ func create(path string, size, cap int) (f file, err error) {
 	}
 
 	err = writeMetadata(data[:size], meta.Metadata{
-		Size_: int64(size),
+		Size_: size,
 		Head:  0,
 	})
 	if err != nil {
@@ -101,8 +101,8 @@ func open(path string) (f file, err error) {
 	return file{
 		fh:   fh,
 		data: data,
-		size: int(meta.Size_),
-		len:  len(data)/int(meta.Size_) - 1,
+		size: meta.Size_,
+		len:  len(data)/meta.Size_ - 1,
 		buf:  make([]byte, meta.Size_),
 	}, nil
 }
