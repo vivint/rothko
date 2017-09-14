@@ -73,6 +73,11 @@ func open(path string) (f file, err error) {
 		return f, Error.Wrap(err)
 	}
 
+	if fi.Size() < recordHeaderSize {
+		fh.Close()
+		return f, Error.New("file is too small to contain metadata")
+	}
+
 	data, err := syscall.Mmap(int(fh.Fd()), 0, int(fi.Size()),
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {

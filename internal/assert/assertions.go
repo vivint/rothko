@@ -15,6 +15,14 @@ func NoError(t testing.TB, err error) {
 	}
 }
 
+func Error(t testing.TB, err error) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+}
+
 func Equal(t testing.TB, a, b interface{}) {
 	t.Helper()
 

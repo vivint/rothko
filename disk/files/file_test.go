@@ -14,7 +14,7 @@ import (
 func newTestFile(t *testing.T) (f file, cleanup func()) {
 	t.Helper()
 
-	fh, err := ioutil.TempFile("", "file-basic-")
+	fh, err := ioutil.TempFile("", "file-")
 	assert.NoError(t, err)
 	assert.NoError(t, fh.Close())
 
@@ -69,5 +69,22 @@ func TestFile(t *testing.T) {
 		got, err := f.Record(3)
 		assert.NoError(t, err)
 		assert.DeepEqual(t, rec, got)
+	})
+
+	t.Run("OpenFails", func(t *testing.T) {
+		fh, err := ioutil.TempFile("", "file-")
+		assert.NoError(t, err)
+		defer os.Remove(fh.Name())
+		defer fh.Close()
+
+		// no metadata
+		_, err = open(fh.Name())
+		assert.Error(t, err)
+
+		assert.NoError(t, fh.Truncate(recordHeaderSize+100))
+
+		// invalid metadata record
+		_, err = open(fh.Name())
+		assert.Error(t, err)
 	})
 }
