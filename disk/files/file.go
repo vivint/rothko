@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/spacemonkeygo/errors"
+	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
 )
 
 // file represents a buffer of records mmaped into memory
@@ -18,8 +19,49 @@ type file struct {
 	buf  []byte   // buffer that can hold a record
 }
 
-// open returns a file for the given path
-func open(path string, size int) (f file, err error) {
+// create creates a file at the given path with the given size and metadata.
+// the file is allocated with the ability to store cap records.
+func create(path string, size, cap int) (f file, err error) {
+	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		return f, Error.Wrap(err)
+	}
+
+	// TODO(jeff): overflow detection?
+	trunc := size * (cap + 1)
+
+	if err := fh.Truncate(int64(trunc)); err != nil {
+		fh.Close()
+		return f, Error.Wrap(err)
+	}
+
+	data, err := syscall.Mmap(int(fh.Fd()), 0, trunc,
+		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	if err != nil {
+		fh.Close()
+		return f, Error.Wrap(err)
+	}
+
+	err = writeMetadata(data[:size], meta.Metadata{
+		Size_: int64(size),
+		Head:  0,
+	})
+	if err != nil {
+		fh.Close()
+		return f, err
+	}
+
+	return file{
+		fh:   fh,
+		data: data,
+		size: size,
+		len:  0,
+		buf:  make([]byte, size),
+	}, nil
+}
+
+// open returns a file for the given path.
+func open(path string) (f file, err error) {
 	fh, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return f, Error.Wrap(err)
@@ -31,26 +73,37 @@ func open(path string, size int) (f file, err error) {
 		return f, Error.Wrap(err)
 	}
 
-	f_size := int(fi.Size())
-	if f_size < size {
-		f_size = size
-	}
-
-	data, err := syscall.Mmap(int(fh.Fd()), 0, f_size,
+	data, err := syscall.Mmap(int(fh.Fd()), 0, int(fi.Size()),
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		fh.Close()
 		return f, Error.Wrap(err)
 	}
 
+	// read the metadata record to determine the size of the records in this
+	// file.
+	meta, err := readMetadata(data)
+	if err != nil {
+		fh.Close()
+		return f, err
+	}
+
+	if meta.Size_ < recordHeaderSize {
+		fh.Close()
+		return f, Error.New("possible corruption: invalid size")
+	}
+
 	return file{
 		fh:   fh,
 		data: data,
-		size: size,
-		len:  len(data)/size - 1,
-		buf:  make([]byte, size),
+		size: int(meta.Size_),
+		len:  len(data)/int(meta.Size_) - 1,
+		buf:  make([]byte, meta.Size_),
 	}, nil
 }
+
+// Size returns the maximum size of a record.
+func (f file) Size() int { return f.size }
 
 // Close releases all the of resources for the file.
 func (f file) Close() error {
@@ -65,36 +118,35 @@ func (f file) offset(n int) int {
 	return (n + 1) * f.size
 }
 
-// metadata returns the metadata record.
-func (f file) metadata() (out record, err error) {
-	return parse(f.data[:f.size])
+// Metadata returns the metadata record.
+func (f file) Metadata() (m meta.Metadata, err error) {
+	return readMetadata(f.data[:f.size])
 }
 
-// get returns the nth record.
-func (f file) get(n int) (out record, err error) {
+// SetMetadata sets the metadata record.
+func (f file) SetMetadata(m meta.Metadata) (err error) {
+	return writeMetadata(f.data[:f.size], m)
+}
+
+// Record returns the nth record.
+func (f file) Record(n int) (out record, err error) {
 	if n >= f.len {
-		return out, Error.New("file: out of bounds")
+		return out, Error.New("record out of bounds")
 	}
 	off := f.offset(n)
-	return parse(f.data[off : off+f.size])
+	return readRecord(f.data[off : off+f.size])
 }
 
-// put stores the record in the nth slot.
-func (f *file) put(n int, rec record) (err error) {
+// SetRecrod stores the record in the nth slot.
+func (f *file) SetRecord(n int, rec record) (err error) {
 	if n >= f.len {
 		if err := f.truncate(n + 1); err != nil {
 			return err
 		}
 	}
 
-	// TODO(jeff): this is either safe with a copy, or dangerous without one.
-	// let's go with dangerous for now. as long as the record marshals to less
-	// than the size, we're good! maybe we can just error if that won't be the
-	// case... should be cheap.
-
 	off := f.offset(n)
-	rec.Marshal(f.data[off:off])
-	return nil
+	return writeRecord(f.data[off:off+f.size], rec)
 }
 
 // truncate causes the file to accomodate n records (and one metadata record).

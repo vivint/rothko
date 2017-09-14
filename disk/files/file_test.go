@@ -7,19 +7,29 @@ import (
 	"os"
 	"testing"
 
+	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
 	"github.com/spacemonkeygo/rothko/internal/assert"
 )
 
-func TestFileBasic(t *testing.T) {
+func newTestFile(t *testing.T) (f file, cleanup func()) {
+	t.Helper()
+
 	fh, err := ioutil.TempFile("", "file-basic-")
 	assert.NoError(t, err)
-	fh.Close()
-	defer os.Remove(fh.Name())
+	assert.NoError(t, fh.Close())
 
-	f, err := open(fh.Name(), 512)
+	name := fh.Name()
+
+	f, err = create(name, 512, 0)
 	assert.NoError(t, err)
-	defer f.Close()
 
+	return f, func() {
+		f.Close()
+		os.Remove(name)
+	}
+}
+
+func TestFile(t *testing.T) {
 	data := make([]byte, 100)
 	for i := range data {
 		data[i] = byte(i)
@@ -34,9 +44,30 @@ func TestFileBasic(t *testing.T) {
 		data:    data,
 	}
 
-	assert.NoError(t, f.put(3, rec))
+	m := meta.Metadata{
+		Size_: 512,
+		Head:  5,
+	}
 
-	got, err := f.get(3)
-	assert.NoError(t, err)
-	assert.DeepEqual(t, rec, got)
+	t.Run("Metadata", func(t *testing.T) {
+		f, cleanup := newTestFile(t)
+		defer cleanup()
+
+		assert.NoError(t, f.SetMetadata(m))
+
+		got, err := f.Metadata()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, m, got)
+	})
+
+	t.Run("Basic", func(t *testing.T) {
+		f, cleanup := newTestFile(t)
+		defer cleanup()
+
+		assert.NoError(t, f.SetRecord(3, rec))
+
+		got, err := f.Record(3)
+		assert.NoError(t, err)
+		assert.DeepEqual(t, rec, got)
+	})
 }

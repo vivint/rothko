@@ -1,0 +1,23 @@
+// Copyright (C) 2017. See AUTHORS.
+
+syntax = "proto3";
+
+package sm.rothko.disk.files.internal.meta;
+option go_package = "meta";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+// Metadata contains information about a file.
+message Metadata {
+	// the alignment size of the file
+	int64 size = 1;
+
+	// a hint (it could be wrong) about where the head pointer of the file
+	// is.
+	int64 head = 2;
+}

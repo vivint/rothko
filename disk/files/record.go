@@ -43,10 +43,15 @@ const (
 	recordKind_end
 )
 
-// Marshal appends a record to the provided buf, returning it.
-func (r record) Marshal(buf []byte) []byte {
+// Size returns the marshalled size of the record.
+func (r record) Size() int {
+	return recordHeaderSize + int(r.size)
+}
+
+// MarshalHeader appends a record header to the provided buf, returning it.
+func (r record) MarshalHeader(buf []byte) []byte {
 	// resize buf once if necessary
-	if size := recordHeaderSize + len(r.data); cap(buf) < size {
+	if size := r.Size(); cap(buf) < size {
 		buf = make([]byte, 0, size)
 	}
 
@@ -64,8 +69,13 @@ func (r record) Marshal(buf []byte) []byte {
 	binary.BigEndian.PutUint16(scratch[:], r.size)
 	buf = append(buf, scratch[:2]...)
 
-	buf = append(buf, r.data[:r.size]...)
+	return buf
+}
 
+// Marshal appends a record to the provided buf, returning it.
+func (r record) Marshal(buf []byte) []byte {
+	buf = r.MarshalHeader(buf)
+	buf = append(buf, r.data[:r.size]...)
 	return buf
 }
 
