@@ -4,7 +4,6 @@ package files
 
 import (
 	"context"
-	"math"
 	"os"
 
 	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
@@ -40,13 +39,13 @@ func createFile(ctx context.Context, path string, size, cap int) (
 	defer fh.Close()
 
 	// these overflow checks might be too restrictive, but i think it will
-	// go up to 1GB files, so meh that's probably good enough. we can revisit
-	// making them up to the full 4GB size later, though mmap will probably
-	// struggle with that.
+	// go up to 1GB at least, so meh that's probably good enough. we can
+	// revisit making them up to a larger size size later, though the system
+	// will probably struggle with that anyway.
 	if cap+1 < cap ||
 		int(int32(cap)) != cap ||
 		int(int32(size)) != size ||
-		math.MaxInt32/int32(size) < int32(cap) {
+		int32(size)*int32(cap)/int32(cap) != int32(size) {
 
 		return f, Error.New("capacity too large")
 	}
@@ -138,7 +137,10 @@ func (f file) Capacity() int { return f.cap }
 
 // Close releases all the of resources for the file.
 func (f file) Close() error {
-	return mmap.Munmap(f.data, f.len)
+	if f.data != 0 {
+		return mmap.Munmap(f.data, f.len)
+	}
+	return nil
 }
 
 // Metadata returns the metadata record.

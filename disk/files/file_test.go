@@ -11,6 +11,7 @@ import (
 	"github.com/spacemonkeygo/rothko/internal/assert"
 )
 
+// newTestFile constructs a temporary file backed by disk.
 func newTestFile(t testing.TB) (f file, cleanup func()) {
 	t.Helper()
 
