@@ -3,176 +3,194 @@
 package files
 
 import (
+	"context"
+	"math"
 	"os"
-	"syscall"
 
-	"github.com/spacemonkeygo/errors"
 	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
+	"github.com/spacemonkeygo/rothko/disk/files/internal/mmap"
 )
+
+//
+// the file implementation goes to great lengths to be efficient: it avoids
+// allocations in common operations as much as possible, the struct layout
+// does not contain any pointers, none of the methods are mutating so that
+// they may be passed as values cheaply.
+//
 
 // file represents a buffer of records mmaped into memory
 type file struct {
-	fh   *os.File // used to remap
-	data []byte   // mmap'd data
-	size int      // alignment size of each record
-	len  int      // length (in records) of the data excluding metadata
-	buf  []byte   // buffer that can hold a record
+	data uintptr // mmap'd data. stored as a uintptr to avoid gc pressure.
+	len  int     // length of mmap'd data
+	cap  int     // capacity (in records) of the data excluding metadata
+	size int     // alignment size of each record
 }
 
-// create creates a file at the given path with the given size and metadata.
-// the file is allocated with the ability to store cap records.
-func create(path string, size, cap int) (f file, err error) {
+// createFile creates a file at the given path with the given record size.
+// the file is allocated with the ability to store cap records without a
+// resize.
+func createFile(ctx context.Context, path string, size, cap int) (
+	f file, err error) {
+	defer mon.Task()(&ctx)(&err)
+
 	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return f, Error.Wrap(err)
 	}
+	defer fh.Close()
 
-	// TODO(jeff): overflow detection?
-	trunc := size * (cap + 1)
+	// these overflow checks might be too restrictive, but i think it will
+	// go up to 1GB files, so meh that's probably good enough. we can revisit
+	// making them up to the full 4GB size later, though mmap will probably
+	// struggle with that.
+	if cap+1 < cap ||
+		int(int32(cap)) != cap ||
+		int(int32(size)) != size ||
+		math.MaxInt32/int32(size) < int32(cap) {
 
-	if err := fh.Truncate(int64(trunc)); err != nil {
-		fh.Close()
+		return f, Error.New("capacity too large")
+	}
+
+	len := size * (cap + 1)
+	if err := fh.Truncate(int64(len)); err != nil {
 		return f, Error.Wrap(err)
 	}
 
-	data, err := syscall.Mmap(int(fh.Fd()), 0, trunc,
-		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	data, err := mmap.Mmap(int(fh.Fd()), len,
+		mmap.PROT_READ|mmap.PROT_WRITE, mmap.MAP_SHARED)
 	if err != nil {
-		fh.Close()
 		return f, Error.Wrap(err)
 	}
 
-	err = writeMetadata(data[:size], meta.Metadata{
+	err = writeMetadata(slice(data, len)[:size], meta.Metadata{
 		Size_: size,
-		Head:  0,
 	})
 	if err != nil {
-		fh.Close()
 		return f, err
 	}
 
 	return file{
-		fh:   fh,
 		data: data,
+		len:  len,
+		cap:  cap,
 		size: size,
-		len:  0,
-		buf:  make([]byte, size),
 	}, nil
 }
 
-// open returns a file for the given path.
-func open(path string) (f file, err error) {
+// openFile returns a file for the given path.
+func openFile(ctx context.Context, path string) (f file, err error) {
+	defer mon.Task()(&ctx)(&err)
+
 	fh, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return f, Error.Wrap(err)
 	}
+	defer fh.Close()
 
 	fi, err := fh.Stat()
 	if err != nil {
-		fh.Close()
 		return f, Error.Wrap(err)
 	}
+	len := int(fi.Size())
 
-	if fi.Size() < recordHeaderSize {
-		fh.Close()
+	if len < recordHeaderSize {
 		return f, Error.New("file is too small to contain metadata")
 	}
 
-	data, err := syscall.Mmap(int(fh.Fd()), 0, int(fi.Size()),
-		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	data, err := mmap.Mmap(int(fh.Fd()), len,
+		mmap.PROT_READ|mmap.PROT_WRITE, mmap.MAP_SHARED)
 	if err != nil {
-		fh.Close()
 		return f, Error.Wrap(err)
 	}
 
 	// read the metadata record to determine the size of the records in this
 	// file.
-	meta, err := readMetadata(data)
+	meta, err := readMetadata(slice(data, len))
 	if err != nil {
-		fh.Close()
 		return f, err
 	}
 
 	if meta.Size_ < recordHeaderSize {
-		fh.Close()
 		return f, Error.New("possible corruption: invalid size")
 	}
 
 	return file{
-		fh:   fh,
 		data: data,
+		len:  len,
+		cap:  len/meta.Size_ - 1,
 		size: meta.Size_,
-		len:  len(data)/meta.Size_ - 1,
-		buf:  make([]byte, meta.Size_),
 	}, nil
 }
 
-// Size returns the maximum size of a record.
-func (f file) Size() int { return f.size }
-
-// Close releases all the of resources for the file.
-func (f file) Close() error {
-	var eg errors.ErrorGroup
-	eg.Add(f.fh.Close())
-	eg.Add(syscall.Munmap(f.data))
-	return eg.Finalize()
-}
+// slice returns the data slice for the file
+func (f file) slice() []byte { return slice(f.data, f.len) }
 
 // offset computes the byte offset for the nth record.
 func (f file) offset(n int) int {
 	return (n + 1) * f.size
 }
 
+// Size returns the maximum size of a record.
+func (f file) Size() int { return f.size }
+
+// Capacity returns the capacity of records in the file.
+func (f file) Capacity() int { return f.cap }
+
+// Close releases all the of resources for the file.
+func (f file) Close() error {
+	return mmap.Munmap(f.data, f.len)
+}
+
 // Metadata returns the metadata record.
-func (f file) Metadata() (m meta.Metadata, err error) {
-	return readMetadata(f.data[:f.size])
+func (f file) Metadata(ctx context.Context) (m meta.Metadata, err error) {
+	return readMetadata(f.slice()[:f.size])
 }
 
 // SetMetadata sets the metadata record.
-func (f file) SetMetadata(m meta.Metadata) (err error) {
-	return writeMetadata(f.data[:f.size], m)
+func (f file) SetMetadata(ctx context.Context, m meta.Metadata) (err error) {
+	return writeMetadata(f.slice()[:f.size], m)
 }
 
 // Record returns the nth record.
-func (f file) Record(n int) (out record, err error) {
-	if n >= f.len {
+func (f file) Record(ctx context.Context, n int) (out record, err error) {
+	if n >= f.cap {
 		return out, Error.New("record out of bounds")
 	}
 	off := f.offset(n)
-	return readRecord(f.data[off : off+f.size])
+	return readRecord(f.slice()[off : off+f.size])
 }
 
 // SetRecrod stores the record in the nth slot.
-func (f *file) SetRecord(n int, rec record) (err error) {
-	if n >= f.len {
-		if err := f.truncate(n + 1); err != nil {
-			return err
-		}
+func (f file) SetRecord(ctx context.Context, n int, rec record) (err error) {
+	if n >= f.cap {
+		return Error.New("record out of bounds")
 	}
-
 	off := f.offset(n)
-	return writeRecord(f.data[off:off+f.size], rec)
+	return writeRecord(f.slice()[off:off+f.size], rec)
 }
 
-// truncate causes the file to accomodate n records (and one metadata record).
-func (f *file) truncate(n int) (err error) {
-	size := f.offset(n) + f.size
-
-	if err := syscall.Munmap(f.data); err != nil {
-		return Error.Wrap(err)
+// HasRecord returns if there is a record stored at the index.
+func (f file) HasRecord(ctx context.Context, n int) (ok bool, err error) {
+	if n >= f.cap {
+		return false, Error.New("record out of bounds")
 	}
 
-	if err := f.fh.Truncate(int64(size)); err != nil {
-		return Error.Wrap(err)
-	}
+	// this relies on the first byte of the serialized record containing a
+	// non-zero version.
+	off := f.offset(n)
+	return f.slice()[off] != 0, nil
+}
 
-	data, err := syscall.Mmap(int(f.fh.Fd()), 0, size,
-		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
-	if err != nil {
-		return Error.Wrap(err)
-	}
+// FullSync causes the file's contents to be synced to disk.
+func (f file) FullSync(ctx context.Context) (err error) {
+	defer mon.Task()(&ctx)(&err)
 
-	f.data = data
-	f.len = n
-	return nil
+	return mmap.Msync(f.data, f.len, mmap.MS_SYNC)
+}
+
+// FullAsync causes the file's contents to be synced to disk asynchronously.
+func (f file) FullAsync(ctx context.Context) (err error) {
+	defer mon.Task()(&ctx)(&err)
+
+	return mmap.Msync(f.data, f.len, mmap.MS_ASYNC)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/spacemonkeygo/rothko/internal/assert"
 )
 
-func newTestFile(t *testing.T) (f file, cleanup func()) {
+func newTestFile(t testing.TB) (f file, cleanup func()) {
 	t.Helper()
 
 	fh, err := ioutil.TempFile("", "file-")
@@ -20,7 +20,7 @@ func newTestFile(t *testing.T) (f file, cleanup func()) {
 
 	name := fh.Name()
 
-	f, err = create(name, 512, 0)
+	f, err = createFile(ctx, name, 512, 10)
 	assert.NoError(t, err)
 
 	return f, func() {
@@ -46,16 +46,15 @@ func TestFile(t *testing.T) {
 
 	m := meta.Metadata{
 		Size_: 512,
-		Head:  5,
 	}
 
 	t.Run("Metadata", func(t *testing.T) {
 		f, cleanup := newTestFile(t)
 		defer cleanup()
 
-		assert.NoError(t, f.SetMetadata(m))
+		assert.NoError(t, f.SetMetadata(ctx, m))
 
-		got, err := f.Metadata()
+		got, err := f.Metadata(ctx)
 		assert.NoError(t, err)
 		assert.DeepEqual(t, m, got)
 	})
@@ -64,11 +63,26 @@ func TestFile(t *testing.T) {
 		f, cleanup := newTestFile(t)
 		defer cleanup()
 
-		assert.NoError(t, f.SetRecord(3, rec))
+		assert.NoError(t, f.SetRecord(ctx, 3, rec))
 
-		got, err := f.Record(3)
+		got, err := f.Record(ctx, 3)
 		assert.NoError(t, err)
 		assert.DeepEqual(t, rec, got)
+	})
+
+	t.Run("HasRecord", func(t *testing.T) {
+		f, cleanup := newTestFile(t)
+		defer cleanup()
+
+		assert.NoError(t, f.SetRecord(ctx, 3, rec))
+
+		ok, err := f.HasRecord(ctx, 0)
+		assert.NoError(t, err)
+		assert.That(t, !ok)
+
+		ok, err = f.HasRecord(ctx, 3)
+		assert.NoError(t, err)
+		assert.That(t, ok)
 	})
 
 	t.Run("OpenFails", func(t *testing.T) {
@@ -78,13 +92,103 @@ func TestFile(t *testing.T) {
 		defer fh.Close()
 
 		// no metadata
-		_, err = open(fh.Name())
+		_, err = openFile(ctx, fh.Name())
 		assert.Error(t, err)
 
 		assert.NoError(t, fh.Truncate(recordHeaderSize+100))
 
 		// invalid metadata record
-		_, err = open(fh.Name())
+		_, err = openFile(ctx, fh.Name())
 		assert.Error(t, err)
+	})
+}
+
+func BenchmarkFile(b *testing.B) {
+	data := make([]byte, 100)
+	for i := range data {
+		data[i] = byte(i)
+	}
+
+	rec := record{
+		version: recordVersion,
+		kind:    recordKind_complete,
+		start:   1234,
+		end:     4567,
+		size:    100,
+		data:    data,
+	}
+
+	m := meta.Metadata{
+		Size_: 512,
+	}
+
+	b.Run("Metadata", func(b *testing.B) {
+		b.Run("Write", func(b *testing.B) {
+			f, cleanup := newTestFile(b)
+			defer cleanup()
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				f.SetMetadata(ctx, m)
+			}
+		})
+
+		b.Run("Read", func(b *testing.B) {
+			f, cleanup := newTestFile(b)
+			defer cleanup()
+
+			assert.NoError(b, f.SetMetadata(ctx, m))
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				f.Metadata(ctx)
+			}
+		})
+	})
+
+	b.Run("Record", func(b *testing.B) {
+		b.Run("Write", func(b *testing.B) {
+			f, cleanup := newTestFile(b)
+			defer cleanup()
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				f.SetRecord(ctx, 3, rec)
+			}
+		})
+
+		b.Run("Read", func(b *testing.B) {
+			f, cleanup := newTestFile(b)
+			defer cleanup()
+
+			assert.NoError(b, f.SetRecord(ctx, 3, rec))
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				f.Record(ctx, 3)
+			}
+		})
+
+		b.Run("Has", func(b *testing.B) {
+			f, cleanup := newTestFile(b)
+			defer cleanup()
+
+			assert.NoError(b, f.SetRecord(ctx, 3, rec))
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				f.HasRecord(ctx, 3)
+			}
+		})
 	})
 }

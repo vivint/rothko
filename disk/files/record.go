@@ -48,6 +48,11 @@ func (r record) Size() int {
 	return recordHeaderSize + int(r.size)
 }
 
+// Copy copies the data using the backing array of the passed in buf.
+func (r *record) Copy(buf []byte) {
+	r.data = append(buf[:0], r.data...)
+}
+
 // MarshalHeader appends a record header to the provided buf, returning it.
 func (r record) MarshalHeader(buf []byte) []byte {
 	// resize buf once if necessary

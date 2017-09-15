@@ -3,8 +3,22 @@
 package files
 
 import (
+	"unsafe"
+
 	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
 )
+
+// slice returns a slice of the data with the given length. the data MUST NOT
+// point at go allocated memory.
+func slice(data uintptr, length int) []byte {
+	var sl = struct {
+		addr uintptr
+		len  int
+		cap  int
+	}{data, length, length}
+
+	return *(*[]byte)(unsafe.Pointer(&sl))
+}
 
 // writeMetadata writes a metadata value into the buffer, ensuring that it
 // fits in the size.

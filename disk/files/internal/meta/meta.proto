@@ -16,8 +16,4 @@ option (gogoproto.goproto_getters_all) = false;
 message Metadata {
 	// the alignment size of the file
 	int32 size = 1 [(gogoproto.casttype) = "int"];
-
-	// a hint (it could be wrong) about where the head pointer of the file
-	// is.
-	int64 head = 2 [(gogoproto.casttype) = "int"];
 }

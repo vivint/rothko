@@ -32,6 +32,12 @@
   revision = "66aacef3dd8a676686c7ae3716979581e8b03c47"
 
 [[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "062cd7e4e68206d8bab9b18396626e855c992658"
+
+[[projects]]
   branch = "v2"
   name = "gopkg.in/spacemonkeygo/monkit.v2"
   packages = ["."]
@@ -46,6 +52,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7085a3b2e0cfc7bc80d26d758d3d36fb5ff56de2714b60e5523b61f1ddb7775b"
+  inputs-digest = "10753715d9d0cd354b3ff434cadeca07569b2759fa33c5eb97d28ccbf7b40319"
   solver-name = "gps-cdcl"
   solver-version = 1
