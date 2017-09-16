@@ -2,12 +2,11 @@
 
 package files
 
-// DB is a database implementing disk.Writer and disk.Source using a file
-// on disk for each metric.
-type DB struct {
-	path string
-	opts Options
-}
+import (
+	"runtime"
+	"sync"
+	"syscall"
+)
 
 // Options is a set of options to configure a database.
 type Options struct {
@@ -44,13 +43,72 @@ type Options struct {
 	// cache. If 0, then 1024 less than the soft limit of file handles as
 	// reported by getrlimit will be used.
 	Handles int
+
+	// Workers controls the number of parallel workers draining queued values
+	// into files. If zero, the value of GOMAXPROCS at the start of the call
+	// to New is used.
+	Workers int
+}
+
+// DB is a database implementing disk.Writer and disk.Source using a file
+// on disk for each metric.
+type DB struct {
+	path string
+	opts Options
+
+	// the queue of values and a sync.Pool containing byte slices since we want
+	// to take ownership of the data passed in to Queue.
+	queue chan queuedValue
+	bufs  sync.Pool // contains []byte
+	locks *lockPool
+
+	// file handle cache for metrics
+	mu   sync.Mutex
+	toks map[string]cacheToken
+	ch   *cache
+}
+
+// queuedValue represents some data queued to be written to disk.
+type queuedValue struct {
+	metric string
+	start  int64
+	end    int64
+	data   []byte
+	done   func(error)
 }
 
 // New constructs a database with directory rooted at path and the provided
 // options.
 func New(path string, opts Options) *DB {
+	// set up the number of workers
+	if opts.Workers == 0 {
+		opts.Workers = runtime.GOMAXPROCS(-1)
+	}
+
+	// set up the number of handles
+	if opts.Handles == 0 {
+		var lim syscall.Rlimit
+		if syscall.Getrlimit(syscall.RLIMIT_NOFILE, &lim) == nil {
+			if int64(int(lim.Cur)) == int64(lim.Cur) {
+				opts.Handles = int(lim.Cur) - 512
+			}
+		}
+	}
+	if opts.Handles < 0 {
+		opts.Handles = 0
+	}
+
 	return &DB{
 		path: path,
 		opts: opts,
+
+		queue: make(chan queuedValue, opts.Buffer),
+		bufs: sync.Pool{
+			New: func() interface{} { return make([]byte, opts.Size) },
+		},
+		locks: newLockPool(),
+
+		toks: make(map[string]cacheToken),
+		ch:   newCache(opts.Handles),
 	}
 }

@@ -14,6 +14,9 @@ option (gogoproto.goproto_getters_all) = false;
 
 // Metadata contains information about a file.
 message Metadata {
-	// the alignment size of the file
+	// the alignment size of the file.
 	int32 size = 1 [(gogoproto.casttype) = "int"];
+
+	// points at the first available record.
+	int32 head = 2 [(gogoproto.casttype) = "int"];
 }

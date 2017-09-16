@@ -28,11 +28,6 @@ package files
 // which is cheaper to perform, but causes 5 to potentially live longer.
 //
 
-// NOTE:
-// the cache currently is not thread safe, and wrapping a mutex around it is
-// non trivial since Put can cause a file to be Closed, issuing a Munmap
-// syscall. the API may change to avoid this issue.
-
 // cacheToken is a token for retrieving an entry from the cache.
 type cacheToken int64
 
@@ -90,28 +85,39 @@ func (c *cache) Take(tok cacheToken) (f file, ok bool) {
 }
 
 // Put sticks the file in the cache and returns a token that can be used to
-// retrieve it later.
-func (c *cache) Put(f file) (tok cacheToken) {
+// retrieve it later, a file that was evicted, and an ok boolean to signal if
+// a file was actually evicted.
+func (c *cache) Put(f file) (tok cacheToken, ev file, ok bool) {
 	c.tok++
 	entry := cacheEntry{
 		loc: len(c.order),
 		tok: c.tok,
 		f:   f,
 	}
-	c.handles[entry.tok] = entry
 
+	// if we have capacity, just add it and don't evict anything.
 	if len(c.order) < cap(c.order) {
+		c.handles[entry.tok] = entry
 		c.order = append(c.order, entry.tok)
-		return entry.tok
+
+		return entry.tok, ev, false
 	}
 
-	// gotta take the place of the last node and close out the last node
+	// if we don't have capacity, we reduce one from the entry's location
+	// because it will be assigned to the last slot in the list.
+	entry.loc--
+
+	// if we never have capacity, return that we evicted the file that was put.
+	if cap(c.order) == 0 {
+		return entry.tok, f, true
+	}
+
+	// otherwise, we take the place of and evict the last entry.
 	last := c.last()
+
 	delete(c.handles, last.tok)
-
-	// clean up the evicted file handle
-	last.f.Close() // TODO(jeff): log this error?
-
+	c.handles[entry.tok] = entry
 	c.order[last.loc] = entry.tok
-	return entry.tok
+
+	return entry.tok, last.f, true
 }

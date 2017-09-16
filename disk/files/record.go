@@ -140,12 +140,25 @@ func parse(buf []byte) (out record, err error) {
 	return out, nil
 }
 
+// numRecords returns the number of records that will be used. Returns 0 if the
+// size is not in a range that is valid.
+func numRecords(len, size int) int {
+	chunk := size - recordHeaderSize
+	if chunk < 0 || int(uint16(chunk)) != chunk {
+		return 0
+	}
+	if len == 0 {
+		return 1
+	}
+	return (len + chunk - 1) / chunk
+}
+
 // records chunks up the data into individual records whose marshalled size is
 // at most size. The records are passed to the callback function. If the
 // function returns false, the iteration stops. Errors if size is not inside
 // of a range to produce valid records.
 func records(start, end int64, data []byte, size int,
-	fn func(rec record) bool) error {
+	fn func(rec record) error) error {
 
 	chunk := size - recordHeaderSize
 	if chunk < 0 || int(uint16(chunk)) != chunk {
@@ -156,7 +169,7 @@ func records(start, end int64, data []byte, size int,
 	kind := recordKind_begin
 
 	for len(data) > chunk {
-		cont := fn(record{
+		err := fn(record{
 			version: recordVersion,
 			kind:    kind,
 			start:   start,
@@ -164,8 +177,8 @@ func records(start, end int64, data []byte, size int,
 			size:    uint16(chunk),
 			data:    data[:chunk],
 		})
-		if !cont {
-			return nil
+		if err != nil {
+			return err
 		}
 
 		data = data[chunk:]
@@ -178,7 +191,7 @@ func records(start, end int64, data []byte, size int,
 		kind = recordKind_end
 	}
 
-	fn(record{
+	return fn(record{
 		version: recordVersion,
 		kind:    kind,
 		start:   start,
@@ -186,6 +199,4 @@ func records(start, end int64, data []byte, size int,
 		size:    uint16(len(data)),
 		data:    data,
 	})
-
-	return nil
 }

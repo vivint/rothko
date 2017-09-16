@@ -32,7 +32,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 	f file, err error) {
 	defer mon.Task()(&ctx)(&err)
 
-	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return f, Error.Wrap(err)
 	}
@@ -63,6 +63,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 
 	err = writeMetadata(slice(data, len)[:size], meta.Metadata{
 		Size_: size,
+		Head:  0,
 	})
 	if err != nil {
 		return f, err
