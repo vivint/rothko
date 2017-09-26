@@ -53,7 +53,7 @@ type Options struct {
 // DB is a database implementing disk.Writer and disk.Source using a file
 // on disk for each metric.
 type DB struct {
-	path string
+	dir  string
 	opts Options
 
 	// the queue of values and a sync.Pool containing byte slices since we want
@@ -63,9 +63,7 @@ type DB struct {
 	locks *lockPool
 
 	// file handle cache for metrics
-	mu   sync.Mutex
-	toks map[string]cacheToken
-	ch   *cache
+	fch *fileCache
 }
 
 // queuedValue represents some data queued to be written to disk.
@@ -74,12 +72,12 @@ type queuedValue struct {
 	start  int64
 	end    int64
 	data   []byte
-	done   func(error)
+	done   func(bool, error)
 }
 
-// New constructs a database with directory rooted at path and the provided
+// New constructs a database with directory rooted at dir and the provided
 // options.
-func New(path string, opts Options) *DB {
+func New(dir string, opts Options) *DB {
 	// set up the number of workers
 	if opts.Workers == 0 {
 		opts.Workers = runtime.GOMAXPROCS(-1)
@@ -99,7 +97,7 @@ func New(path string, opts Options) *DB {
 	}
 
 	return &DB{
-		path: path,
+		dir:  dir,
 		opts: opts,
 
 		queue: make(chan queuedValue, opts.Buffer),
@@ -108,7 +106,10 @@ func New(path string, opts Options) *DB {
 		},
 		locks: newLockPool(),
 
-		toks: make(map[string]cacheToken),
-		ch:   newCache(opts.Handles),
+		fch: newFileCache(fileCacheOptions{
+			Handles: opts.Handles,
+			Size:    opts.Size,
+			Cap:     opts.Cap,
+		}),
 	}
 }

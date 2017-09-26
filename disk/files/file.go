@@ -130,6 +130,9 @@ func (f file) offset(n int) int {
 	return (n + 1) * f.size
 }
 
+// Nil returns if the file is nil.
+func (f file) Nil() bool { return f.data != 0 }
+
 // Size returns the maximum size of a record.
 func (f file) Size() int { return f.size }
 
@@ -156,16 +159,16 @@ func (f file) SetMetadata(ctx context.Context, m meta.Metadata) (err error) {
 
 // Record returns the nth record.
 func (f file) Record(ctx context.Context, n int) (out record, err error) {
-	if n >= f.cap {
+	if n >= f.cap || n < 0 {
 		return out, Error.New("record out of bounds")
 	}
 	off := f.offset(n)
 	return readRecord(f.slice()[off : off+f.size])
 }
 
-// SetRecrod stores the record in the nth slot.
+// SetRecord stores the record in the nth slot.
 func (f file) SetRecord(ctx context.Context, n int, rec record) (err error) {
-	if n >= f.cap {
+	if n >= f.cap || n < 0 {
 		return Error.New("record out of bounds")
 	}
 	off := f.offset(n)
@@ -173,15 +176,15 @@ func (f file) SetRecord(ctx context.Context, n int, rec record) (err error) {
 }
 
 // HasRecord returns if there is a record stored at the index.
-func (f file) HasRecord(ctx context.Context, n int) (ok bool, err error) {
-	if n >= f.cap {
-		return false, Error.New("record out of bounds")
+func (f file) HasRecord(ctx context.Context, n int) (ok bool) {
+	if n >= f.cap || n < 0 {
+		return false
 	}
 
 	// this relies on the first byte of the serialized record containing a
 	// non-zero version.
 	off := f.offset(n)
-	return f.slice()[off] != 0, nil
+	return f.slice()[off] != 0
 }
 
 // FullSync causes the file's contents to be synced to disk.

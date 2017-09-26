@@ -18,18 +18,15 @@ func lastRecord(ctx context.Context, f file) (n int, err error) {
 	}
 
 	// figure out if head has a record. typically, it won't.
-	orig_has, err := f.HasRecord(ctx, head)
-	if err != nil {
-		return 0, err
-	}
+	orig_has := f.HasRecord(ctx, head)
 
-	// if we have a record, walk forward.
+	// if we have a record, walk forward. otherwise, we need to walk backward.
 	delta := 1
 	if !orig_has {
 		delta = -1
 	}
 
-	// walk until we find something different from what we have. if we were
+	// walk until we find something different from what we had. if we were
 	// walking backwards, we will have to return head + 1.
 	for {
 		head += delta
@@ -37,11 +34,11 @@ func lastRecord(ctx context.Context, f file) (n int, err error) {
 		if head >= f.Capacity() {
 			return head, nil
 		}
-		has, err := f.HasRecord(ctx, head)
-		if err != nil {
-			return 0, err
+		if head < 0 {
+			return 0, nil
 		}
 
+		has := f.HasRecord(ctx, head)
 		if has != orig_has {
 			if orig_has {
 				return head, nil

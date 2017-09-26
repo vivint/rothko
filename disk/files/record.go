@@ -153,11 +153,11 @@ func numRecords(len, size int) int {
 	return (len + chunk - 1) / chunk
 }
 
-// records chunks up the data into individual records whose marshalled size is
-// at most size. The records are passed to the callback function. If the
-// function returns false, the iteration stops. Errors if size is not inside
-// of a range to produce valid records.
-func records(start, end int64, data []byte, size int,
+// iterateRecords chunks up the data into individual records whose marshalled
+// size is at most size. The records are passed to the callback function.
+// If the function returns an error, the iteration stops. Errors if size is not
+// inside of a range to produce valid records.
+func iterateRecords(start, end int64, data []byte, size int,
 	fn func(rec record) error) error {
 
 	chunk := size - recordHeaderSize

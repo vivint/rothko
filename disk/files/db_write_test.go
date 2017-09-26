@@ -32,18 +32,29 @@ func TestDBWrite(t *testing.T) {
 	defer cancel()
 
 	db, cleanup := newTestDB(t, Options{
-		Size:  512,
+		Size:  1024,
 		Cap:   10,
 		Files: 10,
 	})
 	defer cleanup()
 	go db.Run(ctx)
 
-	ch := make(chan error)
-	db.QueueCB(ctx, "test.bar.baz", 0, 1, make([]byte, 700), func(err error) {
-		ch <- err
-	})
-	assert.NoError(t, <-ch)
+	type res struct {
+		b bool
+		e error
+	}
+
+	ch := make(chan res)
+	sendErr := func(ok bool, err error) { ch <- res{ok, err} }
+
+	for i := 0; i < 200; i++ {
+		db.QueueCB(ctx, "test.bar.baz", int64(i), int64(i+1),
+			make([]byte, 700), sendErr)
+
+		r := <-ch
+		assert.That(t, r.b)
+		assert.NoError(t, r.e)
+	}
 }
 
 func BenchmarkDBWrite(b *testing.B) {
@@ -53,9 +64,9 @@ func BenchmarkDBWrite(b *testing.B) {
 	// we have a really small cap here because HFS+ doesn't do sparse files.
 	// gonna have to try it on linux!
 	db, cleanup := newTestDB(b, Options{
-		Size:  512,
-		Cap:   1024,
-		Files: 10,
+		Size:  1024,   // 1K/record
+		Cap:   102400, // 100MB/file
+		Files: 10,     // 1GB/metric
 	})
 	defer cleanup()
 	go db.Run(ctx)
@@ -72,8 +83,10 @@ func BenchmarkDBWrite(b *testing.B) {
 		ctr++
 		mu.Unlock()
 
+		i := int64(0)
 		for pb.Next() {
-			db.Queue(ctx, metric, 0, 1, make([]byte, 300))
+			db.Queue(ctx, metric, i, i+1, make([]byte, 300))
+			i++
 		}
 	})
 }

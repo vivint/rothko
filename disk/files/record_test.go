@@ -17,7 +17,7 @@ func TestRecords(t *testing.T) {
 	t.Run("Complete", func(t *testing.T) {
 		var out []record
 
-		err := records(1234, 5678, data, 1024, func(rec record) error {
+		err := iterateRecords(1234, 5678, data, 1024, func(rec record) error {
 			out = append(out, rec)
 			return nil
 		})
@@ -37,7 +37,7 @@ func TestRecords(t *testing.T) {
 	t.Run("Split", func(t *testing.T) {
 		var out []record
 
-		err := records(1234, 5678, data, 50, func(rec record) error {
+		err := iterateRecords(1234, 5678, data, 50, func(rec record) error {
 			out = append(out, rec)
 			return nil
 		})
@@ -117,7 +117,7 @@ func BenchmarkRecords(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			records(1234, 5678, data, 1024, func(rec record) error {
+			iterateRecords(1234, 5678, data, 1024, func(rec record) error {
 				return nil
 			})
 		}
@@ -127,7 +127,7 @@ func BenchmarkRecords(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			records(1234, 5678, data, 50, func(rec record) error {
+			iterateRecords(1234, 5678, data, 50, func(rec record) error {
 				return nil
 			})
 		}

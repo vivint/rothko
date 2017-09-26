@@ -77,12 +77,10 @@ func TestFile(t *testing.T) {
 
 		assert.NoError(t, f.SetRecord(ctx, 3, rec))
 
-		ok, err := f.HasRecord(ctx, 0)
-		assert.NoError(t, err)
+		ok := f.HasRecord(ctx, 0)
 		assert.That(t, !ok)
 
-		ok, err = f.HasRecord(ctx, 3)
-		assert.NoError(t, err)
+		ok = f.HasRecord(ctx, 3)
 		assert.That(t, ok)
 	})
 
