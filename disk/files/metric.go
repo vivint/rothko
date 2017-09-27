@@ -27,7 +27,7 @@ type metric struct {
 
 // newMetric constructs a metric for some path. only one metric instance should
 // be in use at a time for a given directory.
-func newMetric(opts metricOptions) (*metric, error) {
+func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
 	// get the base directory
 	dir_buf := make([]byte, 0, len(opts.dir)+1+len(opts.name)+5)
 	dir_buf = append(dir_buf, opts.dir...)
@@ -85,7 +85,7 @@ func newMetric(opts metricOptions) (*metric, error) {
 	// empty file exists.
 	if !first_set {
 		path := metricFilenameAt(dir, 1)
-		f, err := opts.fch.acquireFile(path, false)
+		f, err := opts.fch.acquireFile(ctx, path, false)
 		if err != nil {
 			return nil, err
 		}
@@ -121,12 +121,11 @@ func metricFilenameAt(dir string, index int) string {
 // empty file if there is no data. f refers to the file opened at m.last.
 func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 	err error) {
-	defer mon.Task()(&ctx)(&err)
 
 	// while there is a last file
 	for m.last >= m.first {
 		path := metricFilenameAt(m.dir, m.last)
-		f, err := m.opts.fch.acquireFile(path, true)
+		f, err := m.opts.fch.acquireFile(ctx, path, true)
 		if err != nil {
 			return file{}, 0, err
 		}
@@ -163,7 +162,6 @@ func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 // the data was written. this method is not safe to be called concurrently.
 func (m *metric) write(ctx context.Context, start, end int64, data []byte) (
 	ok bool, err error) {
-	defer mon.Task()(&ctx)(&err)
 
 	// acquire the last file and determine where the head pointer is for it.
 	f, head, err := m.acquireLast(ctx)
@@ -212,7 +210,7 @@ func (m *metric) write(ctx context.Context, start, end int64, data []byte) (
 		head = 0
 
 		path := metricFilenameAt(m.dir, m.last)
-		f, err = m.opts.fch.acquireFile(path, false)
+		f, err = m.opts.fch.acquireFile(ctx, path, false)
 		if err != nil {
 			return false, err
 		}
@@ -254,4 +252,47 @@ func (m *metric) write(ctx context.Context, start, end int64, data []byte) (
 	}
 
 	return true, nil
+}
+
+// timeRange returns the start of the first record and the end of the last
+// record. if there are no records, it returns 0, 0.
+func (m *metric) timeRange(ctx context.Context) (start, end int64, err error) {
+	// load up the last file
+	last, head, err := m.acquireLast(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer m.opts.fch.releaseFile(metricFilenameAt(m.dir, m.last), last)
+
+	// if head is 0, then we have no records for this metric
+	if head == 0 {
+		return 0, 0, nil
+	}
+
+	// get the last record (one before head)
+	last_rec, err := last.Record(ctx, head-1)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// load up the first file if it is different than the last file
+	var first file
+	if m.last != m.first {
+		first_path := metricFilenameAt(m.dir, m.first)
+		first, err = m.opts.fch.acquireFile(ctx, first_path, true)
+		if err != nil {
+			return 0, 0, err
+		}
+		defer m.opts.fch.releaseFile(first_path, first)
+	} else {
+		first = last
+	}
+
+	// get the first record
+	first_rec, err := first.Record(ctx, 0)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return first_rec.start, last_rec.end, nil
 }

@@ -100,14 +100,13 @@ func (db *DB) worker(ctx context.Context) {
 // concurrently with other values, even when they reference the same metric.
 func (db *DB) write(ctx context.Context, value queuedValue) (
 	ok bool, err error) {
-	defer mon.Task()(&ctx)(&err)
 
 	// lock the metric
 	db.locks.Lock(value.metric)
 	defer db.locks.Unlock(value.metric)
 
 	// acquire the datastructure encapsulating metric write logic
-	met, err := newMetric(metricOptions{
+	met, err := newMetric(ctx, metricOptions{
 		fch:  db.fch,
 		dir:  db.dir,
 		name: value.metric,

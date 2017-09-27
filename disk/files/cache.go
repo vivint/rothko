@@ -2,30 +2,15 @@
 
 package files
 
+import (
+	"github.com/spacemonkeygo/rothko/disk/files/internal/pcg"
+)
+
 //
-// this cache has some peculiar properties. it's close in spirit to an MRU
-// cache in that the most recently put entry will be evicted when a new put
-// is performed and there is no extra capacity, but we do not attempt to
-// strictly follow that rule recursively. that allows us to avoid much of the
-// pointer chasing required when using a linked list to store the order, and
-// avoid copying using a backing slice because we just swap whoever is the
-// newest value with whatever value is taken, rather than move the entire
-// section down.
-//
-// For example, if we had the order
-//
-//    1 2 3 4 5
-//
-// Then 5 would be first to be evicted. If we then took 2 from that list,
-// the order, in an MRU would be
-//
-//    1 3 4 5
-//
-// but with this implementation, it will be
-//
-//    1 5 3 4
-//
-// which is cheaper to perform, but causes 5 to potentially live longer.
+// this cache does a random eviction strategy. it is very cheap and requires
+// almost no pointer chasing. since we frequently access every single file
+// in the system during writes, i do not believe there is a better caching
+// strategy.
 //
 
 // cacheToken is a token for retrieving an entry from the cache.
@@ -47,6 +32,7 @@ type cache struct {
 	cap     int
 	order   []cacheToken // evict order is last element first
 	handles map[cacheToken]cacheEntry
+	pcg     pcg.PCG
 }
 
 // newCache constructs a cache with the given capacity.
@@ -55,12 +41,8 @@ func newCache(cap int) *cache {
 		cap:     cap,
 		order:   make([]cacheToken, 0, cap),
 		handles: make(map[cacheToken]cacheEntry, cap),
+		pcg:     pcg.New(0, 0), // we could introduce entropy here
 	}
-}
-
-// last returns the last cacheEntry: the one that would be evicted first.
-func (c *cache) last() cacheEntry {
-	return c.handles[c.order[len(c.order)-1]]
 }
 
 // Take retrieves the file from the cache. If the file has been evicted, then
@@ -70,9 +52,9 @@ func (c *cache) Take(tok cacheToken) (f file, ok bool) {
 	if !ok {
 		return file{}, false
 	}
-	last := c.last()
 
-	// last takes the found entry's position
+	// the last entry takes the found entry's position
+	last := c.handles[c.order[len(c.order)-1]]
 	last.loc = entry.loc
 	c.order[entry.loc] = last.tok
 	c.handles[last.tok] = last
@@ -103,21 +85,19 @@ func (c *cache) Put(f file) (tok cacheToken, ev file, ok bool) {
 		return entry.tok, ev, false
 	}
 
-	// if we don't have capacity, we reduce one from the entry's location
-	// because it will be assigned to the last slot in the list.
-	entry.loc--
-
 	// if we never have capacity, return that we evicted the file that was put.
 	if cap(c.order) == 0 {
 		return entry.tok, f, true
 	}
 
-	// otherwise, we take the place of and evict the last entry.
-	last := c.last()
+	// if we don't have capacity, we will evict a random entry and this new
+	// entry will take its spot.
+	entry.loc = fastMod(c.pcg.Uint32(), c.cap)
+	current := c.handles[c.order[entry.loc]]
 
-	delete(c.handles, last.tok)
+	delete(c.handles, current.tok)
 	c.handles[entry.tok] = entry
-	c.order[last.loc] = entry.tok
+	c.order[current.loc] = entry.tok
 
-	return entry.tok, last.f, true
+	return entry.tok, current.f, true
 }

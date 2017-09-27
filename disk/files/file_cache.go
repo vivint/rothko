@@ -2,7 +2,10 @@
 
 package files
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 // fileCacheOptions describes the options a file cache can be made with.
 type fileCacheOptions struct {
@@ -51,8 +54,8 @@ func (fch *fileCache) releaseFile(path string, f file) {
 
 // acquireFile opens or creates the file at the path. it is expected to be
 // called exclusive to all others that might be interested in the path.
-func (fch *fileCache) acquireFile(path string, exists bool) (
-	f file, err error) {
+func (fch *fileCache) acquireFile(ctx context.Context, path string,
+	exists bool) (f file, err error) {
 
 	fch.mu.Lock()
 	tok, ok := fch.toks[path]

@@ -30,7 +30,6 @@ type file struct {
 // resize.
 func createFile(ctx context.Context, path string, size, cap int) (
 	f file, err error) {
-	defer mon.Task()(&ctx)(&err)
 
 	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -79,8 +78,6 @@ func createFile(ctx context.Context, path string, size, cap int) (
 
 // openFile returns a file for the given path.
 func openFile(ctx context.Context, path string) (f file, err error) {
-	defer mon.Task()(&ctx)(&err)
-
 	fh, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return f, Error.Wrap(err)
@@ -189,14 +186,10 @@ func (f file) HasRecord(ctx context.Context, n int) (ok bool) {
 
 // FullSync causes the file's contents to be synced to disk.
 func (f file) FullSync(ctx context.Context) (err error) {
-	defer mon.Task()(&ctx)(&err)
-
 	return mmap.Msync(f.data, f.len, mmap.MS_SYNC)
 }
 
 // FullAsync causes the file's contents to be synced to disk asynchronously.
 func (f file) FullAsync(ctx context.Context) (err error) {
-	defer mon.Task()(&ctx)(&err)
-
 	return mmap.Msync(f.data, f.len, mmap.MS_ASYNC)
 }
