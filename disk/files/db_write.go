@@ -117,7 +117,7 @@ func (db *DB) write(ctx context.Context, value queuedValue) (
 	}
 
 	// write the value
-	ok, err = met.write(ctx, value.start, value.end, value.data)
+	ok, err = met.Write(ctx, value.start, value.end, value.data)
 	if err != nil {
 		return false, err
 	}

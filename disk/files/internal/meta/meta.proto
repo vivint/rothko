@@ -19,4 +19,8 @@ message Metadata {
 
 	// points at the first available record.
 	int32 head = 2 [(gogoproto.casttype) = "int"];
+
+	// advisory start and end of the records in the file.
+	int64 start = 3 ;
+	int64 end = 4;
 }

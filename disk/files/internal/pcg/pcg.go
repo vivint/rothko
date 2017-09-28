@@ -31,8 +31,11 @@ func (p *PCG) Uint32() uint32 {
 		p.state = p.state*6364136223846793005 + 1
 	}
 
+	// update the state (LCG step)
 	oldstate := p.state
 	p.state = oldstate*6364136223846793005 + p.inc
+
+	// apply the output permutation to the old state
 	xorshifted := uint32(((oldstate >> 18) ^ oldstate) >> 27)
 	rot := uint32(oldstate >> 59)
 	return xorshifted>>rot | (xorshifted << ((-rot) & 31))

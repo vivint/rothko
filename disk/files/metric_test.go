@@ -44,22 +44,22 @@ func TestMetric(t *testing.T) {
 		defer cleanup()
 
 		// test that a write that is too large cannot pass as the first write
-		written, err := m.write(ctx, 100, 200, make([]byte, 1024*1024))
+		written, err := m.Write(ctx, 100, 200, make([]byte, 1024*1024))
 		assert.Error(t, err)
 		assert.That(t, !written)
 
 		// test that a normal write works
-		written, err = m.write(ctx, 10, 20, make([]byte, 10))
+		written, err = m.Write(ctx, 10, 20, make([]byte, 10))
 		assert.NoError(t, err)
 		assert.That(t, written)
 
 		// test that a chronologically previous write does not work
-		written, err = m.write(ctx, 0, 10, make([]byte, 10))
+		written, err = m.Write(ctx, 0, 10, make([]byte, 10))
 		assert.NoError(t, err)
 		assert.That(t, !written)
 
 		// test that a write that is too large cannot pass after a valid write
-		written, err = m.write(ctx, 100, 200, make([]byte, 1024*1024))
+		written, err = m.Write(ctx, 100, 200, make([]byte, 1024*1024))
 		assert.Error(t, err)
 		assert.That(t, !written)
 	})
@@ -69,16 +69,58 @@ func TestMetric(t *testing.T) {
 		defer cleanup()
 
 		for i := int64(0); i < 1000; i++ {
-			written, err := m.write(ctx, i, i+1, make([]byte, 10))
+			written, err := m.Write(ctx, i, i+1, make([]byte, 10))
 			assert.NoError(t, err)
 			assert.That(t, written)
 
-			first, last, err := m.timeRange(ctx)
+			first, last, err := m.TimeRange(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, last, i+1)
 			// the timestamp of the earliest record will be 10 (the cap) times
 			// the file index minus 1 (since files are 1 based)
 			assert.Equal(t, first, int64(m.first-1)*10)
+		}
+	})
+
+	t.Run("Search", func(t *testing.T) {
+		m, cleanup := newTestMetric(t)
+		defer cleanup()
+
+		for i := int64(0); i < 1000; i++ {
+			written, err := m.Write(ctx, i, i+1, make([]byte, 10))
+			assert.NoError(t, err)
+			assert.That(t, written)
+		}
+
+		// 890 because we can keep up to 110 records as there are 10 per file
+		// and 10 files, and we have 1 file of staging data.
+		for i := int64(-100); i < 890; i++ {
+			num, head, err := m.Search(ctx, i)
+			assert.NoError(t, err)
+			assert.Equal(t, num, 0)
+			assert.Equal(t, head, 0)
+		}
+
+		for i := int64(890); i < 1000; i++ {
+			num, head, err := m.Search(ctx, i)
+			assert.NoError(t, err)
+
+			rec, err := m.readRecord(ctx, num, head)
+			assert.NoError(t, err)
+			assert.That(t, rec.start >= i)
+
+			if head > 0 {
+				rec, err := m.readRecord(ctx, num, head-1)
+				assert.NoError(t, err)
+				assert.That(t, rec.start < i)
+			}
+		}
+
+		for i := int64(1000); i < 1100; i++ {
+			num, head, err := m.Search(ctx, i)
+			assert.NoError(t, err)
+			assert.Equal(t, num, 0)
+			assert.Equal(t, head, 0)
 		}
 	})
 }
@@ -94,7 +136,7 @@ func BenchmarkMetric(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			m.write(ctx, int64(i), int64(i+1), data)
+			m.Write(ctx, int64(i), int64(i+1), data)
 		}
 	})
 
@@ -103,7 +145,7 @@ func BenchmarkMetric(b *testing.B) {
 		defer cleanup()
 
 		for i := int64(0); i < 1000; i++ {
-			written, err := m.write(ctx, i, i+1, make([]byte, 10))
+			written, err := m.Write(ctx, i, i+1, make([]byte, 10))
 			assert.NoError(b, err)
 			assert.That(b, written)
 		}
@@ -112,7 +154,25 @@ func BenchmarkMetric(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			m.timeRange(ctx)
+			m.TimeRange(ctx)
+		}
+	})
+
+	b.Run("Search", func(b *testing.B) {
+		m, cleanup := newTestMetric(b)
+		defer cleanup()
+
+		for i := int64(0); i < 1000; i++ {
+			written, err := m.Write(ctx, i, i+1, make([]byte, 10))
+			assert.NoError(b, err)
+			assert.That(b, written)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			m.Search(ctx, 890+int64(i%110))
 		}
 	})
 }

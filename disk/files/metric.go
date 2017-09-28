@@ -156,11 +156,11 @@ func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 	return file{}, 0, Error.New("unable to acquire last file")
 }
 
-// write stores the data in the metric if there is room and the data is
+// Write stores the data in the metric if there is room and the data is
 // chronologically later than the last data stored. additionally, it cleans
 // any files older than max if it had to allocate a new file. it returns if
 // the data was written. this method is not safe to be called concurrently.
-func (m *metric) write(ctx context.Context, start, end int64, data []byte) (
+func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	ok bool, err error) {
 
 	// acquire the last file and determine where the head pointer is for it.
@@ -239,12 +239,17 @@ func (m *metric) write(ctx context.Context, start, end int64, data []byte) (
 		return false, err
 	}
 
-	// update the metadata to point at the new head
+	// update the metadata to point at the new head, and update the start and
+	// end values. this helps for searching and bounds checking.
 	meta, err := f.Metadata(ctx)
 	if err != nil {
 		return true, err
 	}
 	meta.Head = head
+	meta.End = end
+	if meta.Start == 0 {
+		meta.Start = start
+	}
 
 	err = f.SetMetadata(ctx, meta)
 	if err != nil {
@@ -254,9 +259,9 @@ func (m *metric) write(ctx context.Context, start, end int64, data []byte) (
 	return true, nil
 }
 
-// timeRange returns the start of the first record and the end of the last
+// TimeRange returns the start of the first record and the end of the last
 // record. if there are no records, it returns 0, 0.
-func (m *metric) timeRange(ctx context.Context) (start, end int64, err error) {
+func (m *metric) TimeRange(ctx context.Context) (start, end int64, err error) {
 	// load up the last file
 	last, head, err := m.acquireLast(ctx)
 	if err != nil {
@@ -295,4 +300,156 @@ func (m *metric) timeRange(ctx context.Context) (start, end int64, err error) {
 	}
 
 	return first_rec.start, last_rec.end, nil
+}
+
+// Search returns the file, file number, and head position of the record
+// that is the earliest record that starts greater than or equal to start.
+func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
+	err error) {
+
+	// first do a bisection on which file we believe the record will be in
+	// based on their metadata.
+
+	// startsAfter returns if the file numbered at candidate only contains
+	// records that start after the start time.
+	startsAfter := func(cand int) (ok bool, err error) {
+		path := metricFilenameAt(m.dir, cand)
+		f, err := m.opts.fch.acquireFile(ctx, path, true)
+		if err != nil {
+			return false, err
+		}
+		defer m.opts.fch.releaseFile(path, f)
+
+		rec, err := f.Record(ctx, 0)
+		if err != nil {
+			return false, err
+		}
+
+		return rec.start > start, nil
+	}
+
+	// we add one to last because we want to include the last file as a
+	// possibility.
+	first, last := m.first, m.last+1
+	for first < last {
+		cand := int(uint(first+last) >> 1)
+
+		ok, err := startsAfter(cand)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		// if all of the records start after the start time, we reduce the
+		// upper bound since all records after it presumably contain records
+		// that start after as well.
+		if ok {
+			last = cand
+		} else {
+			first = cand + 1
+		}
+	}
+
+	// first is the smallest file that contains data that is strictly after
+	// the start: this means the previous file must contain it, so we start
+	// in that file. if that file doesn't exist, we do not have that data.
+	first--
+	if first < m.first || first > m.last {
+		return 0, 0, nil
+	}
+
+	// we will do a binary search again inside of the file to find the spot
+	// where it transitions from an earlier start to a later start. if we do
+	// not find that transition point, we know the next file at index 0
+	// contains that transition (but we double check to be sure).
+
+	path := metricFilenameAt(m.dir, first)
+	f, err := m.opts.fch.acquireFile(ctx, path, true)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer m.opts.fch.releaseFile(path, f)
+
+	last_rec, err := lastRecord(ctx, f)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	begin, end := 0, last_rec
+	for begin < end {
+		cand := int(uint(begin+end) >> 1)
+
+		rec, err := f.Record(ctx, cand)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if rec.start >= start {
+			end = cand
+		} else {
+			begin = cand + 1
+		}
+	}
+
+	// if we found a record where it transitions, we're done!
+	if begin < last_rec {
+		return first, begin, nil
+	}
+
+	// if the index is after last record, we know the next file contains the
+	// first record that starts greater than or equal to start. if there is
+	// no file, we don't have a record that is greater than or equal to start.
+
+	first++
+	if first > m.last {
+		return 0, 0, nil
+	}
+
+	path = metricFilenameAt(m.dir, first)
+	f, err = m.opts.fch.acquireFile(ctx, path, true)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer m.opts.fch.releaseFile(path, f)
+
+	// if the next file does not have a record, then there is no record that
+	// starts greater than or equal to start.
+	if !f.HasRecord(ctx, 0) {
+		return 0, 0, nil
+	}
+
+	rec, err := f.Record(ctx, 0)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if rec.start < start {
+		return 0, 0, Error.New("data integrity error")
+	}
+
+	return first, 0, nil
+}
+
+// readRecord reads the n'th record out of the file at index.
+func (m *metric) readRecord(ctx context.Context, index, n int) (
+	rec record, err error) {
+
+	path := metricFilenameAt(m.dir, index)
+	f, err := m.opts.fch.acquireFile(ctx, path, true)
+	if err != nil {
+		return record{}, nil
+	}
+	defer m.opts.fch.releaseFile(path, f)
+
+	return f.Record(ctx, n)
+}
+
+// Read returns all of the writes that have any overlap with start and end. it
+// appends the data to the provided buf and runs the provided callback. the
+// data slice is reused between callback calls, so callers must ensure they
+// do not keep references to the data slice after returning. if the callback
+// returns an error, the iteration is stopped and the error is returned.
+func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
+	cb func(start, end int64, data []byte) error) error {
+
+	panic("not implemented")
 }
