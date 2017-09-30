@@ -303,7 +303,8 @@ func (m *metric) TimeRange(ctx context.Context) (start, end int64, err error) {
 }
 
 // Search returns the file, file number, and head position of the record
-// that is the earliest record that starts greater than or equal to start.
+// that is the latest record that starts less than or equal to start. It
+// returns 0, 0 if there is no record that starts less than start.
 func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	err error) {
 
@@ -383,7 +384,7 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 			return 0, 0, err
 		}
 
-		if rec.start >= start {
+		if rec.start > start {
 			end = cand
 		} else {
 			begin = cand + 1
@@ -391,8 +392,8 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	}
 
 	// if we found a record where it transitions, we're done!
-	if begin < last_rec {
-		return first, begin, nil
+	if begin <= last_rec {
+		return first, begin - 1, nil
 	}
 
 	// if the index is after last record, we know the next file contains the
@@ -436,7 +437,7 @@ func (m *metric) readRecord(ctx context.Context, index, n int) (
 	path := metricFilenameAt(m.dir, index)
 	f, err := m.opts.fch.acquireFile(ctx, path, true)
 	if err != nil {
-		return record{}, nil
+		return record{}, err
 	}
 	defer m.opts.fch.releaseFile(path, f)
 
@@ -451,5 +452,123 @@ func (m *metric) readRecord(ctx context.Context, index, n int) (
 func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 	cb func(start, end int64, data []byte) error) error {
 
-	panic("not implemented")
+	// figure out where we should start reading
+	num, head, err := m.Search(ctx, start)
+	if err != nil {
+		return err
+	}
+
+	// if there is no record less than or equal to start, we should start at
+	// the first record we have.
+	if num == 0 {
+		num = m.first
+		head = 0
+	}
+
+	for {
+		done, err := func() (done bool, err error) {
+			// load up the file at num so that we can start reading records.
+			path := metricFilenameAt(m.dir, num)
+			f, err := m.opts.fch.acquireFile(ctx, path, true)
+			if err != nil {
+				return false, err
+			}
+			defer m.opts.fch.releaseFile(path, f)
+
+			last, err := lastRecord(ctx, f)
+			if err != nil {
+				return false, err
+			}
+
+			// start reading off values
+			for head < last {
+				// we know that data values are fully contained in files: if we
+				// see a start record, we know we can keep reading inside of
+				// this file until the end.
+				//
+				// also, all of the records involved with a value have the same
+				// start and end times in them, so we only need to check the
+				// "starting" record for the condition that we're done.
+
+				rec, err := f.Record(ctx, head)
+				if err != nil {
+					return false, err
+				}
+
+				// if the record ends after the requested end, we no longer
+				// need to check any more values.
+				if rec.end > end {
+					return true, nil
+				}
+
+				// TODO(jeff): we could be opening these files as read only,
+				// but that would complicate the caching semantics. maybe
+				// it's worth it to avoid this copy though.
+				buf = append(buf[:0], rec.data...)
+				head++
+
+				// if we have a complete record, bump the head pointer and
+				// move to the next record.
+				if rec.kind == recordKind_complete {
+					err := cb(rec.start, rec.end, buf)
+					if err != nil {
+						return false, err
+					}
+					continue
+				}
+
+				// if it's not a begin, we have some data integrity error.
+				if rec.kind != recordKind_begin {
+					return false, Error.New("data integrity error")
+				}
+
+				// read records and append them to the buf while we're getting
+				// continues.
+				for {
+					rec, err := f.Record(ctx, head)
+					if err != nil {
+						return false, err
+					}
+
+					buf = append(buf, rec.data...)
+					head++
+
+					if rec.kind == recordKind_continue {
+						continue
+					}
+
+					// if we see anything other than an end at this point, it's
+					// definitely a problem.
+					if rec.kind != recordKind_end {
+						return false, Error.New("data integrity error")
+					}
+
+					// ok we're done with that value, callback and move on to
+					// the next value.
+					err = cb(rec.start, rec.end, buf)
+					if err != nil {
+						return false, err
+					}
+
+					break
+				}
+			}
+
+			// we may have to go to the next file, so we're not done yet.
+			return false, nil
+		}()
+		if err != nil {
+			return err
+		}
+		if done {
+			return nil
+		}
+
+		// go to the next file. if there aren't any more files, we're done.
+		num++
+		if num > m.last {
+			return nil
+		}
+		head = 0
+	}
 }
