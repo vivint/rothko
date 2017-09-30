@@ -17,18 +17,45 @@ type metricOptions struct {
 	max  int
 }
 
+// filenameBuf is a cache around constructing paths, as it is a significant
+// source of allocations.
+type filenameBuf []byte
+
+// metricFilenameAt returns the data file for the index.
+func (fb *filenameBuf) metricFilenameAt(dir string, index int) string {
+	out := []byte(*fb)[:0]
+	if initial := len(dir) + 12; cap(out) < initial {
+		out = make([]byte, 0, initial)
+	}
+
+	out = append(out, dir...)
+	if len(out) > 0 && out[len(out)-1] != '/' {
+		out = append(out, '/')
+	}
+	out = strconv.AppendInt(out, int64(index), 10)
+	out = append(out, ".data"...)
+
+	*fb = filenameBuf(out)
+	return string(out)
+}
+
 // metric abstracts logic around reading and writing data for a metric.
 type metric struct {
 	opts  metricOptions
 	dir   string
 	first int
 	last  int
+
+	// caching around paths because it's a significant source of allocations
+	fb       filenameBuf
+	interned map[int]string // to avoid reallocating paths from filenamebuf
 }
 
 // newMetric constructs a metric for some path. only one metric instance should
 // be in use at a time for a given directory.
 func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
-	// get the base directory
+	// get the base directory. it's probably going overboard reducing
+	// allocations here. hopefully no bugs are ever caused by it :)
 	dir_buf := make([]byte, 0, len(opts.dir)+1+len(opts.name)+5)
 	dir_buf = append(dir_buf, opts.dir...)
 	if len(dir_buf) > 0 && dir_buf[len(dir_buf)-1] != '/' {
@@ -55,6 +82,12 @@ func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
 		return nil, Error.Wrap(err)
 	}
 
+	// interned keeps track of all of the path strings for a given metric. it
+	// is lazily created by filenameAt, but we pre-fill it while walking the
+	// directory.
+	var fb filenameBuf
+	interned := make(map[int]string)
+
 	// compute the first and last metric files for the metric. if first == last
 	// then we know there was at most one file. if last == 0, we know there
 	// are zero files.
@@ -70,6 +103,7 @@ func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
 			continue
 		}
 		iv := int(val)
+		interned[iv] = fb.metricFilenameAt(dir, iv)
 
 		if iv > last {
 			last = iv
@@ -84,7 +118,7 @@ func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
 	// the logic because we can from now on assume that at least one possibly
 	// empty file exists.
 	if !first_set {
-		path := metricFilenameAt(dir, 1)
+		path := fb.metricFilenameAt(dir, 1)
 		f, err := opts.fch.acquireFile(ctx, path, false)
 		if err != nil {
 			return nil, err
@@ -99,20 +133,20 @@ func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
 		dir:   dir,
 		first: first,
 		last:  last,
+
+		fb:       fb,
+		interned: interned,
 	}, nil
 }
 
-// metricFilenameAt returns the data file for the index.
-func metricFilenameAt(dir string, index int) string {
-	// careful about allocations!
-	out := make([]byte, 0, len(dir)+12)
-	out = append(out, dir...)
-	if len(out) > 0 && out[len(out)-1] != '/' {
-		out = append(out, '/')
+// filenameAt returns the filename for the data file at the index.
+func (m *metric) filenameAt(index int) string {
+	if path, ok := m.interned[index]; ok {
+		return path
 	}
-	out = strconv.AppendInt(out, int64(index), 10)
-	out = append(out, ".data"...)
-	return string(out)
+	path := m.fb.metricFilenameAt(m.dir, index)
+	m.interned[index] = path
+	return path
 }
 
 // acquireLast finds the last file available, what it's head position is and
@@ -124,7 +158,7 @@ func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 
 	// while there is a last file
 	for m.last >= m.first {
-		path := metricFilenameAt(m.dir, m.last)
+		path := m.filenameAt(m.last)
 		f, err := m.opts.fch.acquireFile(ctx, path, true)
 		if err != nil {
 			return file{}, 0, err
@@ -168,7 +202,7 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	if err != nil {
 		return false, err
 	}
-	defer m.opts.fch.releaseFile(metricFilenameAt(m.dir, m.last), f)
+	defer m.opts.fch.releaseFile(m.filenameAt(m.last), f)
 
 	// if the last file has a record, ensure monotonicity with it.
 	if f.HasRecord(ctx, head-1) {
@@ -199,7 +233,7 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 		// it from the cache if it is there. bump first once the file is
 		// removed.
 		if m.last-m.first >= m.opts.max && m.opts.max > 0 {
-			first_path := metricFilenameAt(m.dir, m.first)
+			first_path := m.filenameAt(m.first)
 			m.opts.fch.evictFile(first_path)
 			os.Remove(first_path)
 			m.first++
@@ -209,7 +243,7 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 		m.last++
 		head = 0
 
-		path := metricFilenameAt(m.dir, m.last)
+		path := m.filenameAt(m.last)
 		f, err = m.opts.fch.acquireFile(ctx, path, false)
 		if err != nil {
 			return false, err
@@ -267,7 +301,7 @@ func (m *metric) TimeRange(ctx context.Context) (start, end int64, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	defer m.opts.fch.releaseFile(metricFilenameAt(m.dir, m.last), last)
+	defer m.opts.fch.releaseFile(m.filenameAt(m.last), last)
 
 	// if head is 0, then we have no records for this metric
 	if head == 0 {
@@ -283,7 +317,7 @@ func (m *metric) TimeRange(ctx context.Context) (start, end int64, err error) {
 	// load up the first file if it is different than the last file
 	var first file
 	if m.last != m.first {
-		first_path := metricFilenameAt(m.dir, m.first)
+		first_path := m.filenameAt(m.first)
 		first, err = m.opts.fch.acquireFile(ctx, first_path, true)
 		if err != nil {
 			return 0, 0, err
@@ -302,6 +336,26 @@ func (m *metric) TimeRange(ctx context.Context) (start, end int64, err error) {
 	return first_rec.start, last_rec.end, nil
 }
 
+// startsAfter returns if the file numbered at candidate only contains records
+// that start after the start time.
+func (m *metric) startsAfter(ctx context.Context, cand int, start int64) (
+	ok bool, err error) {
+
+	path := m.filenameAt(cand)
+	f, err := m.opts.fch.acquireFile(ctx, path, true)
+	if err != nil {
+		return false, err
+	}
+	defer m.opts.fch.releaseFile(path, f)
+
+	rec, err := f.Record(ctx, 0)
+	if err != nil {
+		return false, err
+	}
+
+	return rec.start > start, nil
+}
+
 // Search returns the file, file number, and head position of the record
 // that is the latest record that starts less than or equal to start. It
 // returns 0, 0 if there is no record that starts less than start.
@@ -309,33 +363,13 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	err error) {
 
 	// first do a bisection on which file we believe the record will be in
-	// based on their metadata.
-
-	// startsAfter returns if the file numbered at candidate only contains
-	// records that start after the start time.
-	startsAfter := func(cand int) (ok bool, err error) {
-		path := metricFilenameAt(m.dir, cand)
-		f, err := m.opts.fch.acquireFile(ctx, path, true)
-		if err != nil {
-			return false, err
-		}
-		defer m.opts.fch.releaseFile(path, f)
-
-		rec, err := f.Record(ctx, 0)
-		if err != nil {
-			return false, err
-		}
-
-		return rec.start > start, nil
-	}
-
-	// we add one to last because we want to include the last file as a
-	// possibility.
+	// based on their metadata. we add one to last because we want to include
+	// the last file as a possibility.
 	first, last := m.first, m.last+1
 	for first < last {
 		cand := int(uint(first+last) >> 1)
 
-		ok, err := startsAfter(cand)
+		ok, err := m.startsAfter(ctx, cand, start)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -363,7 +397,7 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	// not find that transition point, we know the next file at index 0
 	// contains that transition (but we double check to be sure).
 
-	path := metricFilenameAt(m.dir, first)
+	path := m.filenameAt(first)
 	f, err := m.opts.fch.acquireFile(ctx, path, true)
 	if err != nil {
 		return 0, 0, err
@@ -405,7 +439,7 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 		return 0, 0, nil
 	}
 
-	path = metricFilenameAt(m.dir, first)
+	path = m.filenameAt(first)
 	f, err = m.opts.fch.acquireFile(ctx, path, true)
 	if err != nil {
 		return 0, 0, err
@@ -434,7 +468,7 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 func (m *metric) readRecord(ctx context.Context, index, n int) (
 	rec record, err error) {
 
-	path := metricFilenameAt(m.dir, index)
+	path := m.filenameAt(index)
 	f, err := m.opts.fch.acquireFile(ctx, path, true)
 	if err != nil {
 		return record{}, err
@@ -468,7 +502,7 @@ func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 	for {
 		done, err := func() (done bool, err error) {
 			// load up the file at num so that we can start reading records.
-			path := metricFilenameAt(m.dir, num)
+			path := m.filenameAt(num)
 			f, err := m.opts.fch.acquireFile(ctx, path, true)
 			if err != nil {
 				return false, err

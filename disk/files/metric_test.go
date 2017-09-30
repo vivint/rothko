@@ -231,11 +231,13 @@ func BenchmarkMetric(b *testing.B) {
 				assert.That(b, written)
 			}
 
+			buf := make([]byte, buf_size)
+
 			b.ResetTimer()
 			b.ReportAllocs()
 
 			for i := 0; i < b.N; i++ {
-				m.Read(ctx, 0, 10000, nil,
+				m.Read(ctx, 0, 10000, buf,
 					func(start, end int64, data []byte) error {
 						return nil
 					})
