@@ -8,6 +8,7 @@ import (
 
 	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
 	"github.com/spacemonkeygo/rothko/disk/files/internal/mmap"
+	"github.com/spacemonkeygo/rothko/disk/files/internal/sparse"
 )
 
 //
@@ -33,7 +34,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 
 	fh, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return f, Error.Wrap(err)
+		return file{}, Error.Wrap(err)
 	}
 	defer fh.Close()
 
@@ -46,18 +47,18 @@ func createFile(ctx context.Context, path string, size, cap int) (
 		int(int32(size)) != size ||
 		int32(size)*int32(cap)/int32(cap) != int32(size) {
 
-		return f, Error.New("capacity too large")
+		return file{}, Error.New("capacity too large")
 	}
 
 	len := size * (cap + 1)
-	if err := fh.Truncate(int64(len)); err != nil {
-		return f, Error.Wrap(err)
+	if err := sparse.Allocate(int(fh.Fd()), int64(len)); err != nil {
+		return file{}, err
 	}
 
 	data, err := mmap.Mmap(int(fh.Fd()), len,
 		mmap.PROT_READ|mmap.PROT_WRITE, mmap.MAP_SHARED)
 	if err != nil {
-		return f, Error.Wrap(err)
+		return file{}, Error.Wrap(err)
 	}
 
 	err = writeMetadata(slice(data, len)[:size], meta.Metadata{
@@ -65,7 +66,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 		Head:  0,
 	})
 	if err != nil {
-		return f, err
+		return file{}, err
 	}
 
 	return file{
