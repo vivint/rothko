@@ -19,11 +19,11 @@ func newTestMetric(t testing.TB) (m *metric, cleanup func()) {
 	dir, err := ioutil.TempDir("", "metric-")
 	assert.NoError(t, err)
 
-	t.Log("temp dir:", dir)
+	// t.Log("temp dir:", dir)
 
 	opts := metricOptions{
 		fch: newFileCache(fileCacheOptions{
-			Handles: 10,
+			Handles: 100,
 			Size:    1024,
 			Cap:     10,
 		}),
@@ -160,10 +160,34 @@ func TestMetric(t *testing.T) {
 				})
 		}
 
-		t.Run("Small", func(t *testing.T) { test(t, 8) })
-		t.Run("Large", func(t *testing.T) { test(t, 8+4096) })
+		t.Run("Small", func(t *testing.T) { test(t, 512) })
+		t.Run("Large", func(t *testing.T) { test(t, 4096) })
 	})
 
+	t.Run("ReadLast", func(t *testing.T) {
+		test := func(t *testing.T, buf_size int) {
+			m, cleanup := newTestMetric(t)
+			defer cleanup()
+
+			for i := int64(0); i < 1000; i++ {
+				buf := make([]byte, buf_size)
+				binary.BigEndian.PutUint64(buf, uint64(i))
+
+				written, err := m.Write(ctx, i, i+1, buf)
+				assert.NoError(t, err)
+				assert.That(t, written)
+
+				start, end, data, err := m.ReadLast(ctx, nil)
+				assert.NoError(t, err)
+				assert.Equal(t, start, i)
+				assert.Equal(t, end, i+1)
+				assert.That(t, bytes.Equal(data, buf))
+			}
+		}
+
+		t.Run("Small", func(t *testing.T) { test(t, 512) })
+		t.Run("Large", func(t *testing.T) { test(t, 4096) })
+	})
 }
 
 func BenchmarkMetric(b *testing.B) {
@@ -232,9 +256,16 @@ func BenchmarkMetric(b *testing.B) {
 			}
 
 			buf := make([]byte, buf_size)
+			size := 0
+			m.Read(ctx, 0, 10000, buf,
+				func(start, end int64, data []byte) error {
+					size += len(data)
+					return nil
+				})
 
-			b.ResetTimer()
+			b.SetBytes(int64(size))
 			b.ReportAllocs()
+			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
 				m.Read(ctx, 0, 10000, buf,
@@ -244,7 +275,30 @@ func BenchmarkMetric(b *testing.B) {
 			}
 		}
 
-		b.Run("Small", func(b *testing.B) { test(b, 8) })
-		b.Run("Large", func(b *testing.B) { test(b, 8+4096) })
+		b.Run("Small", func(b *testing.B) { test(b, 512) })
+		b.Run("Large", func(b *testing.B) { test(b, 4096) })
+	})
+
+	b.Run("ReadLast", func(b *testing.B) {
+		test := func(b *testing.B, buf_size int) {
+			m, cleanup := newTestMetric(b)
+			defer cleanup()
+
+			buf := make([]byte, buf_size)
+			written, err := m.Write(ctx, 0, 1, buf)
+			assert.NoError(b, err)
+			assert.That(b, written)
+
+			b.SetBytes(int64(buf_size))
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				m.ReadLast(ctx, buf[:0])
+			}
+		}
+
+		b.Run("Small", func(b *testing.B) { test(b, 512) })
+		b.Run("Large", func(b *testing.B) { test(b, 4096) })
 	})
 }

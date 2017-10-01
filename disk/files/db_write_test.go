@@ -20,7 +20,7 @@ func newTestDB(t testing.TB, opts Options) (db *DB, cleanup func()) {
 	dir, err := ioutil.TempDir("", "db-")
 	assert.NoError(t, err)
 
-	t.Log("temp dir:", dir)
+	// t.Log("temp dir:", dir)
 
 	return New(dir, opts), func() {
 		os.RemoveAll(dir)

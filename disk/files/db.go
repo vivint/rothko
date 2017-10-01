@@ -3,6 +3,7 @@
 package files
 
 import (
+	"context"
 	"runtime"
 	"sync"
 	"syscall"
@@ -112,4 +113,14 @@ func New(dir string, opts Options) *DB {
 			Cap:     opts.Cap,
 		}),
 	}
+}
+
+// newMetric constructs a *metric value for the database.
+func (db *DB) newMetric(ctx context.Context, name string) (*metric, error) {
+	return newMetric(ctx, metricOptions{
+		fch:  db.fch,
+		dir:  db.dir,
+		name: name,
+		max:  db.opts.Files,
+	})
 }

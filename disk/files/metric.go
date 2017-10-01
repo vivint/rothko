@@ -606,3 +606,58 @@ func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 		head = 0
 	}
 }
+
+// ReadLast reads the last value out of the metric. buf is used as storage for
+// the data slice if possible.
+func (m *metric) ReadLast(ctx context.Context, buf []byte) (
+	start, end int64, data []byte, err error) {
+
+	path := m.filenameAt(m.last)
+	f, err := m.opts.fch.acquireFile(ctx, path, true)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	defer m.opts.fch.releaseFile(path, f)
+
+	last, err := lastRecord(ctx, f)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	last--
+
+	// we need to walk last backwards until we hit a complete or start of a
+	// record. we could append out the data, but it's probably not worth
+	// doing as the whole page will probably be in memory after this reverse
+	// walk.
+	for {
+		rec, err := f.Record(ctx, last)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+
+		if rec.kind == recordKind_complete || rec.kind == recordKind_begin {
+			break
+		}
+
+		last--
+	}
+
+	// now walk forward again
+	buf = buf[:0]
+	for {
+		rec, err := f.Record(ctx, last)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+
+		// TODO(jeff): we could be opening these files as read only,
+		// but that would complicate the caching semantics. maybe
+		// it's worth it to avoid this copy though.
+		buf = append(buf, rec.data...)
+		last++
+
+		if rec.kind == recordKind_complete || rec.kind == recordKind_end {
+			return rec.start, rec.end, buf, nil
+		}
+	}
+}

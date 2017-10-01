@@ -106,12 +106,7 @@ func (db *DB) write(ctx context.Context, value queuedValue) (
 	defer db.locks.Unlock(value.metric)
 
 	// acquire the datastructure encapsulating metric write logic
-	met, err := newMetric(ctx, metricOptions{
-		fch:  db.fch,
-		dir:  db.dir,
-		name: value.metric,
-		max:  db.opts.Files,
-	})
+	met, err := db.newMetric(ctx, value.metric)
 	if err != nil {
 		return false, err
 	}
