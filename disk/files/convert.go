@@ -51,6 +51,58 @@ func metricToDir(buf []byte, metric string) []byte {
 	return buf
 }
 
+func dirToMetric(buf, dir []byte) ([]byte, error) {
+	last_dot := false
+	all_dots := false
+	for i := 0; i < len(dir); i++ {
+		switch ch := dir[i]; ch {
+		case '/':
+			if !last_dot {
+				buf = append(buf, '.')
+				last_dot = true
+				all_dots = true
+			}
+		case '%':
+			i++
+			if i >= len(dir) || dir[i] != '2' {
+				return nil, Error.New("invalid dir: %q", dir)
+			}
+			i++
+			if i >= len(dir) {
+				return nil, Error.New("invalid dir: %q", dir)
+			}
+			switch ch := dir[i]; ch {
+			case 'e':
+				buf = append(buf, '.')
+				last_dot = true
+			case 'f':
+				buf = append(buf, '/')
+				last_dot = false
+				all_dots = false
+			case '5':
+				buf = append(buf, '%')
+				last_dot = false
+				all_dots = false
+			default:
+				return nil, Error.New("invalid dir: %q", dir)
+			}
+		case '.':
+			return nil, Error.New("invalid dir: %q", dir)
+		default:
+			buf = append(buf, ch)
+			last_dot = false
+			all_dots = false
+		}
+	}
+
+	// in the case we had /%2e%2e%2e we need to strip one dot off the end
+	if all_dots && len(dir) > 0 {
+		buf = buf[:len(buf)-1]
+	}
+
+	return buf, nil
+}
+
 // metricToPath selects the data file number out of the directory identified by
 // the metric with metricToDir.
 func metricToPath(buf []byte, metric string, num int) []byte {

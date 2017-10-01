@@ -7,8 +7,7 @@ import (
 	"os"
 
 	"github.com/spacemonkeygo/rothko/disk/files/internal/meta"
-	"github.com/spacemonkeygo/rothko/disk/files/internal/mmap"
-	"github.com/spacemonkeygo/rothko/disk/files/internal/sparse"
+	"github.com/spacemonkeygo/rothko/disk/files/internal/system"
 )
 
 //
@@ -51,12 +50,12 @@ func createFile(ctx context.Context, path string, size, cap int) (
 	}
 
 	len := size * (cap + 1)
-	if err := sparse.Allocate(int(fh.Fd()), int64(len)); err != nil {
+	if err := system.Allocate(int(fh.Fd()), int64(len)); err != nil {
 		return file{}, err
 	}
 
-	data, err := mmap.Mmap(int(fh.Fd()), len,
-		mmap.PROT_READ|mmap.PROT_WRITE, mmap.MAP_SHARED)
+	data, err := system.Mmap(int(fh.Fd()), len,
+		system.PROT_READ|system.PROT_WRITE, system.MAP_SHARED)
 	if err != nil {
 		return file{}, Error.Wrap(err)
 	}
@@ -95,8 +94,8 @@ func openFile(ctx context.Context, path string) (f file, err error) {
 		return f, Error.New("file is too small to contain metadata")
 	}
 
-	data, err := mmap.Mmap(int(fh.Fd()), len,
-		mmap.PROT_READ|mmap.PROT_WRITE, mmap.MAP_SHARED)
+	data, err := system.Mmap(int(fh.Fd()), len,
+		system.PROT_READ|system.PROT_WRITE, system.MAP_SHARED)
 	if err != nil {
 		return f, Error.Wrap(err)
 	}
@@ -140,7 +139,7 @@ func (f file) Capacity() int { return f.cap }
 // Close releases all the of resources for the file.
 func (f file) Close() error {
 	if f.data != 0 {
-		return mmap.Munmap(f.data, f.len)
+		return system.Munmap(f.data, f.len)
 	}
 	return nil
 }
@@ -187,10 +186,10 @@ func (f file) HasRecord(ctx context.Context, n int) (ok bool) {
 
 // FullSync causes the file's contents to be synced to disk.
 func (f file) FullSync(ctx context.Context) (err error) {
-	return mmap.Msync(f.data, f.len, mmap.MS_SYNC)
+	return system.Msync(f.data, f.len, system.MS_SYNC)
 }
 
 // FullAsync causes the file's contents to be synced to disk asynchronously.
 func (f file) FullAsync(ctx context.Context) (err error) {
-	return mmap.Msync(f.data, f.len, mmap.MS_ASYNC)
+	return system.Msync(f.data, f.len, system.MS_ASYNC)
 }

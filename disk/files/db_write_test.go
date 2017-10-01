@@ -5,27 +5,11 @@ package files
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sync"
 	"testing"
 
 	"github.com/spacemonkeygo/rothko/internal/assert"
 )
-
-// newTestDB constructs a temporary db.
-func newTestDB(t testing.TB, opts Options) (db *DB, cleanup func()) {
-	t.Helper()
-
-	dir, err := ioutil.TempDir("", "db-")
-	assert.NoError(t, err)
-
-	// t.Log("temp dir:", dir)
-
-	return New(dir, opts), func() {
-		os.RemoveAll(dir)
-	}
-}
 
 func TestDBWrite(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
@@ -89,4 +73,6 @@ func BenchmarkDBWrite(b *testing.B) {
 			i++
 		}
 	})
+
+	b.StopTimer()
 }

@@ -46,8 +46,12 @@ type Options struct {
 	Handles int
 
 	// Workers controls the number of parallel workers draining queued values
-	// into files. If zero, the value of GOMAXPROCS at the start of the call
-	// to New is used.
+	// into files. If zero, one less than GOMAXPROCS worker is used.
+	//
+	// The number of workers should be less than GOMAXPROCS, because each
+	// worker deals with memory mapped files. The go runtime will not be able
+	// to schedule around goroutines blocked on page faults, which could cause
+	// goroutines to starve.
 	Workers int
 }
 
@@ -65,6 +69,10 @@ type DB struct {
 
 	// file handle cache for metrics
 	fch *fileCache
+
+	// cache of metric names
+	names_mu sync.Mutex
+	names    map[string]struct{}
 }
 
 // queuedValue represents some data queued to be written to disk.
@@ -81,7 +89,12 @@ type queuedValue struct {
 func New(dir string, opts Options) *DB {
 	// set up the number of workers
 	if opts.Workers == 0 {
-		opts.Workers = runtime.GOMAXPROCS(-1)
+		opts.Workers = runtime.GOMAXPROCS(-1) - 1
+
+		// in the worst case, run one worker anyway
+		if opts.Workers <= 0 {
+			opts.Workers = 1
+		}
 	}
 
 	// set up the number of handles
@@ -112,6 +125,8 @@ func New(dir string, opts Options) *DB {
 			Size:    opts.Size,
 			Cap:     opts.Cap,
 		}),
+
+		names: make(map[string]struct{}),
 	}
 }
 
@@ -123,4 +138,23 @@ func (db *DB) newMetric(ctx context.Context, name string) (*metric, error) {
 		name: name,
 		max:  db.opts.Files,
 	})
+}
+
+// Run will read values from the Queue and persist them to disk. It returns
+// when the context is done.
+func (db *DB) Run(ctx context.Context) (err error) {
+	var wg sync.WaitGroup
+
+	wg.Add(db.opts.Workers)
+	for i := 0; i < db.opts.Workers; i++ {
+		go func() {
+			db.worker(ctx)
+			wg.Done()
+		}()
+	}
+
+	// wait for the workers who will exit when the context is done.
+	wg.Wait()
+
+	return nil
 }

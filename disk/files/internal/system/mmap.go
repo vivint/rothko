@@ -1,6 +1,6 @@
 // Copyright (C) 2017. See AUTHORS.
 
-package mmap
+package system
 
 import "syscall"
 

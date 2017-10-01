@@ -4,7 +4,6 @@ package files
 
 import (
 	"context"
-	"sync"
 )
 
 // Queue adds the data for the metric and the given start and end times. If
@@ -45,25 +44,6 @@ func (db *DB) QueueCB(ctx context.Context, metric string, start int64,
 	} else {
 		db.queue <- value
 	}
-
-	return nil
-}
-
-// Run will read values from the Queue and persist them to disk. It returns
-// when the context is done.
-func (db *DB) Run(ctx context.Context) (err error) {
-	var wg sync.WaitGroup
-
-	wg.Add(db.opts.Workers)
-	for i := 0; i < db.opts.Workers; i++ {
-		go func() {
-			db.worker(ctx)
-			wg.Done()
-		}()
-	}
-
-	// wait for the workers who will exit when the context is done.
-	wg.Wait()
 
 	return nil
 }
