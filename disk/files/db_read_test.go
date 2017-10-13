@@ -25,9 +25,6 @@ func TestDBRead(t *testing.T) {
 
 		expected := testPopulateDB(t, db, 100)
 
-		// populate the metrics explicitly to avoid any background adding
-		assert.NoError(t, db.PopulateMetrics(ctx))
-
 		names := make(map[string]struct{})
 		err := db.Metrics(ctx, func(name string) (err error) {
 			names[name] = struct{}{}

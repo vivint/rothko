@@ -34,7 +34,7 @@ func testPopulateDB(t testing.TB, db *DB, num int) (
 		e error
 	}
 
-	ch := make(chan res)
+	ch := make(chan res, num)
 	sendRes := func(ok bool, err error) { ch <- res{ok, err} }
 	metrics = make(map[string]struct{}, num)
 
@@ -52,6 +52,8 @@ func testPopulateDB(t testing.TB, db *DB, num int) (
 		metrics[name] = struct{}{}
 
 		db.QueueCB(ctx, name, 0, 1, make([]byte, 10), sendRes)
+	}
+	for i := 0; i < num; i++ {
 		r := <-ch
 		assert.NoError(t, r.e)
 		assert.That(t, r.b)

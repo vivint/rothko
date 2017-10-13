@@ -97,5 +97,11 @@ func (db *DB) write(ctx context.Context, value queuedValue) (
 		return false, err
 	}
 
+	if ok {
+		db.names_mu.Lock()
+		db.names[value.metric] = struct{}{}
+		db.names_mu.Unlock()
+	}
+
 	return ok, nil
 }
