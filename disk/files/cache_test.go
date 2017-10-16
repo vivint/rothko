@@ -61,6 +61,7 @@ func BenchmarkCache(b *testing.B) {
 		f := newTestCacheFile(1)
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {

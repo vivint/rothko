@@ -198,13 +198,12 @@ func BenchmarkMetric(b *testing.B) {
 		data := make([]byte, 100)
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			m.Write(ctx, int64(i), int64(i+1), data)
 		}
-
-		b.StopTimer()
 	})
 
 	b.Run("TimeRange", func(b *testing.B) {
@@ -218,13 +217,12 @@ func BenchmarkMetric(b *testing.B) {
 		}
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			m.TimeRange(ctx)
 		}
-
-		b.StopTimer()
 	})
 
 	b.Run("Search", func(b *testing.B) {
@@ -238,13 +236,12 @@ func BenchmarkMetric(b *testing.B) {
 		}
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			m.Search(ctx, 890+int64(i%110))
 		}
-
-		b.StopTimer()
 	})
 
 	b.Run("Read", func(b *testing.B) {
@@ -271,6 +268,7 @@ func BenchmarkMetric(b *testing.B) {
 
 			b.SetBytes(int64(size))
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
@@ -279,8 +277,6 @@ func BenchmarkMetric(b *testing.B) {
 						return nil
 					})
 			}
-
-			b.StopTimer()
 		}
 
 		b.Run("Small", func(b *testing.B) { test(b, 512) })
@@ -299,6 +295,7 @@ func BenchmarkMetric(b *testing.B) {
 
 			b.SetBytes(int64(buf_size))
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {

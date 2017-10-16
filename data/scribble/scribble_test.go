@@ -52,8 +52,10 @@ func BenchmarkScribble(b *testing.B) {
 		metrics[i] = fmt.Sprintf("metric%d", i)
 	}
 
-	b.ResetTimer()
 	b.ReportAllocs()
+	defer b.StopTimer()
+	b.ResetTimer()
+
 	b.RunParallel(func(pb *testing.PB) {
 		skip := rand.Intn(16)
 		for i := 0; pb.Next(); i += skip {

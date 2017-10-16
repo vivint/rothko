@@ -78,6 +78,7 @@ func BenchmarkConvert(b *testing.B) {
 		var buf []byte
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -92,6 +93,7 @@ func BenchmarkConvert(b *testing.B) {
 		dir := []byte("some/stinking/metric")
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -105,6 +107,7 @@ func BenchmarkConvert(b *testing.B) {
 		var buf []byte
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {

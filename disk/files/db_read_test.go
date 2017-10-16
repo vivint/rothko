@@ -55,6 +55,7 @@ func BenchmarkDBRead(b *testing.B) {
 		assert.NoError(b, db.PopulateMetrics(ctx))
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
@@ -62,8 +63,6 @@ func BenchmarkDBRead(b *testing.B) {
 				return nil
 			})
 		}
-
-		b.StopTimer()
 	})
 
 	b.Run("PopulateMetrics", func(b *testing.B) {
@@ -82,12 +81,11 @@ func BenchmarkDBRead(b *testing.B) {
 		testPopulateDB(b, db, 1000)
 
 		b.ReportAllocs()
+		defer b.StopTimer()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			assert.NoError(b, db.PopulateMetrics(ctx))
 		}
-
-		b.StopTimer()
 	})
 }

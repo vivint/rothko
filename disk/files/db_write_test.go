@@ -55,11 +55,12 @@ func BenchmarkDBWrite(b *testing.B) {
 	defer cleanup()
 	go db.Run(ctx)
 
-	b.ReportAllocs()
-	b.ResetTimer()
-
 	var mu sync.Mutex
 	var ctr int
+
+	b.ReportAllocs()
+	defer b.StopTimer()
+	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
 		mu.Lock()
@@ -73,6 +74,4 @@ func BenchmarkDBWrite(b *testing.B) {
 			i++
 		}
 	})
-
-	b.StopTimer()
 }

@@ -127,6 +127,7 @@ func BenchmarkFile(b *testing.B) {
 			defer cleanup()
 
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
@@ -141,6 +142,7 @@ func BenchmarkFile(b *testing.B) {
 			assert.NoError(b, f.SetMetadata(ctx, m))
 
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
@@ -155,6 +157,7 @@ func BenchmarkFile(b *testing.B) {
 			defer cleanup()
 
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
@@ -169,6 +172,7 @@ func BenchmarkFile(b *testing.B) {
 			assert.NoError(b, f.SetRecord(ctx, 3, rec))
 
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
@@ -183,6 +187,7 @@ func BenchmarkFile(b *testing.B) {
 			assert.NoError(b, f.SetRecord(ctx, 3, rec))
 
 			b.ReportAllocs()
+			defer b.StopTimer()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {

@@ -35,8 +35,10 @@ func BenchmarkAgg(b *testing.B) {
 	params := tdigest.Params{Compression: 10}
 	a := newAgg(params, time.Now())
 
-	b.ResetTimer()
 	b.ReportAllocs()
+	defer b.StopTimer()
+	b.ResetTimer()
+
 	b.RunParallel(func(pb *testing.PB) {
 		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 		for pb.Next() {

@@ -7,33 +7,37 @@ type PCG struct {
 	inc   uint64
 }
 
+// mul is the multiplier of the LCG step
+const mul = 6364136223846793005
+
 func New(state, inc uint64) PCG {
-	p := PCG{
-		state: 0,
-		inc:   inc<<1 | 1,
+	// this code is equiv to initializing a PCG with a 0 state and the updated
+	// inc and running
+	//
+	//    p.Uint32()
+	//    p.state += state
+	//    p.Uint32()
+	//
+	// to get the generator started
+
+	inc = inc<<1 | 1
+	return PCG{
+		state: (inc+state)*mul + inc,
+		inc:   inc,
 	}
-
-	p.Uint32()
-	p.state += state
-	p.Uint32()
-
-	return p
 }
 
 func (p *PCG) Uint32() uint32 {
-	// we unroll the seeding steps in New above, careful to avoid recursive
-	// calls so that the method may be inlined. this branch will be predicted
-	// to be false in most cases and so is essentially free. this causes the
-	// zero value of a PCG to be the same as New(0, 0).
+	// this branch will be predicted to be false in most cases and so is
+	// essentially free. this causes the zero value of a PCG to be the same as
+	// New(0, 0).
 	if p.inc == 0 {
-		p.inc = 1
-		p.state = p.state*6364136223846793005 + 1
-		p.state = p.state*6364136223846793005 + 1
+		*p = New(0, 0)
 	}
 
 	// update the state (LCG step)
 	oldstate := p.state
-	p.state = oldstate*6364136223846793005 + p.inc
+	p.state = oldstate*mul + p.inc
 
 	// apply the output permutation to the old state
 	xorshifted := uint32(((oldstate >> 18) ^ oldstate) >> 27)
