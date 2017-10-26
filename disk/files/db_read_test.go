@@ -65,6 +65,37 @@ func BenchmarkDBRead(b *testing.B) {
 		}
 	})
 
+	b.Run("MetricsContended", func(b *testing.B) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		db, cleanup := newTestDB(b, Options{
+			Size:  1024,
+			Cap:   10,
+			Files: 10,
+			Drop:  false,
+		})
+		defer cleanup()
+		go db.Run(ctx)
+
+		testPopulateDB(b, db, 100)
+
+		// populate the metrics explicitly to avoid any background adding
+		assert.NoError(b, db.PopulateMetrics(ctx))
+
+		b.ReportAllocs()
+		defer b.StopTimer()
+		b.ResetTimer()
+
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				db.Metrics(ctx, func(name string) (err error) {
+					return nil
+				})
+			}
+		})
+	})
+
 	b.Run("PopulateMetrics", func(b *testing.B) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()

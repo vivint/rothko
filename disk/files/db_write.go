@@ -50,7 +50,7 @@ func (db *DB) QueueCB(ctx context.Context, metric string, start int64,
 
 // worker takes data from the queue and writes it into the appropriate metric
 // file in the appropriate location.
-func (db *DB) worker(ctx context.Context) {
+func (db *DB) worker(ctx context.Context, num int) {
 	done := ctx.Done()
 
 	// NOTE(jeff): because there are multiple workers and because we do not
@@ -67,7 +67,7 @@ func (db *DB) worker(ctx context.Context) {
 			return
 
 		case value := <-db.queue:
-			ok, err := db.write(ctx, value)
+			ok, err := db.write(ctx, num, value)
 			db.bufs.Put(value.data)
 			if value.done != nil {
 				value.done(ok, err)
@@ -78,7 +78,7 @@ func (db *DB) worker(ctx context.Context) {
 
 // write puts the queued value into the appropriate file. it can be called
 // concurrently with other values, even when they reference the same metric.
-func (db *DB) write(ctx context.Context, value queuedValue) (
+func (db *DB) write(ctx context.Context, num int, value queuedValue) (
 	ok bool, err error) {
 
 	// lock the metric
@@ -97,10 +97,24 @@ func (db *DB) write(ctx context.Context, value queuedValue) (
 		return false, err
 	}
 
+	// update the names map for this worker if not already present in the
+	// central set of names. we avoid contention as much as possible through
+	// a readonly names set and per worker mutexes and names.
 	if ok {
-		db.names_mu.Lock()
-		db.names[value.metric] = struct{}{}
-		db.names_mu.Unlock()
+		should_store := false
+
+		names, ok := db.names.Load().(map[string]struct{})
+		if !ok {
+			should_store = true
+		} else if _, ok := names[value.metric]; !ok {
+			should_store = true
+		}
+
+		if should_store {
+			db.names_w_mu[num].Lock()
+			db.names_w[num][value.metric] = struct{}{}
+			db.names_w_mu[num].Unlock()
+		}
 	}
 
 	return ok, nil

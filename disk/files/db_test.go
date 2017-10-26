@@ -65,7 +65,7 @@ func testPopulateDB(t testing.TB, db *DB, num int) (
 var metricRNG pcg.PCG
 
 func randomMetric() string {
-	components := fastMod(metricRNG.Uint32(), 10) + 1
+	components := fastMod(metricRNG.Uint32(), 10)
 	parts := make([]string, 0, components)
 	for i := 0; i < components; i++ {
 		const letters = "" +

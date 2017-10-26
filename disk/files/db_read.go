@@ -52,15 +52,63 @@ func (db *DB) QueryLatest(ctx context.Context, metric string, buf []byte) (
 func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 	err error) {
 
-	// do the copy as fast as possible to avoid contention on this mutex.
-	db.names_mu.Lock()
-	names := make([]string, 0, len(db.names))
-	for name := range db.names {
-		names = append(names, name)
+	// load up the readonly names value
+	names, ok := db.names.Load().(map[string]struct{})
+	if !ok {
+		names = make(map[string]struct{})
 	}
-	db.names_mu.Unlock()
 
-	for _, name := range names {
+	// merge the worker sets in if we have a flag for it
+	copied := false
+	locked := false
+	for i, names_w := range db.names_w {
+		db.names_w_mu[i].Lock()
+
+		// skip if we don't need to merge it in
+		if len(names_w) == 0 {
+			db.names_w_mu[i].Unlock()
+			continue
+		}
+
+		// lock the populating mutex if required
+		if !locked {
+			db.names_mu.Lock()
+			locked = true
+		}
+
+		// lazily copy the names map to ensure it is readonly
+		// we reload the names map here after we have the mutex in case
+		// some concurrent Metrics call has updated the atomic.Value
+		if !copied {
+			new_names, ok := db.names.Load().(map[string]struct{})
+			if ok && len(new_names) > 0 {
+				names = copyStringSet(new_names)
+			}
+			copied = true
+		}
+
+		// merge it in
+		for name := range names_w {
+			names[name] = struct{}{}
+		}
+
+		// clear out the map
+		db.names_w[i] = make(map[string]struct{})
+		db.names_w_mu[i].Unlock()
+	}
+
+	// if we copied, we need to store the value now
+	if copied {
+		db.names.Store(names)
+	}
+
+	// if we locked, we can unlock now as we're done populating and storing
+	if locked {
+		db.names_mu.Unlock()
+	}
+
+	// yay do callbacks
+	for name := range names {
 		if err := cb(name); err != nil {
 			return err
 		}
@@ -76,8 +124,9 @@ func (db *DB) PopulateMetrics(ctx context.Context) (err error) {
 		return err
 	}
 
+	// all stores to the names map have to be done under the names_mu mutex.
 	db.names_mu.Lock()
-	db.names = dp.out
+	db.names.Store(dp.out)
 	db.names_mu.Unlock()
 
 	return nil

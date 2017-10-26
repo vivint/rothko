@@ -6,6 +6,7 @@ import (
 	"context"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"syscall"
 )
 
@@ -70,9 +71,15 @@ type DB struct {
 	// file handle cache for metrics
 	fch *fileCache
 
-	// cache of metric names
+	// cache of metric names. one per worker with unions on reads
+	names_w_mu []sync.Mutex
+	names_w    []map[string]struct{}
+
+	// metric names cache for easy atomic swapping. is a map[string]struct{}
+	// and it is readonly. the names_mu is held during population of the
+	// value.
 	names_mu sync.Mutex
-	names    map[string]struct{}
+	names    atomic.Value
 }
 
 // queuedValue represents some data queued to be written to disk.
@@ -110,6 +117,11 @@ func New(dir string, opts Options) *DB {
 		opts.Handles = 0
 	}
 
+	names_w := make([]map[string]struct{}, opts.Workers)
+	for i := range names_w {
+		names_w[i] = make(map[string]struct{})
+	}
+
 	return &DB{
 		dir:  dir,
 		opts: opts,
@@ -126,7 +138,8 @@ func New(dir string, opts Options) *DB {
 			Cap:     opts.Cap,
 		}),
 
-		names: make(map[string]struct{}),
+		names_w_mu: make([]sync.Mutex, opts.Workers),
+		names_w:    names_w,
 	}
 }
 
@@ -147,10 +160,10 @@ func (db *DB) Run(ctx context.Context) (err error) {
 
 	wg.Add(db.opts.Workers)
 	for i := 0; i < db.opts.Workers; i++ {
-		go func() {
-			db.worker(ctx)
+		go func(i int) {
+			db.worker(ctx, i)
 			wg.Done()
-		}()
+		}(i)
 	}
 
 	// wait for the workers who will exit when the context is done.

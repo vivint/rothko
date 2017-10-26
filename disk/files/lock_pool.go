@@ -4,6 +4,9 @@ package files
 
 import "sync"
 
+// TODO(jeff): we may want some caching around lockPoolState to avoid
+// allocations on frequently accessed keys.
+
 type lockPoolState struct {
 	mu  sync.Mutex
 	ref int
