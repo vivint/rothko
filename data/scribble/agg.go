@@ -17,10 +17,9 @@ type agg struct {
 	dist   data.Dist
 }
 
-// newAgg returns a value to avoid allocations if necessary. since it contains
-// a mutex, it should not be copied.
-func newAgg(params data.DistParams, now time.Time) agg {
-	return agg{
+// newAgg returns an agg that can observe values and write a record.
+func newAgg(params data.DistParams, now time.Time) *agg {
+	return &agg{
 		params: params,
 		rec: data.Record{
 			StartTime: now.In(time.UTC).UnixNano(),
@@ -70,20 +69,17 @@ func (a *agg) Observe(val float64, id []byte) {
 	}
 }
 
-// Finish returns the aggregated record.
-//
-// TODO(jeff): maybe rethink this api in a way that allows us to pass a buffer
-// to the Marshal call. This requires coordination with the Scribbler. I have
-// a feeling this might show up on memory allocation profiles, but finishing
-// should be relatively rare.
-func (a *agg) Finish(now time.Time) data.Record {
+// Finish returns the aggregated record, using the buf to marshal the data
+// and returning the buf. Mutating the returned buf invalidates the record.
+func (a *agg) Finish(buf []byte, now time.Time) ([]byte, data.Record) {
 	a.mu.Lock()
 	out := a.rec
 	a.mu.Unlock()
 
 	out.EndTime = now.In(time.UTC).UnixNano()
 	out.DistributionKind = a.dist.Kind()
-	out.Distribution = a.dist.Marshal(nil)
+	buf = a.dist.Marshal(buf[:0])
+	out.Distribution = buf
 
-	return out
+	return buf, out
 }

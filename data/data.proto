@@ -14,7 +14,7 @@ option (gogoproto.goproto_getters_all) = false;
 
 enum DistributionKind {
 	Random = 0; // gopkg.in/spacemonkeygo/random.v1
-	TDigest = 1; // github.com/zeebo/go-tdigest (fenwick branch for speeds)
+	TDigest = 1; // github.com/zeebo/tdigest
 }
 
 // Record is an observed distribution over some time period with some

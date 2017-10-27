@@ -10,6 +10,7 @@ import (
 
 	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
 	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/spacemonkeygo/rothko/internal/pcg"
 )
 
 func TestAgg(t *testing.T) {
@@ -20,7 +21,7 @@ func TestAgg(t *testing.T) {
 		a.Observe(float64(i), []byte(fmt.Sprint(i)))
 	}
 
-	rec := a.Finish(time.Now())
+	_, rec := a.Finish(nil, time.Now())
 
 	assert.Equal(t, rec.Min, float64(0))
 	assert.Equal(t, string(rec.MinId), "0")
@@ -40,9 +41,9 @@ func BenchmarkAgg(b *testing.B) {
 	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
-		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		var rng pcg.PCG
 		for pb.Next() {
-			a.Observe(float64(rng.Int63()), []byte("some id"))
+			a.Observe(float64(rng.Uint32()), []byte("some id"))
 		}
 	})
 }

@@ -14,21 +14,22 @@ import (
 // page keeps track of a mapping of metric name strings to *agg with a time
 // that all of the aggs will start at.
 type page struct {
-	m   *sync.Map
+	mu  sync.Mutex
+	m   sync.Map // map[string]*agg
 	now time.Time
 }
 
 // newPage creates a new page for the scribbler.
-func newPage() page {
-	return page{
-		m:   new(sync.Map),
+func newPage() *page {
+	return &page{
 		now: time.Now(),
 	}
 }
 
 // Scribbler keeps track of the distributions of a collection of metrics.
 type Scribbler struct {
-	val atomic.Value // contains a page
+	val_mu sync.Mutex   // mutex around creating the page
+	val    atomic.Value // contains a *page
 
 	params data.DistParams
 }
@@ -47,22 +48,44 @@ func NewScribbler(params data.DistParams) *Scribbler {
 func (s *Scribbler) Scribble(ctx context.Context, metric string,
 	value float64, id []byte) {
 
-	// warning: there is a race here where values can be lost. two people can
-	// create the page and one will use the wrong one.
 	pi := s.val.Load()
 	if pi == nil {
-		pi = newPage()
-		s.val.Store(pi)
-	}
-	p := pi.(page)
+		// if we don't have a page, we need to acquire the mutex and allocate
+		// one. after acquiring the mutex, we may have lost a race so we need
+		// to double check that we still don't have a page.
 
-	// warning: there is a race here where values can be lost. two people can
-	// create the agg and one will use the wrong one.
+		s.val_mu.Lock()
+		pi = s.val.Load()
+		if pi == nil {
+			pi = newPage()
+			s.val.Store(pi)
+		}
+		s.val_mu.Unlock()
+	}
+	p := pi.(*page)
+
+	// TODO(jeff): there is a race here where we can lose writes: if someone
+	// is calling Capture and that finishes and sets a new page, a call to
+	// Scribble may use an agg on a page that will no longer be Captured.
+	// Callers may work around this by ensuring no concurrent calls to Scribble
+	// and Capture, but the data loss is probably acceptable.
+
 	ai, ok := p.m.Load(metric)
 	if !ok {
-		a := newAgg(s.params, p.now)
-		ai = &a
-		p.m.Store(metric, ai)
+		// if we don't have the agg, we need to acquire the page mutex and
+		// allocate one. after acquiring the mutex, we may have lost a race
+		// so we need to double check that we still don't have a page.
+		//
+		// TODO(jeff): we can have sharded by metric name mutexes for creating
+		// these aggs.
+
+		p.mu.Lock()
+		ai, ok = p.m.Load(metric)
+		if !ok {
+			ai = newAgg(s.params, p.now)
+			p.m.Store(metric, ai)
+		}
+		p.mu.Unlock()
 	}
 	a := ai.(*agg)
 
@@ -72,22 +95,76 @@ func (s *Scribbler) Scribble(ctx context.Context, metric string,
 // Capture clears out current set of records for future Scribble calls and
 // calls the provided function with every record.
 func (s *Scribbler) Capture(ctx context.Context,
-	fn func(metric string, rec data.Record) bool) {
+	fn func(metric string, rec data.Record)) {
 
-	// warning: there is a race here where values can be lost. a scribbler can
-	// have a reference to this map instead of the new map we will be putting
-	// into the atomic value. they could then write to that map after the
-	// Range call.
+	// call CaptureUnsafe with nil buffers to cause allocations
+	s.CaptureUnsafe(ctx, nil, func(metric string, rec data.Record) []byte {
+		fn(metric, rec)
+		return nil
+	})
+}
+
+// Iterate calls the provided function with every record.
+func (s *Scribbler) Iterate(ctx context.Context,
+	fn func(metric string, rec data.Record)) {
+
+	// call IterateUnsafe with nil buffers to cause allocations
+	s.IterateUnsafe(ctx, nil, func(metric string, rec data.Record) []byte {
+		fn(metric, rec)
+		return nil
+	})
+}
+
+// CaptureUnsafe clears out current set of records for future Scribble calls
+// and calls the provided function with every record. The function returns the
+// next buffer for the Captrue call to use. The record will be invalidated if
+// any passed in buffer for it is modified.
+func (s *Scribbler) CaptureUnsafe(ctx context.Context, buf []byte,
+	fn func(metric string, rec data.Record) []byte) {
+
+	// acquire the mutex to read and swap out the current page
+	s.val_mu.Lock()
+
+	// if we don't have a page yet, we can just be done
+	pi := s.val.Load()
+	if pi == nil {
+		s.val_mu.Unlock()
+		return
+	}
+
+	// swap it out and unlock
+	pn := newPage()
+	s.val.Store(pn)
+	s.val_mu.Unlock()
+
+	p := pi.(*page)
+
+	// iterate it
+	p.m.Range(func(key, ai interface{}) (ok bool) {
+		var rec data.Record
+		buf, rec = ai.(*agg).Finish(buf[:0], pn.now)
+		buf = fn(key.(string), rec)
+		return true
+	})
+}
+
+// Iterate calls the provided function with every record.
+func (s *Scribbler) IterateUnsafe(ctx context.Context, buf []byte,
+	fn func(metric string, rec data.Record) []byte) {
+
+	// if we don't have a page yet, we can just be done
 	pi := s.val.Load()
 	if pi == nil {
 		return
 	}
+	p := pi.(*page)
+	now := time.Now()
 
-	pn := newPage()
-	s.val.Store(pn)
-
-	p := pi.(page)
-	p.m.Range(func(key, ai interface{}) bool {
-		return fn(key.(string), ai.(*agg).Finish(pn.now))
+	// iterate it
+	p.m.Range(func(key, ai interface{}) (ok bool) {
+		var rec data.Record
+		buf, rec = ai.(*agg).Finish(buf[:0], now)
+		buf = fn(key.(string), rec)
+		return true
 	})
 }
