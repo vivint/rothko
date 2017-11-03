@@ -362,6 +362,11 @@ func (m *metric) startsAfter(ctx context.Context, cand int, start int64) (
 func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	err error) {
 
+	// TODO(jeff): consider doing a variant of newton's method where we read
+	// the first two records, determine a derivative, and search at where we
+	// expect it to be. this might work out much better than binary search for
+	// mostly homogenous data (aka linear).
+
 	// first do a bisection on which file we believe the record will be in
 	// based on their metadata. we add one to last because we want to include
 	// the last file as a possibility.

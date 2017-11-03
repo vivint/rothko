@@ -4,23 +4,33 @@ package draw
 
 import (
 	"context"
-	"math"
-	"math/rand"
-	"testing"
-
-	"github.com/spacemonkeygo/rothko/internal/assert"
+	"image"
 )
 
 var ctx = context.Background()
 
-func TestFastFloor(t *testing.T) {
-	// this test passes for higher values, but we should never have more than
-	// 1000 colors.
-	for i := 0; i < 1000; i++ {
-		for j := 0; j < 100; j++ {
-			f := rand.Float64()
-			v := float64(i) + f
-			assert.Equal(t, int(math.Floor(v)), fastFloor(v))
-		}
+func (m *RGB) AsImage() *image.RGBA {
+	return &image.RGBA{
+		Pix:    m.Pix,
+		Stride: m.Stride,
+		Rect:   image.Rect(0, 0, m.Width, m.Height),
 	}
+}
+
+func testMakeColumns(cols, height, col_width int,
+	cb func(x, y int) float64) (out []Column) {
+
+	for i := 0; i < cols; i++ {
+		var data []float64
+		for j := 0; j < height; j++ {
+			data = append(data, cb(i, j))
+		}
+		out = append(out, Column{
+			X:    i * col_width,
+			W:    col_width,
+			Data: data,
+		})
+	}
+
+	return out
 }

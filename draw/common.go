@@ -2,26 +2,53 @@
 
 package draw
 
-import (
-	"image"
-	"image/color"
-	"math"
-)
+//
+// Canvas is the type of things that can be drawn onto.
+//
 
-// fastSet elides most bounds checks, assumes the rectangle for the image is
-// at 0, 0 and ignores the alpha component.
-func fastSet(m *image.RGBA, x, y int, c color.RGBA) {
-	i := y*m.Stride + x*4
-	_ = m.Pix[i+3]
-	m.Pix[i+0] = c.R
-	m.Pix[i+1] = c.G
-	m.Pix[i+2] = c.B
-	m.Pix[i+3] = 255
+type Canvas interface {
+	Set(x, y int, c Color)
+	Size() (w, h int)
 }
 
-func fastFloor(f float64) int {
-	y := math.Float64bits(f)
-	e := 0x3ff + 63 - (y >> 52)
-	m := 1<<63 | y<<11
-	return int(m >> e)
+//
+// Color is a simple 8 bits per channel color.
+//
+
+type Color struct {
+	R, G, B uint8
+}
+
+//
+// RGB is a byte compatabile implementation of image.RGBA, except with much
+// less supporting code, and no alpha channel.
+//
+
+type RGB struct {
+	Pix    []uint8
+	Stride int
+	Width  int
+	Height int
+}
+
+func NewRGB(w, h int) *RGB {
+	return &RGB{
+		Pix:    make([]uint8, 4*w*h),
+		Stride: 4 * w,
+		Width:  w,
+		Height: h,
+	}
+}
+
+func (r *RGB) Size() (w, h int) {
+	return r.Width, r.Height
+}
+
+func (r *RGB) Set(x, y int, c Color) {
+	i := y*r.Stride + x*4
+	pix := r.Pix[i : i+4]
+	pix[3] = 255 // this one first for bounds check help
+	pix[0] = c.R
+	pix[1] = c.G
+	pix[2] = c.B
 }

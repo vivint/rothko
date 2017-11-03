@@ -15,46 +15,34 @@ func TestContext(t *testing.T) {
 	assert.NoError(t, err)
 	defer fh.Close()
 
-	var cols []Column
-	for i := 0; i < 1000; i++ {
-		var data []float64
-		for j := 0; j < 300; j++ {
-			data = append(data, float64(i+j))
-		}
-		cols = append(cols, Column{
-			X:    i,
-			W:    1,
-			Data: data,
-		})
-	}
-
+	cols := testMakeColumns(100, 30, 10, func(x, y int) float64 {
+		return float64(x + y)
+	})
+	m := NewRGB(1000, 300)
 	c := Context{
 		Colors: dumb,
-		Height: 300,
+		Canvas: m,
+		Min:    30,
+		Max:    100,
 	}
 
-	m := c.Draw(ctx, cols)
-	assert.NoError(t, png.Encode(fh, m))
+	c.Draw(ctx, cols)
+	assert.NoError(t, png.Encode(fh, m.AsImage()))
 }
 
 func BenchmarkContext(b *testing.B) {
-	var cols []Column
-	for i := 0; i < 1000; i++ {
-		var data []float64
-		for j := 0; j < 300; j++ {
-			data = append(data, float64(i+j))
-		}
-		cols = append(cols, Column{
-			X:    i,
-			W:    1,
-			Data: data,
-		})
-	}
+	cols := testMakeColumns(100, 30, 10, func(x, y int) float64 {
+		return float64(x + y)
+	})
+	m := NewRGB(1000, 300)
 	c := Context{
 		Colors: dumb,
-		Height: 300,
+		Canvas: m,
+		Min:    30,
+		Max:    100,
 	}
 
+	b.SetBytes(int64(4 * m.Width * m.Height))
 	b.ReportAllocs()
 	b.ResetTimer()
 
