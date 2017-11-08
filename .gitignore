@@ -1,6 +1,7 @@
 vendor
 *.pprof
 *.test
+**/test.png
 analysis.log
 
 **/.DS_Store

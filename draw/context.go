@@ -2,10 +2,6 @@
 
 package draw
 
-import (
-	"context"
-)
-
 // Column represents a column to draw in a context. Data is expected to be
 // sorted, non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
 type Column struct {
@@ -25,21 +21,27 @@ type Context struct {
 	Canvas Canvas
 
 	// Values below and above these get mapped to the first and last color.
+	// All other values get mapped to a color based on their percentage
+	// difference between based on the scaling.
 	Min, Max float64
+
+	// If true, will use logarithms to map between the value scales, where
+	// it finds the p where min + (max - min)^p is equal to the value.
+	Logrithmic bool
 }
 
-func (c *Context) Draw(ctx context.Context, cols []Column) {
+func (c *Context) Draw(cols []Column) {
 	// type assert the canvas to our optimized fast case
 	can := c.Canvas
 	m, _ := can.(*RGB)
 
+	// TODO(jeff): this setup is really complicated lol. there's probably a
+	// good idea to simplify this.
+
 	width, height := can.Size()
 	value_delta := c.Max - c.Min
 	color_scale := float64(len(c.Colors)-1) / 1
-	value_color_scale := color_scale / value_delta
-	if value_delta == 0 {
-		value_color_scale = 0
-	}
+
 	last_data_len := -1
 	index_scale := 0.0
 
@@ -70,7 +72,7 @@ func (c *Context) Draw(ctx context.Context, cols []Column) {
 			index := int(float64(y) * index_scale)
 
 			// figure out the color if it's different from the last data index
-			if index != last_index && value_color_scale > 0 {
+			if index != last_index && value_delta > 0 {
 				val := data[index]
 				if val < c.Min {
 					val = c.Min
@@ -79,7 +81,8 @@ func (c *Context) Draw(ctx context.Context, cols []Column) {
 					val = c.Max
 				}
 
-				scaled := int((val - c.Min) * value_color_scale)
+				// TODO(jeff): figure this out
+
 				last_color = c.Colors[scaled]
 				last_index = index
 			}

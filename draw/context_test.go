@@ -10,24 +10,40 @@ import (
 	"github.com/spacemonkeygo/rothko/internal/assert"
 )
 
-func TestContext(t *testing.T) {
+func debugWriteImage(t *testing.T, m *RGB) {
 	fh, err := os.OpenFile("test.png", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
 	assert.NoError(t, err)
 	defer fh.Close()
+	assert.NoError(t, png.Encode(fh, m.AsImage()))
+}
 
+func TestContext(t *testing.T) {
 	cols := testMakeColumns(100, 30, 10, func(x, y int) float64 {
 		return float64(x + y)
 	})
-	m := NewRGB(1000, 300)
-	c := Context{
-		Colors: dumb,
-		Canvas: m,
-		Min:    30,
-		Max:    100,
-	}
 
-	c.Draw(ctx, cols)
-	assert.NoError(t, png.Encode(fh, m.AsImage()))
+	t.Run("Value", func(t *testing.T) {
+		m := NewRGB(1000, 300)
+		c := Context{
+			Colors: grayscale,
+			Canvas: m,
+			Min:    30,
+			Max:    100,
+		}
+		c.Draw(cols)
+	})
+
+	t.Run("Logarithm", func(t *testing.T) {
+		m := NewRGB(1000, 300)
+		c := Context{
+			Colors:     grayscale,
+			Canvas:     m,
+			Min:        30,
+			Max:        100,
+			Logrithmic: true,
+		}
+		c.Draw(cols)
+	})
 }
 
 func BenchmarkContext(b *testing.B) {
@@ -36,7 +52,7 @@ func BenchmarkContext(b *testing.B) {
 	})
 	m := NewRGB(1000, 300)
 	c := Context{
-		Colors: dumb,
+		Colors: grayscale,
 		Canvas: m,
 		Min:    30,
 		Max:    100,
@@ -47,6 +63,6 @@ func BenchmarkContext(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		c.Draw(ctx, cols)
+		c.Draw(cols)
 	}
 }

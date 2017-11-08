@@ -3,11 +3,18 @@
 package draw
 
 import (
-	"context"
 	"image"
 )
 
-var ctx = context.Background()
+var grayscale []Color
+
+func init() {
+	for i := 0; i < 256; i++ {
+		grayscale = append(grayscale, Color{
+			R: uint8(i), G: uint8(i), B: uint8(i),
+		})
+	}
+}
 
 func (m *RGB) AsImage() *image.RGBA {
 	return &image.RGBA{
