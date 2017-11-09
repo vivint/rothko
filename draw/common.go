@@ -47,8 +47,8 @@ func (r *RGB) Size() (w, h int) {
 func (r *RGB) Set(x, y int, c Color) {
 	i := y*r.Stride + x*4
 	pix := r.Pix[i : i+4]
-	pix[3] = 255 // this one first for bounds check help
 	pix[0] = c.R
 	pix[1] = c.G
 	pix[2] = c.B
+	pix[3] = 255
 }

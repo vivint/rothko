@@ -2,6 +2,8 @@
 
 package draw
 
+import "math"
+
 // Column represents a column to draw in a context. Data is expected to be
 // sorted, non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
 type Column struct {
@@ -10,10 +12,6 @@ type Column struct {
 }
 
 type Context struct {
-	//
-	// Required fields
-	//
-
 	// Colors is the slice of colors to map the column data on to.
 	Colors []Color
 
@@ -41,6 +39,13 @@ func (c *Context) Draw(cols []Column) {
 	width, height := can.Size()
 	value_delta := c.Max - c.Min
 	color_scale := float64(len(c.Colors)-1) / 1
+
+	linear_scale := 0.0
+	log_scale := 0.0
+	if value_delta > 0 {
+		linear_scale = color_scale / value_delta
+		log_scale = (math.E - 1) / value_delta
+	}
 
 	last_data_len := -1
 	index_scale := 0.0
@@ -73,15 +78,21 @@ func (c *Context) Draw(cols []Column) {
 
 			// figure out the color if it's different from the last data index
 			if index != last_index && value_delta > 0 {
-				val := data[index]
-				if val < c.Min {
-					val = c.Min
+				val := data[index] - c.Min
+				if val < 0 {
+					val = 0
 				}
-				if val > c.Max {
-					val = c.Max
+				if val > value_delta {
+					val = value_delta
 				}
 
-				// TODO(jeff): figure this out
+				var scaled int
+				if c.Logrithmic {
+					val = (val * log_scale) + 1
+					scaled = int(math.Log(val) * color_scale)
+				} else {
+					scaled = int(val * linear_scale)
+				}
 
 				last_color = c.Colors[scaled]
 				last_index = index
