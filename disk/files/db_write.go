@@ -103,10 +103,10 @@ func (db *DB) write(ctx context.Context, num int, value queuedValue) (
 	if ok {
 		should_store := false
 
-		names, ok := db.names.Load().(map[string]struct{})
-		if !ok {
+		names, found := db.names.Load().(map[string]struct{})
+		if !found {
 			should_store = true
-		} else if _, ok := names[value.metric]; !ok {
+		} else if _, found := names[value.metric]; !found {
 			should_store = true
 		}
 

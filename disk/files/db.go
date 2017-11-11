@@ -155,7 +155,7 @@ func (db *DB) newMetric(ctx context.Context, name string) (*metric, error) {
 
 // Run will read values from the Queue and persist them to disk. It returns
 // when the context is done.
-func (db *DB) Run(ctx context.Context) (err error) {
+func (db *DB) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
 	wg.Add(db.opts.Workers)
@@ -168,6 +168,4 @@ func (db *DB) Run(ctx context.Context) (err error) {
 
 	// wait for the workers who will exit when the context is done.
 	wg.Wait()
-
-	return nil
 }

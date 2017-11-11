@@ -28,7 +28,7 @@ type Context struct {
 	Logrithmic bool
 }
 
-func (c *Context) Draw(cols []Column) {
+func (c Context) Draw(cols []Column) {
 	// type assert the canvas to our optimized fast case
 	can := c.Canvas
 	m, _ := can.(*RGB)

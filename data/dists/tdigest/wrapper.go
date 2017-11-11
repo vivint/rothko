@@ -20,7 +20,7 @@ func (p Params) Kind() data.DistributionKind {
 
 // New returns a new TDigest as a data.Dist.
 func (p Params) New() data.Dist {
-	return wrapper{p.NewUnwrapped()}
+	return Wrap(p.NewUnwrapped())
 }
 
 // NewUnwrapped returns a new TDigest.
@@ -29,19 +29,27 @@ func (p Params) NewUnwrapped() *tdigest.TDigest {
 }
 
 //
-// wrapper
+// Wrapper
 //
 
-type wrapper struct{ td *tdigest.TDigest }
+type Wrapper struct{ td *tdigest.TDigest }
 
-func (wrapper) Kind() data.DistributionKind {
+func Wrap(td *tdigest.TDigest) Wrapper {
+	return Wrapper{td: td}
+}
+
+func (Wrapper) Kind() data.DistributionKind {
 	return data.DistributionKind_TDigest
 }
 
-func (w wrapper) Observe(val float64) {
+func (w Wrapper) Observe(val float64) {
 	w.td.Add(val, 1)
 }
 
-func (w wrapper) Marshal(buf []byte) []byte {
+func (w Wrapper) Marshal(buf []byte) []byte {
 	return w.td.Marshal(buf)
+}
+
+func (w Wrapper) Query(x float64) float64 {
+	return w.td.Quantile(x)
 }
