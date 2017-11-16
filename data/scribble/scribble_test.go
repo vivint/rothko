@@ -23,6 +23,16 @@ func TestScribbler(t *testing.T) {
 	s.Scribble(ctx, "4", 4, nil)
 
 	got := make(map[string]bool)
+	s.Iterate(ctx, func(metric string, rec data.Record) {
+		got[metric] = true
+	})
+
+	assert.That(t, got["1"])
+	assert.That(t, got["2"])
+	assert.That(t, got["3"])
+	assert.That(t, got["4"])
+
+	got = make(map[string]bool)
 	s.Capture(ctx, func(metric string, rec data.Record) {
 		got[metric] = true
 	})

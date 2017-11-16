@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/spacemonkeygo/rothko/data"
 )
@@ -14,23 +15,20 @@ import (
 // page keeps track of a mapping of metric name strings to *agg with a time
 // that all of the aggs will start at.
 type page struct {
-	mu  sync.Mutex
 	m   sync.Map // map[string]*agg
 	now time.Time
 }
 
 // newPage creates a new page for the scribbler.
-func newPage() *page {
+func newPage(now time.Time) *page {
 	return &page{
-		now: time.Now(),
+		now: now,
 	}
 }
 
 // Scribbler keeps track of the distributions of a collection of metrics.
 type Scribbler struct {
-	val_mu sync.Mutex   // mutex around creating the page
-	val    atomic.Value // contains a *page
-
+	page   unsafe.Pointer // contains *page
 	params data.DistParams
 }
 
@@ -48,21 +46,22 @@ func NewScribbler(params data.DistParams) *Scribbler {
 func (s *Scribbler) Scribble(ctx context.Context, metric string,
 	value float64, id []byte) {
 
-	pi := s.val.Load()
-	if pi == nil {
-		// if we don't have a page, we need to acquire the mutex and allocate
-		// one. after acquiring the mutex, we may have lost a race so we need
-		// to double check that we still don't have a page.
-
-		s.val_mu.Lock()
-		pi = s.val.Load()
-		if pi == nil {
-			pi = newPage()
-			s.val.Store(pi)
+	// load up the page pointer, allocating a fresh page if there isn't one.
+	var pi unsafe.Pointer
+	for {
+		pi = atomic.LoadPointer(&s.page)
+		if pi != nil {
+			break
 		}
-		s.val_mu.Unlock()
+
+		// if we don't have a page, we attempt to compare and swap it with a
+		// newly allocated page.
+		pi = unsafe.Pointer(newPage(time.Now()))
+		if atomic.CompareAndSwapPointer(&s.page, nil, pi) {
+			break
+		}
 	}
-	p := pi.(*page)
+	p := (*page)(pi)
 
 	// TODO(jeff): there is a race here where we can lose writes: if someone
 	// is calling Capture and that finishes and sets a new page, a call to
@@ -72,20 +71,9 @@ func (s *Scribbler) Scribble(ctx context.Context, metric string,
 
 	ai, ok := p.m.Load(metric)
 	if !ok {
-		// if we don't have the agg, we need to acquire the page mutex and
-		// allocate one. after acquiring the mutex, we may have lost a race
-		// so we need to double check that we still don't have a page.
-		//
-		// TODO(jeff): we can have sharded by metric name mutexes for creating
-		// these aggs.
-
-		p.mu.Lock()
-		ai, ok = p.m.Load(metric)
-		if !ok {
-			ai = newAgg(s.params, p.now)
-			p.m.Store(metric, ai)
-		}
-		p.mu.Unlock()
+		// we use LoadOrStore here to avoid a mutex at the cost of wasted
+		// allocations for losers during contention.
+		ai, _ = p.m.LoadOrStore(metric, newAgg(s.params, p.now))
 	}
 	a := ai.(*agg)
 
@@ -122,27 +110,28 @@ func (s *Scribbler) Iterate(ctx context.Context,
 func (s *Scribbler) CaptureUnsafe(ctx context.Context, buf []byte,
 	fn func(metric string, rec data.Record) []byte) {
 
-	// acquire the mutex to read and swap out the current page
-	s.val_mu.Lock()
-
-	// if we don't have a page yet, we can just be done
-	pi := s.val.Load()
+	// read the page out. capture clears out the page so we will be setting
+	// it to a new page that we allocate so that the timestamps line up
+	// perfectly.
+	pi := atomic.LoadPointer(&s.page)
 	if pi == nil {
-		s.val_mu.Unlock()
 		return
 	}
+	p := (*page)(pi)
+	now := time.Now()
 
-	// swap it out and unlock
-	pn := newPage()
-	s.val.Store(pn)
-	s.val_mu.Unlock()
-
-	p := pi.(*page)
+	// swap it out with a new page starting at the capture time. if we are
+	// unable to do this, some other call must be ranging on the page, and
+	// so we don't want to also range over it.
+	new_pi := unsafe.Pointer(newPage(now))
+	if !atomic.CompareAndSwapPointer(&s.page, pi, new_pi) {
+		return
+	}
 
 	// iterate it
 	p.m.Range(func(key, ai interface{}) (ok bool) {
 		var rec data.Record
-		buf, rec = ai.(*agg).Finish(buf[:0], pn.now)
+		buf, rec = ai.(*agg).Finish(buf[:0], now)
 		buf = fn(key.(string), rec)
 		return true
 	})
@@ -152,12 +141,13 @@ func (s *Scribbler) CaptureUnsafe(ctx context.Context, buf []byte,
 func (s *Scribbler) IterateUnsafe(ctx context.Context, buf []byte,
 	fn func(metric string, rec data.Record) []byte) {
 
-	// if we don't have a page yet, we can just be done
-	pi := s.val.Load()
+	// read the page out. iterate does not clear out the page so we just need
+	// to read and if we have no page, we're done.
+	pi := atomic.LoadPointer(&s.page)
 	if pi == nil {
 		return
 	}
-	p := pi.(*page)
+	p := (*page)(pi)
 	now := time.Now()
 
 	// iterate it
