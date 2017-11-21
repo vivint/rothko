@@ -53,3 +53,7 @@ func (w Wrapper) Marshal(buf []byte) []byte {
 func (w Wrapper) Query(x float64) float64 {
 	return w.td.Quantile(x)
 }
+
+func (w Wrapper) Len() int64 {
+	return int64(w.td.Len())
+}

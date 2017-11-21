@@ -30,16 +30,15 @@ type SinkCB interface {
 // ResultCallback is a function used to pass results back from Query. The data
 // slice must not be modified, and no references must be kept after the
 // function returns.
-type ResultCallback func(start, end int64, data []byte) error
+type ResultCallback func(start, end int64, data []byte) (bool, error)
 
 // Source can be used to read data about metrics.
 type Source interface {
-	// Query calls the ResultCallback with all of the data slices that overlap
-	// their start and end time with the provided values. The buf slice is
-	// used for storage of the data passed to the ResultCallback if possible.
-	// The data must not be modified, and no references must be kept after
-	// the callback returns.
-	Query(ctx context.Context, metric string, start, end int64, buf []byte,
+	// Query calls the ResultCallback with all of the data slices that end
+	// strictly before the provided end time in strictly decreasing order by
+	// their end. It will continue to call the ResultCallback until it exhausts
+	// all of the records, or the callback returns false.
+	Query(ctx context.Context, metric string, end int64, buf []byte,
 		cb ResultCallback) error
 
 	// QueryLatest returns the latest value stored for the metric. buf is used

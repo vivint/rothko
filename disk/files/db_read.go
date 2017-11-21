@@ -16,7 +16,7 @@ import (
 // used for storage of the data passed to the ResultCallback if possible.
 // The data must not be modified, and no references must be kept after
 // the callback returns.
-func (db *DB) Query(ctx context.Context, metric string, start, end int64,
+func (db *DB) Query(ctx context.Context, metric string, end int64,
 	buf []byte, cb disk.ResultCallback) error {
 
 	db.locks.Lock(metric)
@@ -28,7 +28,7 @@ func (db *DB) Query(ctx context.Context, metric string, start, end int64,
 		return err
 	}
 
-	return met.Read(ctx, start, end, buf, cb)
+	return met.Read(ctx, end, buf, cb)
 }
 
 // QueryLatest returns the latest value stored for the metric. buf is used

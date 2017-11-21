@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+
+	"github.com/spacemonkeygo/rothko/disk"
 )
 
 // Options is a set of options to configure a database.
@@ -81,6 +83,13 @@ type DB struct {
 	names_mu sync.Mutex
 	names    atomic.Value
 }
+
+var (
+	// type assert the interfaces we expect to implement
+	_ disk.Source = (*DB)(nil)
+	_ disk.Sink   = (*DB)(nil)
+	_ disk.SinkCB = (*DB)(nil)
+)
 
 // queuedValue represents some data queued to be written to disk.
 type queuedValue struct {

@@ -13,4 +13,5 @@ var Error = errors.NewClass("dists")
 // Dist is a representation of a distribution.
 type Dist interface {
 	Query(x float64) float64
+	Len() int64
 }

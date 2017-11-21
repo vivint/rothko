@@ -4,10 +4,28 @@ package files
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 )
+
+//
+// the metric abstraction keeps track of the number of files backing the metric
+// data, and allows quick seeking/reading/writing of the data.
+//
+// the data format is that each file contains some number of records of some
+// size described by the metadata at the start of the file. the records are
+// filled in from the last entry to the first in order to make the query
+// calls as efficient as possible. we want to cause backward iteration of
+// records to be forward reads on disk.
+//
+// because we are laying out chronoglically later records earlier in the file
+// there can be confusion about what directions mean. we always use the term
+// "forward" to mean forward in terms of disk layout, and explicitly specify
+// "chronologically forward" to mean forward in time.
+//
 
 // metricOptions are all the pieces of data required to work with a metric.
 type metricOptions struct {
@@ -164,8 +182,8 @@ func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 			return file{}, 0, err
 		}
 
-		// find the last record contained in the file
-		head, err := lastRecord(ctx, f)
+		// find the largest record contained in the file
+		head, err := getHeadPointer(ctx, f)
 		if err != nil {
 			m.opts.fch.releaseFile(path, f)
 			return file{}, 0, err
@@ -173,7 +191,7 @@ func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 
 		// if the file contains no records, check a previous file as long as
 		// there exists one.
-		if head == 0 && m.last > m.first {
+		if head == f.Capacity()-1 && m.last > m.first {
 			// since this file is empty and there is an earlier file, we should
 			// remove it.
 			m.opts.fch.releaseFile(path, f)
@@ -204,13 +222,16 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	}
 	defer m.opts.fch.releaseFile(m.filenameAt(m.last), f)
 
+	// point head at the first valid record (or out of bounds at the capacity)
+	head++
+
 	// if the last file has a record, ensure monotonicity with it.
-	if f.HasRecord(ctx, head-1) {
-		last_rec, err := f.Record(ctx, head-1)
+	if f.HasRecord(ctx, head) {
+		last_rec, err := f.Record(ctx, head)
 		if err != nil {
 			return false, err
 		}
-		if last_rec.start > start || last_rec.end > start {
+		if last_rec.end >= end {
 			return false, nil
 		}
 	}
@@ -221,10 +242,12 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	if nr == 0 {
 		return false, Error.New("unable to compute number of records")
 	}
-	if head+nr > f.Capacity() {
+	if head-nr < 0 {
+		last_rec := f.Capacity() - 1
+
 		// if this is the first write to an empty file, then we will not be
 		// able to write it.
-		if m.last == 1 && head == 0 {
+		if m.last == 1 && head == last_rec {
 			return false, Error.New("value too large for empty file")
 		}
 
@@ -241,7 +264,6 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 
 		// bump last, open the new handle, and reset the head pointer.
 		m.last++
-		head = 0
 
 		path := m.filenameAt(m.last)
 		f, err = m.opts.fch.acquireFile(ctx, path, false)
@@ -250,6 +272,8 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 		}
 		defer m.opts.fch.releaseFile(path, f)
 
+		head = f.Capacity()
+
 		// update our capacity check and try again. if it fails now, the file
 		// is just too large to write. due to fixed size issues with mmap, we
 		// can't allow it to write past the capacity.
@@ -257,10 +281,15 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 		if nr == 0 {
 			return false, Error.New("unable to compute number of records")
 		}
-		if head+nr > f.Capacity() {
+		if head-nr < 0 {
 			return false, Error.New("value too large for empty file")
 		}
 	}
+
+	// we are gauranteed that head >= nr, so subtract it to copy in the
+	// records.
+	head -= nr
+	new_head := head - 1
 
 	// write the records into the file
 	err = iterateRecords(start, end, data, f.Size(),
@@ -279,7 +308,7 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	if err != nil {
 		return true, err
 	}
-	meta.Head = head
+	meta.Head = new_head
 	meta.End = end
 	if meta.Start == 0 {
 		meta.Start = start
@@ -293,52 +322,9 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	return true, nil
 }
 
-// TimeRange returns the start of the first record and the end of the last
-// record. if there are no records, it returns 0, 0.
-func (m *metric) TimeRange(ctx context.Context) (start, end int64, err error) {
-	// load up the last file
-	last, head, err := m.acquireLast(ctx)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer m.opts.fch.releaseFile(m.filenameAt(m.last), last)
-
-	// if head is 0, then we have no records for this metric
-	if head == 0 {
-		return 0, 0, nil
-	}
-
-	// get the last record (one before head)
-	last_rec, err := last.Record(ctx, head-1)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// load up the first file if it is different than the last file
-	var first file
-	if m.last != m.first {
-		first_path := m.filenameAt(m.first)
-		first, err = m.opts.fch.acquireFile(ctx, first_path, true)
-		if err != nil {
-			return 0, 0, err
-		}
-		defer m.opts.fch.releaseFile(first_path, first)
-	} else {
-		first = last
-	}
-
-	// get the first record
-	first_rec, err := first.Record(ctx, 0)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return first_rec.start, last_rec.end, nil
-}
-
-// startsAfter returns if the file numbered at candidate only contains records
-// that start after the start time.
-func (m *metric) startsAfter(ctx context.Context, cand int, start int64) (
+// endsAfter returns if the file numbered at candidate only contains records
+// that end after the end time.
+func (m *metric) endsAfter(ctx context.Context, cand int, end int64) (
 	ok bool, err error) {
 
 	path := m.filenameAt(cand)
@@ -348,18 +334,18 @@ func (m *metric) startsAfter(ctx context.Context, cand int, start int64) (
 	}
 	defer m.opts.fch.releaseFile(path, f)
 
-	rec, err := f.Record(ctx, 0)
+	rec, err := f.Record(ctx, f.Capacity()-1)
 	if err != nil {
 		return false, err
 	}
 
-	return rec.start > start, nil
+	return rec.end > end, nil
 }
 
 // Search returns the file, file number, and head position of the record
-// that is the latest record that starts less than or equal to start. It
-// returns 0, 0 if there is no record that starts less than start.
-func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
+// such that every record that chronologically proceeds it ends before the
+// given end time. it returns 0, 0 if there is no such record.
+func (m *metric) Search(ctx context.Context, end int64) (num int, head int,
 	err error) {
 
 	// TODO(jeff): consider doing a variant of newton's method where we read
@@ -374,14 +360,14 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	for first < last {
 		cand := int(uint(first+last) >> 1)
 
-		ok, err := m.startsAfter(ctx, cand, start)
+		ok, err := m.endsAfter(ctx, cand, end)
 		if err != nil {
 			return 0, 0, err
 		}
 
-		// if all of the records start after the start time, we reduce the
+		// if all of the records end after the end time, we reduce the
 		// upper bound since all records after it presumably contain records
-		// that start after as well.
+		// that end after as well.
 		if ok {
 			last = cand
 		} else {
@@ -389,16 +375,16 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 		}
 	}
 
-	// first is the smallest file that contains data that is strictly after
-	// the start: this means the previous file must contain it, so we start
-	// in that file. if that file doesn't exist, we do not have that data.
+	// first is the smallest file that contains all data that is strictly after
+	// the end: this means the previous file must contain it, so we start in
+	// that file. if that file doesn't exist, we do not have that data.
 	first--
 	if first < m.first || first > m.last {
 		return 0, 0, nil
 	}
 
 	// we will do a binary search again inside of the file to find the spot
-	// where it transitions from an earlier start to a later start. if we do
+	// where it transitions from an earlier end to a later end. if we do
 	// not find that transition point, we know the next file at index 0
 	// contains that transition (but we double check to be sure).
 
@@ -409,30 +395,34 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	}
 	defer m.opts.fch.releaseFile(path, f)
 
-	last_rec, err := lastRecord(ctx, f)
+	head, err = getHeadPointer(ctx, f)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	begin, end := 0, last_rec
-	for begin < end {
-		cand := int(uint(begin+end) >> 1)
+	// TODO(jeff): search between head and capacity.
+	begin_s, end_s := 0, head
+	for begin_s < end_s {
+		cand := int(uint(begin_s+end_s) >> 1)
 
 		rec, err := f.Record(ctx, cand)
 		if err != nil {
 			return 0, 0, err
 		}
 
-		if rec.start > start {
-			end = cand
+		// TODO(jeff): this is probably wrong now because of the fact that the
+		// records are chronologically reversed inside of the file.
+		if rec.end > end {
+			end_s = cand
 		} else {
-			begin = cand + 1
+			begin_s = cand + 1
 		}
 	}
 
 	// if we found a record where it transitions, we're done!
-	if begin <= last_rec {
-		return first, begin - 1, nil
+	if begin_s <= head {
+		// TODO(jeff): this is probably wrong
+		return first, begin_s - 1, nil
 	}
 
 	// if the index is after last record, we know the next file contains the
@@ -451,18 +441,21 @@ func (m *metric) Search(ctx context.Context, start int64) (num int, head int,
 	}
 	defer m.opts.fch.releaseFile(path, f)
 
+	// TODO(jeff): should this be first_rec?
+	last_rec := f.Capacity() - 1
+
 	// if the next file does not have a record, then there is no record that
 	// starts greater than or equal to start.
-	if !f.HasRecord(ctx, 0) {
+	if !f.HasRecord(ctx, last_rec) {
 		return 0, 0, nil
 	}
 
-	rec, err := f.Record(ctx, 0)
+	rec, err := f.Record(ctx, last_rec)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	if rec.start < start {
+	if rec.end < end {
 		return 0, 0, Error.New("data integrity error")
 	}
 
@@ -483,25 +476,24 @@ func (m *metric) readRecord(ctx context.Context, index, n int) (
 	return f.Record(ctx, n)
 }
 
-// Read returns all of the writes that have any overlap with start and end. it
-// appends the data to the provided buf and runs the provided callback. the
-// data slice is reused between callback calls, so callers must ensure they
-// do not keep references to the data slice after returning. if the callback
-// returns an error, the iteration is stopped and the error is returned.
-func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
-	cb func(start, end int64, data []byte) error) error {
+// Read returns all of the writes that are strictly before end. it appends the
+// data to the provided buf and runs the provided callback. the data slice is
+// reused between callback calls, so callers must ensure they do not keep
+// references to the data slice after returning. if the callback returns an
+// error, the iteration is stopped and the error is returned. if the callback
+// returns false, the iteration is stopped.
+func (m *metric) Read(ctx context.Context, end int64, buf []byte,
+	cb func(start, end int64, data []byte) (bool, error)) error {
 
 	// figure out where we should start reading
-	num, head, err := m.Search(ctx, start)
+	num, head, err := m.Search(ctx, end)
 	if err != nil {
 		return err
 	}
 
-	// if there is no record less than or equal to start, we should start at
-	// the first record we have.
+	// if there is no record earlier than end, then we're done.
 	if num == 0 {
-		num = m.first
-		head = 0
+		return nil
 	}
 
 	for {
@@ -514,10 +506,12 @@ func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 			}
 			defer m.opts.fch.releaseFile(path, f)
 
-			last, err := lastRecord(ctx, f)
+			last, err := getHeadPointer(ctx, f)
 			if err != nil {
 				return false, err
 			}
+
+			// TODO(jeff): wrong
 
 			// start reading off values
 			for head < last {
@@ -549,9 +543,12 @@ func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 				// if we have a complete record, bump the head pointer and
 				// move to the next record.
 				if rec.kind == recordKind_complete {
-					err := cb(rec.start, rec.end, buf)
+					done, err := cb(rec.start, rec.end, buf)
 					if err != nil {
 						return false, err
+					}
+					if done {
+						return true, nil
 					}
 					continue
 				}
@@ -584,9 +581,12 @@ func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 
 					// ok we're done with that value, callback and move on to
 					// the next value.
-					err = cb(rec.start, rec.end, buf)
+					done, err = cb(rec.start, rec.end, buf)
 					if err != nil {
 						return false, err
+					}
+					if done {
+						return true, nil
 					}
 
 					break
@@ -604,8 +604,8 @@ func (m *metric) Read(ctx context.Context, start, end int64, buf []byte,
 		}
 
 		// go to the next file. if there aren't any more files, we're done.
-		num++
-		if num > m.last {
+		num--
+		if num < m.first {
 			return nil
 		}
 		head = 0
@@ -624,7 +624,7 @@ func (m *metric) ReadLast(ctx context.Context, buf []byte) (
 	}
 	defer m.opts.fch.releaseFile(path, f)
 
-	last, err := lastRecord(ctx, f)
+	last, err := getHeadPointer(ctx, f)
 	if err != nil {
 		return 0, 0, nil, err
 	}
@@ -665,4 +665,39 @@ func (m *metric) ReadLast(ctx context.Context, buf []byte) (
 			return rec.start, rec.end, buf, nil
 		}
 	}
+}
+
+// dump outputs a summary of all the records and files for the metric to the
+// writer. useful for debugging.
+func (m *metric) dump(ctx context.Context, w io.Writer) (err error) {
+	for i := m.first; i <= m.last; i++ {
+		path := m.filenameAt(i)
+		f, err := m.opts.fch.acquireFile(ctx, path, true)
+		if err != nil {
+			return err
+		}
+
+		meta, err := f.Metadata(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(w, path, fmt.Sprintf("%+v", meta))
+
+		for n := 0; n < f.Capacity(); n++ {
+			if f.HasRecord(ctx, n) {
+				rec, err := f.Record(ctx, n)
+				if err != nil {
+					return err
+				}
+				rec.data = nil
+				fmt.Fprintln(w, "\t", n, "\t", fmt.Sprintf("%+v", rec))
+			} else {
+				fmt.Fprintln(w, "\t", n, "\t", "<no record>")
+			}
+		}
+
+		m.opts.fch.releaseFile(path, f)
+	}
+
+	return nil
 }

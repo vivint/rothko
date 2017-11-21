@@ -62,7 +62,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 
 	err = writeMetadata(slice(data, len)[:size], meta.Metadata{
 		Size_: size,
-		Head:  0,
+		Head:  cap - 1,
 	})
 	if err != nil {
 		return file{}, err
