@@ -182,7 +182,7 @@ func (m *metric) acquireLast(ctx context.Context) (f file, head int,
 			return file{}, 0, err
 		}
 
-		// find the largest record contained in the file
+		// get the head pointer for the file.
 		head, err := getHeadPointer(ctx, f)
 		if err != nil {
 			m.opts.fch.releaseFile(path, f)
@@ -313,6 +313,9 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	if meta.Start == 0 {
 		meta.Start = start
 	}
+	if meta.SmallestEnd == 0 || end < meta.SmallestEnd {
+		meta.SmallestEnd = end
+	}
 
 	err = f.SetMetadata(ctx, meta)
 	if err != nil {
@@ -320,160 +323,6 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 	}
 
 	return true, nil
-}
-
-// endsAfter returns if the file numbered at candidate only contains records
-// that end after the end time.
-func (m *metric) endsAfter(ctx context.Context, cand int, end int64) (
-	ok bool, err error) {
-
-	path := m.filenameAt(cand)
-	f, err := m.opts.fch.acquireFile(ctx, path, true)
-	if err != nil {
-		return false, err
-	}
-	defer m.opts.fch.releaseFile(path, f)
-
-	rec, err := f.Record(ctx, f.Capacity()-1)
-	if err != nil {
-		return false, err
-	}
-
-	return rec.end > end, nil
-}
-
-// Search returns the file, file number, and head position of the record
-// such that every record that chronologically proceeds it ends before the
-// given end time. it returns 0, 0 if there is no such record.
-func (m *metric) Search(ctx context.Context, end int64) (num int, head int,
-	err error) {
-
-	// TODO(jeff): consider doing a variant of newton's method where we read
-	// the first two records, determine a derivative, and search at where we
-	// expect it to be. this might work out much better than binary search for
-	// mostly homogenous data (aka linear).
-
-	// first do a bisection on which file we believe the record will be in
-	// based on their metadata. we add one to last because we want to include
-	// the last file as a possibility.
-	first, last := m.first, m.last+1
-	for first < last {
-		cand := int(uint(first+last) >> 1)
-
-		ok, err := m.endsAfter(ctx, cand, end)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		// if all of the records end after the end time, we reduce the
-		// upper bound since all records after it presumably contain records
-		// that end after as well.
-		if ok {
-			last = cand
-		} else {
-			first = cand + 1
-		}
-	}
-
-	// first is the smallest file that contains all data that is strictly after
-	// the end: this means the previous file must contain it, so we start in
-	// that file. if that file doesn't exist, we do not have that data.
-	first--
-	if first < m.first || first > m.last {
-		return 0, 0, nil
-	}
-
-	// we will do a binary search again inside of the file to find the spot
-	// where it transitions from an earlier end to a later end. if we do
-	// not find that transition point, we know the next file at index 0
-	// contains that transition (but we double check to be sure).
-
-	path := m.filenameAt(first)
-	f, err := m.opts.fch.acquireFile(ctx, path, true)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer m.opts.fch.releaseFile(path, f)
-
-	head, err = getHeadPointer(ctx, f)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// TODO(jeff): search between head and capacity.
-	begin_s, end_s := 0, head
-	for begin_s < end_s {
-		cand := int(uint(begin_s+end_s) >> 1)
-
-		rec, err := f.Record(ctx, cand)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		// TODO(jeff): this is probably wrong now because of the fact that the
-		// records are chronologically reversed inside of the file.
-		if rec.end > end {
-			end_s = cand
-		} else {
-			begin_s = cand + 1
-		}
-	}
-
-	// if we found a record where it transitions, we're done!
-	if begin_s <= head {
-		// TODO(jeff): this is probably wrong
-		return first, begin_s - 1, nil
-	}
-
-	// if the index is after last record, we know the next file contains the
-	// first record that starts greater than or equal to start. if there is
-	// no file, we don't have a record that is greater than or equal to start.
-
-	first++
-	if first > m.last {
-		return 0, 0, nil
-	}
-
-	path = m.filenameAt(first)
-	f, err = m.opts.fch.acquireFile(ctx, path, true)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer m.opts.fch.releaseFile(path, f)
-
-	// TODO(jeff): should this be first_rec?
-	last_rec := f.Capacity() - 1
-
-	// if the next file does not have a record, then there is no record that
-	// starts greater than or equal to start.
-	if !f.HasRecord(ctx, last_rec) {
-		return 0, 0, nil
-	}
-
-	rec, err := f.Record(ctx, last_rec)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	if rec.end < end {
-		return 0, 0, Error.New("data integrity error")
-	}
-
-	return first, 0, nil
-}
-
-// readRecord reads the n'th record out of the file at index.
-func (m *metric) readRecord(ctx context.Context, index, n int) (
-	rec record, err error) {
-
-	path := m.filenameAt(index)
-	f, err := m.opts.fch.acquireFile(ctx, path, true)
-	if err != nil {
-		return record{}, err
-	}
-	defer m.opts.fch.releaseFile(path, f)
-
-	return f.Record(ctx, n)
 }
 
 // Read returns all of the writes that are strictly before end. it appends the
@@ -485,18 +334,13 @@ func (m *metric) readRecord(ctx context.Context, index, n int) (
 func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 	cb func(start, end int64, data []byte) (bool, error)) error {
 
-	// figure out where we should start reading
-	num, head, err := m.Search(ctx, end)
-	if err != nil {
-		return err
-	}
+	// since we expect most queries to be for the most recent data, we do a
+	// simple strategy that optimizes for sequential reads: we start at the
+	// last file, use the metadata per file to skip ones that are unlikely to
+	// contain any data, and then linerally walk until we have records to call
+	// back.
 
-	// if there is no record earlier than end, then we're done.
-	if num == 0 {
-		return nil
-	}
-
-	for {
+	for num := m.last; num >= m.first; num-- {
 		done, err := func() (done bool, err error) {
 			// load up the file at num so that we can start reading records.
 			path := m.filenameAt(num)
@@ -506,15 +350,25 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 			}
 			defer m.opts.fch.releaseFile(path, f)
 
-			last, err := getHeadPointer(ctx, f)
+			// check if the file would have any data. if not, just skip it.
+			meta, err := f.Metadata(ctx)
 			if err != nil {
 				return false, err
 			}
+			if meta.SmallestEnd >= end {
+				return false, nil
+			}
 
-			// TODO(jeff): wrong
+			capacity := f.Capacity()
+			head, err := getHeadPointer(ctx, f)
+			if err != nil {
+				return false, err
+			}
+			// we know the first record starts at head+1
+			head++
 
 			// start reading off values
-			for head < last {
+			for head < capacity {
 				// we know that data values are fully contained in files: if we
 				// see a start record, we know we can keep reading inside of
 				// this file until the end.
@@ -527,18 +381,19 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 				if err != nil {
 					return false, err
 				}
+				head++
 
-				// if the record ends after the requested end, we no longer
-				// need to check any more values.
-				if rec.end > end {
-					return true, nil
+				// if the record ends after the end time, we can skip it. we
+				// dont need to check elsewhere because every other record
+				// must have the same timestamps.
+				if rec.end >= end {
+					continue
 				}
 
 				// TODO(jeff): we could be opening these files as read only,
 				// but that would complicate the caching semantics. maybe
 				// it's worth it to avoid this copy though.
 				buf = append(buf[:0], rec.data...)
-				head++
 
 				// if we have a complete record, bump the head pointer and
 				// move to the next record.
@@ -565,9 +420,9 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 					if err != nil {
 						return false, err
 					}
+					head++
 
 					buf = append(buf, rec.data...)
-					head++
 
 					if rec.kind == recordKind_continue {
 						continue
@@ -602,70 +457,52 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 		if done {
 			return nil
 		}
-
-		// go to the next file. if there aren't any more files, we're done.
-		num--
-		if num < m.first {
-			return nil
-		}
-		head = 0
 	}
+
+	return nil
 }
 
 // ReadLast reads the last value out of the metric. buf is used as storage for
-// the data slice if possible.
+// the data slice if possible. Returns 0, 0, nil, nil if there is no data.
 func (m *metric) ReadLast(ctx context.Context, buf []byte) (
 	start, end int64, data []byte, err error) {
 
-	path := m.filenameAt(m.last)
-	f, err := m.opts.fch.acquireFile(ctx, path, true)
+	f, head, err := m.acquireLast(ctx)
 	if err != nil {
 		return 0, 0, nil, err
 	}
-	defer m.opts.fch.releaseFile(path, f)
+	defer m.opts.fch.releaseFile(m.filenameAt(m.last), f)
 
-	last, err := getHeadPointer(ctx, f)
-	if err != nil {
-		return 0, 0, nil, err
-	}
-	last--
+	// we know the first record starts at head+1
+	head++
 
-	// we need to walk last backwards until we hit a complete or start of a
-	// record. we could append out the data, but it's probably not worth
-	// doing as the whole page will probably be in memory after this reverse
-	// walk.
-	for {
-		rec, err := f.Record(ctx, last)
-		if err != nil {
-			return 0, 0, nil, err
-		}
-
-		if rec.kind == recordKind_complete || rec.kind == recordKind_begin {
-			break
-		}
-
-		last--
+	// if there is no record, we just don't have any data yet.
+	if !f.HasRecord(ctx, head) {
+		return 0, 0, nil, nil
 	}
 
-	// now walk forward again
 	buf = buf[:0]
 	for {
-		rec, err := f.Record(ctx, last)
+		rec, err := f.Record(ctx, head)
 		if err != nil {
 			return 0, 0, nil, err
 		}
+		head++
 
 		// TODO(jeff): we could be opening these files as read only,
 		// but that would complicate the caching semantics. maybe
 		// it's worth it to avoid this copy though.
 		buf = append(buf, rec.data...)
-		last++
 
 		if rec.kind == recordKind_complete || rec.kind == recordKind_end {
 			return rec.start, rec.end, buf, nil
 		}
 	}
 }
+
+//
+// debugging helpers
+//
 
 // dump outputs a summary of all the records and files for the metric to the
 // writer. useful for debugging.

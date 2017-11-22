@@ -46,3 +46,47 @@ func That(t testing.TB, v bool) {
 		t.Fatal("expected condition failed")
 	}
 }
+
+func Nil(t testing.TB, a interface{}) {
+	t.Helper()
+
+	if a == nil {
+		return
+	}
+
+	rv := reflect.ValueOf(a)
+	if !canNil(rv) {
+		t.Fatal("%#v cannot be nil", a)
+	}
+	if !rv.IsNil() {
+		t.Fatal("%#v != nil", a)
+	}
+}
+
+func NotNil(t testing.TB, a interface{}) {
+	t.Helper()
+
+	if a == nil {
+		t.Fatal("expected not nil")
+	}
+
+	rv := reflect.ValueOf(a)
+	if !canNil(rv) {
+		return
+	}
+	if rv.IsNil() {
+		t.Fatal("%#v == nil", a)
+	}
+}
+
+func canNil(rv reflect.Value) bool {
+	if !rv.IsValid() {
+		return false
+	}
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map,
+		reflect.Ptr, reflect.Slice:
+		return true
+	}
+	return false
+}

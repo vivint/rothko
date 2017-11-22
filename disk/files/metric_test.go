@@ -73,61 +73,6 @@ func TestMetric(t *testing.T) {
 		// assert.NoError(t, m.dump(ctx, os.Stdout))
 	})
 
-	t.Run("Search", func(t *testing.T) {
-		m, cleanup := newTestMetric(t)
-		defer cleanup()
-
-		for i := int64(0); i < 1000; i++ {
-			written, err := m.Write(ctx, 50*i, 50*i+20, make([]byte, 10))
-			assert.NoError(t, err)
-			assert.That(t, written)
-		}
-
-		assert.NoError(t, m.dump(ctx, os.Stdout))
-
-		// 890 because we can keep up to 110 records as there are 10 per file
-		// and 10 files, and we have 1 file of staging data. everything before
-		// the earliest record should be empty.
-		for i := int64(-100); i < 890; i++ {
-			num, head, err := m.Search(ctx, 50*i)
-			assert.NoError(t, err)
-			assert.Equal(t, num, 0)
-			assert.Equal(t, head, 0)
-		}
-
-		// check right on the boundary and somewhere between records.
-		for _, offset := range []int64{0, 10} {
-			for i := int64(890); i < 1000; i++ {
-				end := 50*i + offset
-				num, head, err := m.Search(ctx, end)
-				assert.NoError(t, err)
-
-				rec, err := m.readRecord(ctx, num, head)
-				assert.NoError(t, err)
-				assert.That(t, rec.end <= end)
-
-				// get the next record and make sure it's bigger
-				if head+1 < 10 {
-					rec, err = m.readRecord(ctx, num, head+1)
-				} else if num < m.last {
-					rec, err = m.readRecord(ctx, num+1, 0)
-				} else {
-					continue
-				}
-				assert.NoError(t, err)
-				assert.That(t, rec.end > end)
-			}
-		}
-
-		// everything after the last record should be the last record
-		for i := int64(1000); i < 1100; i++ {
-			num, head, err := m.Search(ctx, 50*i)
-			assert.NoError(t, err)
-			assert.Equal(t, num, 100)
-			assert.Equal(t, head, 9)
-		}
-	})
-
 	t.Run("Read", func(t *testing.T) {
 		test := func(t *testing.T, buf_size int) {
 			m, cleanup := newTestMetric(t)
@@ -153,6 +98,54 @@ func TestMetric(t *testing.T) {
 
 		t.Run("Small", func(t *testing.T) { test(t, 512) })
 		t.Run("Large", func(t *testing.T) { test(t, 4096) })
+
+		t.Run("Exhaustive", func(t *testing.T) {
+			m, cleanup := newTestMetric(t)
+			defer cleanup()
+
+			for i := int64(0); i < 1000; i++ {
+				written, err := m.Write(ctx, 50*i, 50*i+20, make([]byte, 10))
+				assert.NoError(t, err)
+				assert.That(t, written)
+			}
+
+			// 890 because we can keep up to 110 records as there are 10 per
+			// file and 10 files, and we have 1 file of staging data.
+			// everything before the earliest record should be empty.
+			for i := int64(-100); i < 890; i++ {
+				m.Read(ctx, 50*i, nil,
+					func(_, _ int64, _ []byte) (bool, error) {
+						assert.That(t, false)
+						return false, nil
+					})
+			}
+
+			// check right on the boundary and somewhere between records.
+			for _, offset := range []int64{0, 10} {
+				for i := int64(890); i < 1000; i++ {
+					end := 50*i + offset
+					first := true
+					m.Read(ctx, 50*i+offset, nil,
+						func(_, rec_end int64, _ []byte) (bool, error) {
+							assert.That(t, rec_end < end)
+							if first {
+								assert.That(t, end-rec_end <= 40)
+							}
+							first = false
+							return false, nil
+						})
+				}
+			}
+
+			// everything after the last record should be the last record
+			for i := int64(1000); i < 1100; i++ {
+				m.Read(ctx, 50*i, nil,
+					func(_, end int64, _ []byte) (bool, error) {
+						assert.Equal(t, end, int64(49970))
+						return true, nil
+					})
+			}
+		})
 	})
 
 	t.Run("ReadLast", func(t *testing.T) {
@@ -178,6 +171,17 @@ func TestMetric(t *testing.T) {
 
 		t.Run("Small", func(t *testing.T) { test(t, 512) })
 		t.Run("Large", func(t *testing.T) { test(t, 4096) })
+
+		t.Run("Empty", func(t *testing.T) {
+			m, cleanup := newTestMetric(t)
+			defer cleanup()
+
+			start, end, data, err := m.ReadLast(ctx, nil)
+			assert.NoError(t, err)
+			assert.Equal(t, start, int64(0))
+			assert.Equal(t, end, int64(0))
+			assert.Nil(t, data)
+		})
 	})
 }
 
@@ -194,25 +198,6 @@ func BenchmarkMetric(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			m.Write(ctx, int64(i), int64(i+1), data)
-		}
-	})
-
-	b.Run("Search", func(b *testing.B) {
-		m, cleanup := newTestMetric(b)
-		defer cleanup()
-
-		for i := int64(0); i < 1000; i++ {
-			written, err := m.Write(ctx, i, i+1, make([]byte, 10))
-			assert.NoError(b, err)
-			assert.That(b, written)
-		}
-
-		b.ReportAllocs()
-		defer b.StopTimer()
-		b.ResetTimer()
-
-		for i := 0; i < b.N; i++ {
-			m.Search(ctx, 890+int64(i%110))
 		}
 	})
 
