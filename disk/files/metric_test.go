@@ -99,6 +99,18 @@ func TestMetric(t *testing.T) {
 		t.Run("Small", func(t *testing.T) { test(t, 512) })
 		t.Run("Large", func(t *testing.T) { test(t, 4096) })
 
+		t.Run("Empty", func(t *testing.T) {
+			m, cleanup := newTestMetric(t)
+			defer cleanup()
+
+			err := m.Read(ctx, 1000, nil,
+				func(_, _, int64, _ []byte) (bool, error) {
+					assert.That(t, false)
+					return false, nil
+				})
+			assert.NoError(t, err)
+		})
+
 		t.Run("Exhaustive", func(t *testing.T) {
 			m, cleanup := newTestMetric(t)
 			defer cleanup()
