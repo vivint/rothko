@@ -4,6 +4,7 @@ package files
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"io/ioutil"
 	"os"
@@ -88,7 +89,9 @@ func TestMetric(t *testing.T) {
 			}
 
 			m.Read(ctx, 10000, nil,
-				func(start, end int64, data []byte) (bool, error) {
+				func(ctx context.Context, start, end int64, data []byte) (
+					bool, error) {
+
 					buf := make([]byte, buf_size)
 					binary.BigEndian.PutUint64(buf, uint64(start))
 					assert.That(t, bytes.Equal(data, buf))
@@ -104,7 +107,9 @@ func TestMetric(t *testing.T) {
 			defer cleanup()
 
 			err := m.Read(ctx, 1000, nil,
-				func(_, _, int64, _ []byte) (bool, error) {
+				func(ctx context.Context, _, _ int64, _ []byte) (
+					bool, error) {
+
 					assert.That(t, false)
 					return false, nil
 				})
@@ -126,7 +131,9 @@ func TestMetric(t *testing.T) {
 			// everything before the earliest record should be empty.
 			for i := int64(-100); i < 890; i++ {
 				m.Read(ctx, 50*i, nil,
-					func(_, _ int64, _ []byte) (bool, error) {
+					func(ctx context.Context, _, _ int64, _ []byte) (
+						bool, error) {
+
 						assert.That(t, false)
 						return false, nil
 					})
@@ -138,7 +145,9 @@ func TestMetric(t *testing.T) {
 					end := 50*i + offset
 					first := true
 					m.Read(ctx, 50*i+offset, nil,
-						func(_, rec_end int64, _ []byte) (bool, error) {
+						func(ctx context.Context, _, rec_end int64, _ []byte) (
+							bool, error) {
+
 							assert.That(t, rec_end < end)
 							if first {
 								assert.That(t, end-rec_end <= 40)
@@ -152,7 +161,9 @@ func TestMetric(t *testing.T) {
 			// everything after the last record should be the last record
 			for i := int64(1000); i < 1100; i++ {
 				m.Read(ctx, 50*i, nil,
-					func(_, end int64, _ []byte) (bool, error) {
+					func(ctx context.Context, _, end int64, _ []byte) (
+						bool, error) {
+
 						assert.Equal(t, end, int64(49970))
 						return true, nil
 					})
@@ -230,7 +241,9 @@ func BenchmarkMetric(b *testing.B) {
 			buf := make([]byte, buf_size)
 			size := 0
 			m.Read(ctx, 10000, buf,
-				func(start, end int64, data []byte) (bool, error) {
+				func(ctx context.Context, start, end int64, data []byte) (
+					bool, error) {
+
 					size += len(data)
 					return false, nil
 				})
@@ -242,7 +255,9 @@ func BenchmarkMetric(b *testing.B) {
 
 			for i := 0; i < b.N; i++ {
 				m.Read(ctx, 10000, buf,
-					func(start, end int64, data []byte) (bool, error) {
+					func(ctx context.Context, start, end int64, data []byte) (
+						bool, error) {
+
 						return false, nil
 					})
 			}

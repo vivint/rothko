@@ -30,7 +30,8 @@ type SinkCB interface {
 // ResultCallback is a function used to pass results back from Query. The data
 // slice must not be modified, and no references must be kept after the
 // function returns.
-type ResultCallback func(start, end int64, data []byte) (bool, error)
+type ResultCallback func(ctx context.Context, start, end int64, data []byte) (
+	bool, error)
 
 // Source can be used to read data about metrics.
 type Source interface {

@@ -11,11 +11,10 @@ import (
 	"github.com/spacemonkeygo/rothko/disk/files/internal/system"
 )
 
-// Query calls the ResultCallback with all of the data slices that overlap
-// their start and end time with the provided values. The buf slice is
-// used for storage of the data passed to the ResultCallback if possible.
-// The data must not be modified, and no references must be kept after
-// the callback returns.
+// Query calls the ResultCallback with all of the data slices that end
+// strictly before the provided end time in strictly decreasing order by
+// their end. It will continue to call the ResultCallback until it exhausts
+// all of the records, or the callback returns false.
 func (db *DB) Query(ctx context.Context, metric string, end int64,
 	buf []byte, cb disk.ResultCallback) error {
 

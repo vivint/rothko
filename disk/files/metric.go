@@ -332,7 +332,8 @@ func (m *metric) Write(ctx context.Context, start, end int64, data []byte) (
 // error, the iteration is stopped and the error is returned. if the callback
 // returns false, the iteration is stopped.
 func (m *metric) Read(ctx context.Context, end int64, buf []byte,
-	cb func(start, end int64, data []byte) (bool, error)) error {
+	cb func(ctx context.Context, start, end int64, data []byte) (
+		bool, error)) error {
 
 	// since we expect most queries to be for the most recent data, we do a
 	// simple strategy that optimizes for sequential reads: we start at the
@@ -398,12 +399,17 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 				// if we have a complete record, bump the head pointer and
 				// move to the next record.
 				if rec.kind == recordKind_complete {
-					done, err := cb(rec.start, rec.end, buf)
+					done, err := cb(ctx, rec.start, rec.end, buf)
 					if err != nil {
 						return false, err
 					}
 					if done {
 						return true, nil
+					}
+					select {
+					case <-ctx.Done():
+						return true, ctx.Err()
+					default:
 					}
 					continue
 				}
@@ -436,12 +442,17 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 
 					// ok we're done with that value, callback and move on to
 					// the next value.
-					done, err = cb(rec.start, rec.end, buf)
+					done, err = cb(ctx, rec.start, rec.end, buf)
 					if err != nil {
 						return false, err
 					}
 					if done {
 						return true, nil
+					}
+					select {
+					case <-ctx.Done():
+						return true, ctx.Err()
+					default:
 					}
 
 					break
