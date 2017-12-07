@@ -23,8 +23,9 @@ func TestScribbler(t *testing.T) {
 	s.Scribble(ctx, "4", 4, nil)
 
 	got := make(map[string]bool)
-	s.Iterate(ctx, func(metric string, rec data.Record) {
+	s.Iterate(ctx, func(metric string, rec data.Record) bool {
 		got[metric] = true
+		return true
 	})
 
 	assert.That(t, got["1"])
@@ -33,8 +34,9 @@ func TestScribbler(t *testing.T) {
 	assert.That(t, got["4"])
 
 	got = make(map[string]bool)
-	s.Capture(ctx, func(metric string, rec data.Record) {
+	s.Capture(ctx, func(metric string, rec data.Record) bool {
 		got[metric] = true
+		return true
 	})
 
 	assert.That(t, got["1"])
@@ -43,8 +45,9 @@ func TestScribbler(t *testing.T) {
 	assert.That(t, got["4"])
 
 	got = make(map[string]bool)
-	s.Capture(ctx, func(metric string, rec data.Record) {
+	s.Capture(ctx, func(metric string, rec data.Record) bool {
 		got[metric] = true
+		return true
 	})
 
 	assert.That(t, len(got) == 0)
@@ -79,8 +82,9 @@ func BenchmarkScribbler(b *testing.B) {
 		})
 
 		bytes := int64(0)
-		iterate := func(metric string, rec data.Record) {
+		iterate := func(metric string, rec data.Record) bool {
 			bytes = int64(len(rec.Distribution))
+			return true
 		}
 
 		for i := 0; i < 100; i++ {
@@ -96,31 +100,5 @@ func BenchmarkScribbler(b *testing.B) {
 		}
 
 		b.SetBytes(bytes)
-	})
-
-	b.Run("IterateUnsafe", func(b *testing.B) {
-		s := NewScribbler(tdigest.Params{
-			Compression: 10,
-		})
-
-		var buf []byte
-		iterate := func(metric string, rec data.Record) []byte {
-			buf = rec.Distribution
-			return buf
-		}
-
-		for i := 0; i < 100; i++ {
-			s.Scribble(ctx, "metric", float64(i), nil)
-		}
-
-		b.ReportAllocs()
-		defer b.StopTimer()
-		b.ResetTimer()
-
-		for i := 0; i < b.N; i++ {
-			s.IterateUnsafe(ctx, buf, iterate)
-		}
-
-		b.SetBytes(int64(len(buf)))
 	})
 }

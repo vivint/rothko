@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/gogo/protobuf"
   packages = ["gogoproto","plugin/compare","plugin/defaultcheck","plugin/description","plugin/embedcheck","plugin/enumstringer","plugin/equal","plugin/face","plugin/gostring","plugin/marshalto","plugin/oneofcheck","plugin/populate","plugin/size","plugin/stringer","plugin/testgen","plugin/union","plugin/unmarshal","proto","protoc-gen-gogo","protoc-gen-gogo/descriptor","protoc-gen-gogo/generator","protoc-gen-gogo/grpc","protoc-gen-gogo/plugin","vanity","vanity/command"]
-  revision = "2adc21fd136931e0388e278825291678e1d98309"
+  revision = "41168f6614b7bb144818ec8967b8c702705df564"
 
 [[projects]]
   branch = "master"
@@ -29,7 +29,7 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "66aacef3dd8a676686c7ae3716979581e8b03c47"
+  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
 
 [[projects]]
   branch = "v2"

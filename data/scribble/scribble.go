@@ -81,34 +81,10 @@ func (s *Scribbler) Scribble(ctx context.Context, metric string,
 }
 
 // Capture clears out current set of records for future Scribble calls and
-// calls the provided function with every record.
+// calls the provided function with every record. You must not hold on to
+// any fields of the record after the callback returns.
 func (s *Scribbler) Capture(ctx context.Context,
-	fn func(metric string, rec data.Record)) {
-
-	// call CaptureUnsafe with nil buffers to cause allocations
-	s.CaptureUnsafe(ctx, nil, func(metric string, rec data.Record) []byte {
-		fn(metric, rec)
-		return nil
-	})
-}
-
-// Iterate calls the provided function with every record.
-func (s *Scribbler) Iterate(ctx context.Context,
-	fn func(metric string, rec data.Record)) {
-
-	// call IterateUnsafe with nil buffers to cause allocations
-	s.IterateUnsafe(ctx, nil, func(metric string, rec data.Record) []byte {
-		fn(metric, rec)
-		return nil
-	})
-}
-
-// CaptureUnsafe clears out current set of records for future Scribble calls
-// and calls the provided function with every record. The function returns the
-// next buffer for the Captrue call to use. The record will be invalidated if
-// any passed in buffer for it is modified.
-func (s *Scribbler) CaptureUnsafe(ctx context.Context, buf []byte,
-	fn func(metric string, rec data.Record) []byte) {
+	fn func(metric string, rec data.Record) bool) {
 
 	// read the page out. capture clears out the page so we will be setting
 	// it to a new page that we allocate so that the timestamps line up
@@ -129,17 +105,18 @@ func (s *Scribbler) CaptureUnsafe(ctx context.Context, buf []byte,
 	}
 
 	// iterate it
+	var buf []byte
 	p.m.Range(func(key, ai interface{}) (ok bool) {
 		var rec data.Record
-		buf, rec = ai.(*agg).Finish(buf[:0], now)
-		buf = fn(key.(string), rec)
-		return true
+		buf, rec = ai.(*agg).Finish(buf, now)
+		return fn(key.(string), rec)
 	})
 }
 
-// Iterate calls the provided function with every record.
-func (s *Scribbler) IterateUnsafe(ctx context.Context, buf []byte,
-	fn func(metric string, rec data.Record) []byte) {
+// Iterate calls the provided function with every record. You must not hold on
+// to any fields of the record after the callback returns.
+func (s *Scribbler) Iterate(ctx context.Context,
+	fn func(metric string, rec data.Record) bool) {
 
 	// read the page out. iterate does not clear out the page so we just need
 	// to read and if we have no page, we're done.
@@ -151,10 +128,10 @@ func (s *Scribbler) IterateUnsafe(ctx context.Context, buf []byte,
 	now := time.Now()
 
 	// iterate it
+	var buf []byte
 	p.m.Range(func(key, ai interface{}) (ok bool) {
 		var rec data.Record
-		buf, rec = ai.(*agg).Finish(buf[:0], now)
-		buf = fn(key.(string), rec)
-		return true
+		buf, rec = ai.(*agg).Finish(buf, now)
+		return fn(key.(string), rec)
 	})
 }
