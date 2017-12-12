@@ -50,3 +50,12 @@ type Source interface {
 	// Metrics calls the callback once for every metric stored.
 	Metrics(ctx context.Context, cb func(name string) error) error
 }
+
+// Disk represents a Source and a Sink
+type Disk interface {
+	Source
+	Sink
+}
+
+// DiskMaker returns a new Disk for the given config string.
+type DiskMaker func(ctx context.Context, config string) (Disk, error)

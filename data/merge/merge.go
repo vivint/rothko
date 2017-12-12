@@ -5,16 +5,8 @@ package merge
 import (
 	"context"
 
-	"github.com/spacemonkeygo/errors"
 	"github.com/spacemonkeygo/rothko/data"
 	tdigest_wrapper "github.com/spacemonkeygo/rothko/data/dists/tdigest"
-	monkit "gopkg.in/spacemonkeygo/monkit.v2"
-)
-
-var (
-	mon = monkit.Package()
-
-	Error = errors.NewClass("merge")
 )
 
 // MergeOptions are the arguments passed to Merge.
@@ -31,7 +23,6 @@ type MergeOptions struct {
 // deterministic merging.
 func Merge(ctx context.Context, opts MergeOptions) (
 	out data.Record, err error) {
-	defer mon.Task()(&ctx)(&err)
 
 	if len(opts.Records) == 0 {
 		return out, Error.New("passed no records")

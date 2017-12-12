@@ -3,10 +3,6 @@
 // package system provides optimized and dangerous functions for system calls.
 package system // import "github.com/spacemonkeygo/rothko/disk/files/internal/system"
 
-import (
-	"github.com/spacemonkeygo/errors"
-)
+import "github.com/zeebo/errs"
 
-var (
-	Error = errors.NewClass("system")
-)
+var Error = errs.Class("system")

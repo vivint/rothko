@@ -1,6 +1,6 @@
 // Copyright (C) 2017. See AUTHORS.
 
-package accept
+package data
 
 import "github.com/spacemonkeygo/rothko/internal/registry"
 
@@ -13,20 +13,20 @@ var (
 	Lookup   = Default.Lookup
 )
 
-// Registry keeps track of AcceptrixMaker values by their name.
+// Registry keeps track of DistMaker values by their name.
 type Registry struct {
 	reg registry.Registry
 }
 
-// Register adds a AcceptrixMaker value to the registry under the name, and
+// Register adds a DistMaker value to the registry under the name, and
 // panics if the name already exists.
-func (r *Registry) Register(name string, value AcceptrixMaker) {
+func (r *Registry) Register(name string, value DistMaker) {
 	r.reg.Register(name, value)
 }
 
-// Lookup returns the AcceptrixMaker for the name, or the zero value if
+// Lookup returns the DistMaker for the name, or the zero value if
 // nothing exists.
-func (r *Registry) Lookup(name string) AcceptrixMaker {
-	out, _ := r.reg.Lookup(name).(AcceptrixMaker)
+func (r *Registry) Lookup(name string) DistMaker {
+	out, _ := r.reg.Lookup(name).(DistMaker)
 	return out
 }

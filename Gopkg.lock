@@ -2,40 +2,22 @@
 
 
 [[projects]]
-  branch = "master"
   name = "github.com/gogo/protobuf"
   packages = ["gogoproto","plugin/compare","plugin/defaultcheck","plugin/description","plugin/embedcheck","plugin/enumstringer","plugin/equal","plugin/face","plugin/gostring","plugin/marshalto","plugin/oneofcheck","plugin/populate","plugin/size","plugin/stringer","plugin/testgen","plugin/union","plugin/unmarshal","proto","protoc-gen-gogo","protoc-gen-gogo/descriptor","protoc-gen-gogo/generator","protoc-gen-gogo/grpc","protoc-gen-gogo/plugin","vanity","vanity/command"]
-  revision = "41168f6614b7bb144818ec8967b8c702705df564"
+  revision = "342cbe0a04158f6dcb03ca0079991a51a4248c02"
+  version = "v0.5"
 
 [[projects]]
   branch = "master"
-  name = "github.com/spacemonkeygo/errors"
+  name = "github.com/zeebo/errs"
   packages = ["."]
-  revision = "fafb82d7319b7446027d97bda4b3e089160f6e79"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/spacemonkeygo/monotime"
-  packages = [".","_cgo"]
-  revision = "e6a1d5ba496cb14f7b3ea9123c236d3ea304fb2d"
+  revision = "5730128918a843f3501c675205de17769acc6a79"
 
 [[projects]]
   branch = "master"
   name = "github.com/zeebo/tdigest"
   packages = ["."]
   revision = "1a19267602be352711f90a3c190b20ee1e452e81"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context"]
-  revision = "a8b9294777976932365dabb6640cf1468d95c70f"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/spacemonkeygo/monkit.v2"
-  packages = ["."]
-  revision = "446f79d465d0b7b11ae33cd2914ac47ce14d7bad"
 
 [[projects]]
   branch = "v1"
@@ -46,6 +28,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7085a3b2e0cfc7bc80d26d758d3d36fb5ff56de2714b60e5523b61f1ddb7775b"
+  inputs-digest = "0d76387e68135c3c70c4e16e0081fb6dd0365efc3da3208a48201df1e32497bf"
   solver-name = "gps-cdcl"
   solver-version = 1

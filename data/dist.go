@@ -2,14 +2,7 @@
 
 package data
 
-// DistParams represents a way to create Dists.
-type DistParams interface {
-	// Kind returns the kind of the distribution.
-	Kind() DistributionKind
-
-	// New creates a new distribution value.
-	New() Dist
-}
+import "context"
 
 // Dist represents an abstract distribution.
 type Dist interface {
@@ -22,3 +15,16 @@ type Dist interface {
 	// Marshal by appending to the provided buf.
 	Marshal(buf []byte) []byte
 }
+
+// DistParams represents a way to create Dists.
+type DistParams interface {
+	// Kind returns the kind of the distribution.
+	Kind() DistributionKind
+
+	// New creates a new Dist value.
+	New() Dist
+}
+
+// DistParamsMaker represents a way to create DistParams
+type DistParamsMaker func(ctx context.Context, config string) (
+	DistParams, error)
