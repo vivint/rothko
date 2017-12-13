@@ -1,5 +1,7 @@
 // Copyright (C) 2017. See AUTHORS.
 
+// created from: go run internal/registry/gen.go AcceptrixMaker accept
+
 package accept
 
 import "github.com/spacemonkeygo/rothko/internal/registry"
@@ -11,7 +13,11 @@ var (
 	// Package functions that interact with the Default registry.
 	Register = Default.Register
 	Lookup   = Default.Lookup
+	List     = Default.List
 )
+
+// Registration contains information about the registration returned by List.
+type Registration = registry.Registration
 
 // Registry keeps track of AcceptrixMaker values by their name.
 type Registry struct {
@@ -29,4 +35,9 @@ func (r *Registry) Register(name string, value AcceptrixMaker) {
 func (r *Registry) Lookup(name string) AcceptrixMaker {
 	out, _ := r.reg.Lookup(name).(AcceptrixMaker)
 	return out
+}
+
+// List returns the set of names that have been registered.
+func (r *Registry) List() []Registration {
+	return r.reg.List()
 }

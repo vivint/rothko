@@ -8,17 +8,8 @@ import (
 
 // Queue adds the data for the metric and the given start and end times. If
 // the start time is before the last end time for the metric, no write will
-// happen.
-func (db *DB) Queue(ctx context.Context, metric string, start int64, end int64,
-	data []byte) (err error) {
-
-	return db.QueueCB(ctx, metric, start, end, data, nil)
-}
-
-// QueueCB adds the data for the metric and the given start and end times. If
-// the start time is before the last end time for the metric, no write will
-// happen. The callback is called with the error value o writing the metric.
-func (db *DB) QueueCB(ctx context.Context, metric string, start int64,
+// happen. The callback is called with the error value of writing the metric.
+func (db *DB) Queue(ctx context.Context, metric string, start int64,
 	end int64, data []byte, cb func(bool, error)) (err error) {
 
 	buf := db.bufs.Get().([]byte)

@@ -4,7 +4,10 @@
 package tdigest // import "github.com/spacemonkeygo/rothko/data/dists/tdigest"
 
 import (
+	"context"
+
 	"github.com/spacemonkeygo/rothko/data"
+	"github.com/zeebo/errs"
 	"github.com/zeebo/tdigest"
 )
 
@@ -56,4 +59,14 @@ func (w Wrapper) Query(x float64) float64 {
 
 func (w Wrapper) Len() int64 {
 	return int64(w.td.Len())
+}
+
+//
+// register
+//
+
+func init() { data.Register("rothko/data/dists/tdigest", makeParams) }
+
+func makeParams(ctx context.Context, config string) (data.DistParams, error) {
+	return nil, errs.New("unimplemented")
 }

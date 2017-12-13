@@ -11,7 +11,7 @@
   branch = "master"
   name = "github.com/zeebo/errs"
   packages = ["."]
-  revision = "5730128918a843f3501c675205de17769acc6a79"
+  revision = "08f08a1132e5cbf2c0708b6acdaad6bfbc14aadd"
 
 [[projects]]
   branch = "master"

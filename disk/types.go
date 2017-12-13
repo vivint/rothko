@@ -1,7 +1,6 @@
 // Copyright (C) 2017. See AUTHORS.
 
-// package disk provides interfaces to disk storage of data.
-package disk // import "github.com/spacemonkeygo/rothko/disk"
+package disk
 
 import (
 	"context"
@@ -12,18 +11,11 @@ type Sink interface {
 	// Queue adds the data for the metric and the given start and end times. If
 	// the start time is before the last end time for the metric, no write is
 	// guaranteed to happen. The data is not required to be persisted to disk
-	// after the call returns, and may be flushed asynchronously.
+	// after the call returns, and may be flushed asynchronously. If the cb
+	// parameter is not nil, it will be called when the data has been handled.
+	// Written indicates if the data was written to disk, and err is not nil
+	// if there were errors.
 	Queue(ctx context.Context, metric string, start, end int64,
-		data []byte) (err error)
-}
-
-// SinkCB is an optional stronger interface than Sink.
-type SinkCB interface {
-	// QueueCB is the same as the Sink.Queue method except it can be passed a
-	// callback that is called when the metric has been handled. Written
-	// indicates if the data was written to disk, and err is not nil if there
-	// were errors.
-	QueueCB(ctx context.Context, metric string, start, end int64,
 		data []byte, cb func(written bool, err error)) (err error)
 }
 
@@ -51,10 +43,12 @@ type Source interface {
 	Metrics(ctx context.Context, cb func(name string) error) error
 }
 
-// Disk represents a Source and a Sink
+// Disk represents a Source and a Sink.
 type Disk interface {
 	Source
 	Sink
+
+	Run(ctx context.Context) error
 }
 
 // DiskMaker returns a new Disk for the given config string.
