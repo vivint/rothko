@@ -56,10 +56,10 @@ func Nil(t testing.TB, a interface{}) {
 
 	rv := reflect.ValueOf(a)
 	if !canNil(rv) {
-		t.Fatal("%#v cannot be nil", a)
+		t.Fatalf("%#v cannot be nil", a)
 	}
 	if !rv.IsNil() {
-		t.Fatal("%#v != nil", a)
+		t.Fatalf("%#v != nil", a)
 	}
 }
 
@@ -75,7 +75,7 @@ func NotNil(t testing.TB, a interface{}) {
 		return
 	}
 	if rv.IsNil() {
-		t.Fatal("%#v == nil", a)
+		t.Fatalf("%#v == nil", a)
 	}
 }
 

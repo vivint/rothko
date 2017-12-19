@@ -62,10 +62,11 @@ func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 	locked := false
 	for i, names_w := range db.names_w {
 		db.names_w_mu[i].Lock()
+		len_names_w := len(names_w)
+		db.names_w_mu[i].Unlock()
 
 		// skip if we don't need to merge it in
-		if len(names_w) == 0 {
-			db.names_w_mu[i].Unlock()
+		if len_names_w == 0 {
 			continue
 		}
 
@@ -74,6 +75,10 @@ func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 			db.names_mu.Lock()
 			locked = true
 		}
+
+		// lock the worker map again. we drop the worker mutex to avoid
+		// deadlocks while taking the db.names_mu.
+		db.names_w_mu[i].Lock()
 
 		// lazily copy the names map to ensure it is readonly
 		// we reload the names map here after we have the mutex in case
@@ -86,12 +91,12 @@ func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 			copied = true
 		}
 
-		// merge it in
+		// merge the worker map in
 		for name := range names_w {
 			names[name] = struct{}{}
 		}
 
-		// clear out the map
+		// clear out the worker map
 		db.names_w[i] = make(map[string]struct{})
 		db.names_w_mu[i].Unlock()
 	}

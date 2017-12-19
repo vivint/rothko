@@ -32,7 +32,7 @@ func TestDBWrite(t *testing.T) {
 	sendErr := func(ok bool, err error) { ch <- res{ok, err} }
 
 	for i := 0; i < 200; i++ {
-		db.QueueCB(ctx, "test.bar.baz", int64(i), int64(i+1),
+		db.Queue(ctx, "test.bar.baz", int64(i), int64(i+1),
 			make([]byte, 700), sendErr)
 
 		r := <-ch
@@ -70,7 +70,7 @@ func BenchmarkDBWrite(b *testing.B) {
 
 		i := int64(0)
 		for pb.Next() {
-			db.Queue(ctx, metric, i, i+1, make([]byte, 300))
+			db.Queue(ctx, metric, i, i+1, make([]byte, 300), nil)
 			i++
 		}
 	})

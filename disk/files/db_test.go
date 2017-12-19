@@ -51,7 +51,7 @@ func testPopulateDB(t testing.TB, db *DB, num int) (
 		}
 		metrics[name] = struct{}{}
 
-		db.QueueCB(ctx, name, 0, 1, make([]byte, 10), sendRes)
+		db.Queue(ctx, name, 0, 1, make([]byte, 10), sendRes)
 	}
 	for i := 0; i < num; i++ {
 		r := <-ch
