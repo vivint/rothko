@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spacemonkeygo/rothko/accept"
 	"github.com/spacemonkeygo/rothko/data"
 	"github.com/spacemonkeygo/rothko/disk"
+	"github.com/spacemonkeygo/rothko/internal/junk"
 	"github.com/zeebo/errs"
 )
 
+// error classes that are used in certain circumstances
 var (
-	errInvalidParameters = errs.Class("invalid parameters")
-	errMissing           = errs.Class("missing")
+	ErrInvalidParameters = errs.Class("invalid parameters")
+	ErrMissing           = errs.Class("missing")
 )
 
 func printUsage(w io.Writer) {
@@ -55,40 +56,19 @@ message.
 `))
 }
 
+// listAvailable is a tiny helper to print a tab aligned list of available
+// entities that can be used.
 func listAvailable(w io.Writer) {
-	tw := newTabbed(w)
-	tw.write("kind", "name", "registrar")
+	tw := junk.NewTabbed(w)
+	tw.Write("kind", "name", "registrar")
 	for _, reg := range accept.List() {
-		tw.write("acceptrix", reg.Name, reg.Registrar)
+		tw.Write("acceptrix", reg.Name, reg.Registrar)
 	}
 	for _, reg := range disk.List() {
-		tw.write("disk", reg.Name, reg.Registrar)
+		tw.Write("disk", reg.Name, reg.Registrar)
 	}
 	for _, reg := range data.List() {
-		tw.write("dist", reg.Name, reg.Registrar)
+		tw.Write("dist", reg.Name, reg.Registrar)
 	}
-	tw.flush()
-}
-
-type tabbed struct {
-	tw  *tabwriter.Writer
-	err error
-}
-
-func newTabbed(w io.Writer) *tabbed {
-	return &tabbed{
-		tw: tabwriter.NewWriter(w, 0, 8, 3, ' ', 0),
-	}
-}
-
-func (t *tabbed) write(values ...string) {
-	if t.err == nil {
-		_, t.err = fmt.Fprintln(t.tw, strings.Join(values, "\t"))
-	}
-}
-
-func (t *tabbed) flush() {
-	if t.err == nil {
-		t.err = t.tw.Flush()
-	}
+	tw.Flush()
 }
