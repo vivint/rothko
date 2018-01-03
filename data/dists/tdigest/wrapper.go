@@ -48,7 +48,7 @@ func (Wrapper) Kind() data.DistributionKind {
 }
 
 func (w Wrapper) Observe(val float64) {
-	w.td.Add(val, 1)
+	w.td.Add(val)
 }
 
 func (w Wrapper) Marshal(buf []byte) []byte {
@@ -60,7 +60,7 @@ func (w Wrapper) Query(x float64) float64 {
 }
 
 func (w Wrapper) Len() int64 {
-	return int64(w.td.Len())
+	return int64(w.td.Count())
 }
 
 //

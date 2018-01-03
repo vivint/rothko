@@ -17,7 +17,7 @@
   branch = "master"
   name = "github.com/zeebo/tdigest"
   packages = ["."]
-  revision = "1a19267602be352711f90a3c190b20ee1e452e81"
+  revision = "ab6bd9fcfe7100326f9ae521386061c6379c9310"
 
 [[projects]]
   branch = "v1"

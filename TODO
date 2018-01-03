@@ -6,3 +6,4 @@
 - Get rid of DistributionKind in favor of strings
 - Provide a way to specify a default distribution kind if none are found
 - Perhaps don't worry about providing a default and just hard depend on random
+- Exponential decay merging

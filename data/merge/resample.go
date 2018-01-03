@@ -55,7 +55,7 @@ func (res *resampler) Sample(ctx context.Context, r data.Record) error {
 			}
 			count := uint32(1) << uint32(buf.Level)
 			for _, value := range buf.Data {
-				if err := res.dig.Add(value, count); err != nil {
+				if err := res.dig.AddWeighted(value, count); err != nil {
 					return Error.Wrap(err)
 				}
 			}
