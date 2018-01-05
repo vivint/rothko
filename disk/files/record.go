@@ -4,7 +4,11 @@ package files
 
 import (
 	"encoding/binary"
+	"hash/crc32"
 )
+
+// we use castagnoli for the crc checksum for version 2 and above
+var castTable = crc32.MakeTable(crc32.Castagnoli)
 
 // recordVersion is the version of records this package will write.
 const recordVersion = 1
@@ -21,7 +25,7 @@ type record struct {
 
 // we manually compute this to avoid a dependency on unsafe. it's too bad that
 // unsafe.Sizeof (which is fully safe) requires an unsafe import.
-const recordHeaderSize = 1 + 1 + 8 + 8 + 2
+const recordHeaderSize = 1 + 1 + 8 + 8 + 2 + 4
 
 // recordKind is an enumeration of kinds of records.
 type recordKind int8
@@ -53,26 +57,28 @@ func (r *record) Copy(buf []byte) {
 	r.data = append(buf[:0], r.data...)
 }
 
-// MarshalHeader appends a record header to the provided buf, returning it.
+// MarshalHeader writes a record header to the provided buf, returning it.
 func (r record) MarshalHeader(buf []byte) []byte {
 	// resize buf once if necessary
 	if size := r.Size(); cap(buf) < size {
 		buf = make([]byte, 0, size)
 	}
 
-	var scratch [8]byte
+	// help out bounds checking
+	buf = buf[:recordHeaderSize]
 
-	buf = append(buf, uint8(r.version))
-	buf = append(buf, uint8(r.kind))
+	buf[0] = uint8(r.version)
+	buf[1] = uint8(r.kind)
+	binary.BigEndian.PutUint64(buf[2:10], uint64(r.start))
+	binary.BigEndian.PutUint64(buf[10:18], uint64(r.end))
+	binary.BigEndian.PutUint16(buf[18:20], r.size)
 
-	binary.BigEndian.PutUint64(scratch[:], uint64(r.start))
-	buf = append(buf, scratch[:8]...)
-
-	binary.BigEndian.PutUint64(scratch[:], uint64(r.end))
-	buf = append(buf, scratch[:8]...)
-
-	binary.BigEndian.PutUint16(scratch[:], r.size)
-	buf = append(buf, scratch[:2]...)
+	// the crc is everything but the last 4 bytes of the record header followed
+	// by the data.
+	var crc uint32
+	crc = crc32.Update(crc, castTable, buf[:recordHeaderSize-4])
+	crc = crc32.Update(crc, castTable, r.data[:r.size])
+	binary.BigEndian.PutUint32(buf[20:24], crc)
 
 	return buf
 }
@@ -84,58 +90,37 @@ func (r record) Marshal(buf []byte) []byte {
 	return buf
 }
 
-// consume eats size bytes from the front of the buffer, returning the eaten
-// bytes, a slice without the eaten bytes, and an error if there weren't enough
-// bytes to eat.
-func consume(buf []byte, size int) ([]byte, []byte, error) {
-	if len(buf) < size {
-		return nil, nil, Error.New(
-			"buf not big enough. needed %d. got %d", size, len(buf))
-	}
-	return buf[:size], buf[size:], nil
-}
-
 // parse reads a record out of the byte slice. it returns an error if there is
 // not enough data to be a full record.
 func parse(buf []byte) (out record, err error) {
-	data, buf, err := consume(buf, 1)
-	if err != nil {
-		return out, err
+	if len(buf) < recordHeaderSize {
+		return out, Error.New("record buf not big enough for header")
 	}
-	if data[0] != recordVersion {
-		return out, Error.New("invalid version: %d", buf[0])
-	}
-	out.version = recordVersion
 
-	data, buf, err = consume(buf, 1)
-	if err != nil {
-		return out, err
+	out.version = int8(buf[0])
+	if out.version != recordVersion {
+		return out, Error.New("unknown record header version: %d", out.version)
 	}
-	out.kind = recordKind(data[0])
 
-	data, buf, err = consume(buf, 8)
-	if err != nil {
-		return out, err
-	}
-	out.start = int64(binary.BigEndian.Uint64(data))
+	out.kind = recordKind(buf[1])
+	out.start = int64(binary.BigEndian.Uint64(buf[2:10]))
+	out.end = int64(binary.BigEndian.Uint64(buf[10:18]))
+	out.size = binary.BigEndian.Uint16(buf[18:20])
 
-	data, buf, err = consume(buf, 8)
-	if err != nil {
-		return out, err
+	data_end := recordHeaderSize + int(out.size)
+	if len(buf) < data_end {
+		return out, Error.New("record buf not big enough for data")
 	}
-	out.end = int64(binary.BigEndian.Uint64(data))
+	out.data = buf[recordHeaderSize:data_end]
 
-	data, buf, err = consume(buf, 2)
-	if err != nil {
-		return out, err
+	// the crc is everything but the last 4 bytes of the record header
+	// followed by the data.
+	var crc uint32
+	crc = crc32.Update(crc, castTable, buf[:recordHeaderSize-4])
+	crc = crc32.Update(crc, castTable, out.data)
+	if disk_crc := binary.BigEndian.Uint32(buf[20:24]); crc != disk_crc {
+		return out, Error.New("crc mismatch: %x != disk %x", crc, disk_crc)
 	}
-	out.size = binary.BigEndian.Uint16(data)
-
-	data, buf, err = consume(buf, int(out.size))
-	if err != nil {
-		return out, err
-	}
-	out.data = data
 
 	return out, nil
 }

@@ -11,13 +11,11 @@ import (
 // slice returns a slice of the data with the given length. the data MUST NOT
 // point at go allocated memory.
 func slice(data uintptr, length int) []byte {
-	var sl = struct {
+	return *(*[]byte)(unsafe.Pointer(&struct {
 		addr uintptr
 		len  int
 		cap  int
-	}{data, length, length}
-
-	return *(*[]byte)(unsafe.Pointer(&sl))
+	}{data, length, length}))
 }
 
 // writeMetadata writes a metadata value into the buffer, ensuring that it
@@ -39,10 +37,15 @@ func writeMetadata(buf []byte, m meta.Metadata) (err error) {
 		return Error.New("metadata too large")
 	}
 
-	out := rec.MarshalHeader(buf[:0])
-	_, err = m.MarshalTo(buf[len(out):])
+	_, err = m.MarshalTo(buf[recordHeaderSize:])
+	if err != nil {
+		return Error.Wrap(err)
+	}
 
-	return Error.Wrap(err)
+	rec.data = buf[recordHeaderSize:]
+	rec.MarshalHeader(buf[:0])
+
+	return nil
 }
 
 // readMetadata reads a metadata value from the buffer.

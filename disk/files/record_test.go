@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/spacemonkeygo/rothko/internal/pcg"
 )
 
 func TestRecords(t *testing.T) {
@@ -34,10 +35,39 @@ func TestRecords(t *testing.T) {
 		})
 	})
 
+	t.Run("Checksum", func(t *testing.T) {
+		data := make([]byte, 100)
+		rec := record{
+			version: recordVersion,
+			kind:    recordKind_complete,
+			start:   1234,
+			end:     5678,
+			size:    100,
+			data:    data,
+		}
+		out := rec.Marshal(nil)
+		var rng pcg.PCG
+
+		for i := 0; i < 10000; i++ {
+			// remarshal, and goof it up!
+			out = rec.Marshal(out[:0])
+
+			var goof byte
+			for goof == 0 {
+				goof = uint8(rng.Uint32())
+			}
+
+			out[fastMod(rng.Uint32(), len(out))] += goof
+
+			_, err := parse(out)
+			assert.Error(t, err)
+		}
+	})
+
 	t.Run("Split", func(t *testing.T) {
 		var out []record
 
-		err := iterateRecords(1234, 5678, data, 50, func(rec record) error {
+		err := iterateRecords(1234, 5678, data, 54, func(rec record) error {
 			out = append(out, rec)
 			return nil
 		})
@@ -77,10 +107,10 @@ func TestRecords(t *testing.T) {
 			data:    data[90:100],
 		})
 
-		assert.Equal(t, len(out[0].Marshal(nil)), 50)
-		assert.Equal(t, len(out[1].Marshal(nil)), 50)
-		assert.Equal(t, len(out[2].Marshal(nil)), 50)
-		assert.That(t, len(out[3].Marshal(nil)) <= 50)
+		assert.Equal(t, len(out[0].Marshal(nil)), 54)
+		assert.Equal(t, len(out[1].Marshal(nil)), 54)
+		assert.Equal(t, len(out[2].Marshal(nil)), 54)
+		assert.That(t, len(out[3].Marshal(nil)) <= 54)
 	})
 }
 
