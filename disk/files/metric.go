@@ -369,6 +369,7 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 			head++
 
 			// start reading off values
+		new_record:
 			for head < capacity {
 				// we know that data values are fully contained in files: if we
 				// see a start record, we know we can keep reading inside of
@@ -379,16 +380,18 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 				// "starting" record for the condition that we're done.
 
 				rec, err := f.Record(ctx, head)
-				if err != nil {
-					return false, err
-				}
 				head++
+				if err != nil {
+					// drop any records we have errors reading (checksums, etc)
+					// TODO(jeff): add a hook to observe these errors.
+					continue new_record
+				}
 
 				// if the record ends after the end time, we can skip it. we
 				// dont need to check elsewhere because every other record
 				// must have the same timestamps.
 				if rec.end >= end {
-					continue
+					continue new_record
 				}
 
 				// TODO(jeff): we could be opening these files as read only,
@@ -411,22 +414,26 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 						return true, ctx.Err()
 					default:
 					}
-					continue
+					continue new_record
 				}
 
 				// if it's not a begin, we have some data integrity error.
 				if rec.kind != recordKind_begin {
-					return false, Error.New("data integrity error")
+					// drop any records we have with errors
+					// TODO(jeff): add a hook to observe these errors.
+					continue new_record
 				}
 
 				// read records and append them to the buf while we're getting
 				// continues.
 				for {
 					rec, err := f.Record(ctx, head)
-					if err != nil {
-						return false, err
-					}
 					head++
+					if err != nil {
+						// drop any records we have with errors
+						// TODO(jeff): add a hook to observe these errors.
+						continue new_record
+					}
 
 					buf = append(buf, rec.data...)
 
@@ -437,7 +444,9 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 					// if we see anything other than an end at this point, it's
 					// definitely a problem.
 					if rec.kind != recordKind_end {
-						return false, Error.New("data integrity error")
+						// drop any records we have with errors
+						// TODO(jeff): add a hook to observe these errors.
+						continue new_record
 					}
 
 					// ok we're done with that value, callback and move on to
@@ -454,8 +463,7 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 						return true, ctx.Err()
 					default:
 					}
-
-					break
+					continue new_record
 				}
 			}
 
@@ -478,37 +486,18 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 func (m *metric) ReadLast(ctx context.Context, buf []byte) (
 	start, end int64, data []byte, err error) {
 
-	f, head, err := m.acquireLast(ctx)
-	if err != nil {
-		return 0, 0, nil, err
-	}
-	defer m.opts.fch.releaseFile(m.filenameAt(m.last), f)
+	err = m.Read(ctx, 1<<63-1, buf,
+		func(ctx context.Context, cb_start, cb_end int64, cb_data []byte) (
+			bool, error) {
 
-	// we know the first record starts at head+1
-	head++
+			start = cb_start
+			end = cb_end
+			data = cb_data
 
-	// if there is no record, we just don't have any data yet.
-	if !f.HasRecord(ctx, head) {
-		return 0, 0, nil, nil
-	}
+			return true, nil
+		})
 
-	buf = buf[:0]
-	for {
-		rec, err := f.Record(ctx, head)
-		if err != nil {
-			return 0, 0, nil, err
-		}
-		head++
-
-		// TODO(jeff): we could be opening these files as read only,
-		// but that would complicate the caching semantics. maybe
-		// it's worth it to avoid this copy though.
-		buf = append(buf, rec.data...)
-
-		if rec.kind == recordKind_complete || rec.kind == recordKind_end {
-			return rec.start, rec.end, buf, nil
-		}
-	}
+	return start, end, data, err
 }
 
 //
