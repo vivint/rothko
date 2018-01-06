@@ -59,7 +59,7 @@ type Options struct {
 	Workers int
 
 	// Resources to use during operation.
-	Resources external.Resources
+	Resources external.Resources `json:"-"`
 }
 
 // DB is a database implementing disk.Writer and disk.Source using a file

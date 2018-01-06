@@ -4,7 +4,6 @@ package dump
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,6 +18,7 @@ type Options struct {
 	Disk      disk.Disk
 	Period    time.Duration
 	Resources external.Resources
+	Bufsize   int
 }
 
 type Dumper struct {
@@ -28,11 +28,15 @@ type Dumper struct {
 }
 
 func New(opts Options) *Dumper {
+	if opts.Bufsize == 0 {
+		opts.Bufsize = 1024
+	}
+
 	return &Dumper{
 		opts: opts,
 
 		bufs: sync.Pool{
-			New: func() interface{} { return make([]byte, 1024) },
+			New: func() interface{} { return make([]byte, opts.Bufsize) },
 		},
 	}
 }
@@ -40,6 +44,7 @@ func New(opts Options) *Dumper {
 func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 	err error) {
 
+	ext := d.opts.Resources
 	done := ctx.Done()
 	ticker := time.NewTicker(d.opts.Period)
 	defer ticker.Stop()
@@ -76,16 +81,26 @@ func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 					return false
 				}
 
-				// TODO(jeff): log the error that this returns
 				wg.Add(1)
-				d.opts.Disk.Queue(ctx, metric, rec.StartTime, rec.EndTime,
-					data, func(written bool, err error) {
-						// TODO(jeff): handle the input params appropriately?
-						// probably just logging.
+
+				err = d.opts.Disk.Queue(ctx,
+					metric, rec.StartTime, rec.EndTime, data,
+					func(written bool, err error) {
+						if !written || err != nil {
+							ext.Errorw("metric write problem",
+								"written", written,
+								"err", err,
+							)
+						}
+
 						d.bufs.Put(data)
 						wg.Done()
 						atomic.AddInt64(&metrics, 1)
 					})
+				if err != nil {
+					ext.Errorw("error queuing metric", "err", err)
+				}
+
 				return true
 			})
 
@@ -95,7 +110,8 @@ func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 			}
 
 			wg.Wait()
-			fmt.Println(metrics, time.Since(now))
+			ext.Observe("dumped_metrics_time", time.Since(now).Seconds())
+			ext.Observe("dumped_metrics", float64(metrics))
 		}
 	}
 }
