@@ -60,7 +60,9 @@ func run(ctx context.Context, opts Options) (err error) {
 	}
 
 	// launch the worker that periodically dumps in to the database
-	launch(func() { errch <- periodicallyDump(ctx, scr, opts.Disk) })
+	if opts.Dumper != nil {
+		launch(func() { errch <- opts.Dumper.Run(ctx, scr) })
+	}
 
 	// launch the database worker
 	launch(func() { errch <- opts.Disk.Run(ctx) })

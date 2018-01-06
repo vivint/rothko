@@ -2,8 +2,6 @@
 
 package data
 
-import "context"
-
 // Dist represents an abstract distribution.
 type Dist interface {
 	// Kind returns the kind of the distribution.
@@ -24,7 +22,3 @@ type DistParams interface {
 	// New creates a new Dist value.
 	New() Dist
 }
-
-// DistParamsMaker represents a way to create DistParams
-type DistParamsMaker func(ctx context.Context, config string) (
-	DistParams, error)

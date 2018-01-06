@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/spacemonkeygo/rothko/disk"
+	"github.com/spacemonkeygo/rothko/external"
 )
 
 // Options is a set of options to configure a database.
@@ -56,6 +57,9 @@ type Options struct {
 	// to schedule around goroutines blocked on page faults, which could cause
 	// goroutines to starve.
 	Workers int
+
+	// Resources to use during operation.
+	Resources external.Resources
 }
 
 // DB is a database implementing disk.Writer and disk.Source using a file
@@ -159,6 +163,7 @@ func (db *DB) newMetric(ctx context.Context, name string) (*metric, error) {
 		dir:  db.dir,
 		name: name,
 		max:  db.opts.Files,
+		ext:  db.opts.Resources,
 	})
 }
 

@@ -1,6 +1,6 @@
 // Copyright (C) 2017. See AUTHORS.
 
-// rothko runs a rothko server with standard rothko implementations.
+// rothko runs a demo rothko server with standard rothko implementations.
 package main // import "github.com/spacemonkeygo/rothko/bin/rothko"
 
 import (
@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/spacemonkeygo/rothko"
 	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
 	"github.com/spacemonkeygo/rothko/disk/files"
+	"github.com/spacemonkeygo/rothko/dump"
 )
 
 var (
@@ -44,8 +46,19 @@ func main() {
 
 	disk := files.New(filesOptions.Dir, filesOptions.Options)
 	params := tdigest.Params{Compression: *compression}
+	dumper := dump.New(dump.Options{
+		Disk:   disk,
+		Period: 10 * time.Minute,
+	})
+
+	fmt.Println(`
+This demonstration binary fills the database with bogus random data which can
+be viewed at <TODO: make a web ui :)>. In a real production deployment, a
+way to ingest data and write it would be required. See the rothko.Acceptrix
+interface for how.`)
 
 	rothko.Main(
 		rothko.WithDisk(disk),
-		rothko.WithDistParams(params))
+		rothko.WithDistParams(params),
+		rothko.WithDumper(dumper))
 }

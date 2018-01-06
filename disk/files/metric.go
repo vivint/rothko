@@ -9,6 +9,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/spacemonkeygo/rothko/external"
 )
 
 //
@@ -33,6 +35,7 @@ type metricOptions struct {
 	dir  string
 	name string
 	max  int
+	ext  external.Resources
 }
 
 // filenameBuf is a cache around constructing paths, as it is a significant
@@ -383,7 +386,7 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 				head++
 				if err != nil {
 					// drop any records we have errors reading (checksums, etc)
-					// TODO(jeff): add a hook to observe these errors.
+					m.opts.ext.Errorw("error reading record", "err", err)
 					continue new_record
 				}
 
@@ -420,7 +423,10 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 				// if it's not a begin, we have some data integrity error.
 				if rec.kind != recordKind_begin {
 					// drop any records we have with errors
-					// TODO(jeff): add a hook to observe these errors.
+					m.opts.ext.Errorw("invalid record kind",
+						"kind", rec.kind,
+						"expected", recordKind_end,
+					)
 					continue new_record
 				}
 
@@ -431,7 +437,7 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 					head++
 					if err != nil {
 						// drop any records we have with errors
-						// TODO(jeff): add a hook to observe these errors.
+						m.opts.ext.Errorw("error reading record", "err", err)
 						continue new_record
 					}
 
@@ -445,7 +451,10 @@ func (m *metric) Read(ctx context.Context, end int64, buf []byte,
 					// definitely a problem.
 					if rec.kind != recordKind_end {
 						// drop any records we have with errors
-						// TODO(jeff): add a hook to observe these errors.
+						m.opts.ext.Errorw("invalid record kind",
+							"kind", rec.kind,
+							"expected", recordKind_end,
+						)
 						continue new_record
 					}
 

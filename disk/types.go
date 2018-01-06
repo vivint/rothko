@@ -50,6 +50,3 @@ type Disk interface {
 
 	Run(ctx context.Context) error
 }
-
-// DiskMaker returns a new Disk for the given config string.
-type DiskMaker func(ctx context.Context, config string) (Disk, error)
