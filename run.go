@@ -4,80 +4,32 @@ package rothko
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"sync"
 
+	"github.com/spacemonkeygo/rothko/data/scribble"
 	"github.com/zeebo/errs"
 )
 
-// Main is the entrypoint of the rothko binary. Callers should only be main
-// packages, and their main function should look like
-//
-//	func main() { rothko.Main() }
-//
-// It is this way so that it is easier to build custom binaries with plugins
-// already imported.
-func Main() {
-	flag.Parse()
-
-	args := flag.Args()
-	if len(args) == 0 || args[0] == "help" {
-		printUsage(os.Stderr)
-		fmt.Fprintln(os.Stderr)
-
-		return
+func Main(options ...Option) {
+	var opts Options
+	for _, opt := range options {
+		opt(&opts)
 	}
 
-	err := run(context.Background(), args)
+	err := run(context.Background(), opts)
 	if err == nil {
 		return
 	}
 
-	switch {
-	case ErrInvalidParameters.Has(err):
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr)
-		printUsage(os.Stderr)
-
-	case ErrMissing.Has(err):
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr)
-		listAvailable(os.Stderr)
-
-	default:
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
-	}
-
-	fmt.Fprintln(os.Stderr)
+	fmt.Fprintf(os.Stderr, "%+v\n", err)
 	os.Exit(1)
 }
 
-func run(ctx context.Context, args []string) (err error) {
-	just_list := false
-	if args[0] == "list" {
-		args, just_list = args[1:], true
-	}
-
-	config, _, err := ParseConfig(args)
-	if err != nil {
-		return err
-	}
-
-	// load all of the plugins
-	if err := config.LoadPlugins(); err != nil {
-		return err
-	}
-
-	if just_list {
-		listAvailable(os.Stdout)
-		fmt.Fprintln(os.Stdout)
-		return nil
-	}
-
-	if config.Disk.Name == "" || config.Dist.Name == "" {
-		return ErrInvalidParameters.New("must specify a disk and a dist")
+func run(ctx context.Context, opts Options) (err error) {
+	if opts.Disk == nil || opts.DistParams == nil {
+		return errs.New("must specify a disk and dist params in options")
 	}
 
 	// helpers to keep track of workers
@@ -96,38 +48,23 @@ func run(ctx context.Context, args []string) (err error) {
 	}
 
 	// create the scribbler
-	scr, err := config.LoadScribbler(ctx)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-
-	// create the acceptrixes
-	accs, err := config.LoadAcceptrixes(ctx)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-
-	// create the disk
-	di, err := config.LoadDisk(ctx)
-	if err != nil {
-		return errs.Wrap(err)
-	}
+	scr := scribble.NewScribbler(opts.DistParams)
 
 	// keep track of the errors. the capacity is important to avoid deadlocks
-	errch := make(chan error, len(accs)+2)
+	errch := make(chan error, len(opts.Acceptrixes)+2)
 
 	// launch the acceptrixes
-	for _, acc := range accs {
+	for _, acc := range opts.Acceptrixes {
 		acc := acc
 		launch(func() { errch <- acc.Run(ctx, scr) })
 	}
 
 	// launch the worker that periodically dumps in to the database
-	launch(func() { errch <- periodicallyDump(ctx, scr, di) })
+	launch(func() { errch <- periodicallyDump(ctx, scr, opts.Disk) })
 
 	// launch the database worker
-	launch(func() { errch <- di.Run(ctx) })
+	launch(func() { errch <- opts.Disk.Run(ctx) })
 
-	// wait for an error i guess
+	// wait for an error
 	return <-errch
 }

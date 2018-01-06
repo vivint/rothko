@@ -4,12 +4,7 @@
 package tdigest // import "github.com/spacemonkeygo/rothko/data/dists/tdigest"
 
 import (
-	"context"
-	"strconv"
-
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/internal/confparse"
-	"github.com/zeebo/errs"
 	"github.com/zeebo/tdigest"
 )
 
@@ -61,24 +56,4 @@ func (w Wrapper) Query(x float64) float64 {
 
 func (w Wrapper) Len() int64 {
 	return int64(w.td.Count())
-}
-
-//
-// register with the data package
-//
-
-func init() { data.Register("rothko/data/dists/tdigest", makeParams) }
-
-func makeParams(ctx context.Context, config string) (data.DistParams, error) {
-	value, ok := confparse.Parse(config)["compression"]
-	if !ok {
-		return nil, errs.New("must specify compression=<value>")
-	}
-	compression, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return nil, errs.Wrap(err)
-	}
-	return Params{
-		Compression: compression,
-	}, nil
 }

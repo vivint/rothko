@@ -4,7 +4,9 @@ package rothko
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spacemonkeygo/rothko/data"
@@ -34,6 +36,10 @@ func periodicallyDump(ctx context.Context, scr *scribble.Scribbler,
 
 		case <-ticker.C:
 			var err error
+			var wg sync.WaitGroup
+			metrics := int64(0)
+			now := time.Now()
+
 			scr.Capture(ctx, func(metric string, rec data.Record) bool {
 				// check if we're cancelled
 				select {
@@ -56,12 +62,15 @@ func periodicallyDump(ctx context.Context, scr *scribble.Scribbler,
 				}
 
 				// TODO(jeff): log the error that this returns
-				di.Queue(ctx, metric, rec.StartTime, rec.EndTime,
-					data, func(written bool, err error) {
+				wg.Add(1)
+				di.Queue(ctx, metric, rec.StartTime, rec.EndTime, data,
+					func(written bool, err error) {
 						// TODO(jeff): handle the input params appropriately?
 						// probably just logging.
 
 						bufs.Put(data)
+						wg.Done()
+						atomic.AddInt64(&metrics, 1)
 					})
 				return true
 			})
@@ -70,6 +79,9 @@ func periodicallyDump(ctx context.Context, scr *scribble.Scribbler,
 			if err != nil {
 				return err
 			}
+
+			wg.Wait()
+			fmt.Println(metrics, time.Since(now))
 		}
 	}
 }

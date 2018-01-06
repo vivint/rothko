@@ -2,13 +2,6 @@
 
 package files
 
-import (
-	"github.com/spacemonkeygo/rothko/disk"
-)
-
-// register ourselves as a disk implementation.
-func init() { disk.Register("rothko/disk/files", filesMaker) }
-
 // fastMod computes n % m assuming that n is a random number in the full
 // uint32 range.
 func fastMod(n uint32, m int) int {

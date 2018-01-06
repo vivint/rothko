@@ -5,70 +5,74 @@ package main // import "github.com/spacemonkeygo/rothko/bin/query"
 
 import (
 	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/spacemonkeygo/rothko"
 	"github.com/spacemonkeygo/rothko/data"
 	"github.com/spacemonkeygo/rothko/data/dists"
-	"github.com/spacemonkeygo/rothko/disk"
-	_ "github.com/spacemonkeygo/rothko/disk/files"
+	"github.com/spacemonkeygo/rothko/disk/files"
 	"github.com/spacemonkeygo/rothko/internal/junk"
 	"github.com/zeebo/errs"
 )
 
+var invalidUsage = errs.Class("invalid usage")
+
+var (
+	filesConfigPath = flag.String("files_config", "files.json",
+		"path to json file containing the config for the files backend")
+)
+
 func main() {
-	err := run(context.Background())
-	switch {
-	case err == nil:
+	flag.Parse()
+
+	err := run(context.Background(), flag.Args())
+	if err == nil {
 		return
-
-	case rothko.ErrInvalidParameters.Has(err):
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr)
-		printUsage(os.Stderr)
-
-	case rothko.ErrMissing.Has(err):
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr)
-		listAvailable(os.Stderr)
-
-	default:
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 
-	fmt.Fprintln(os.Stderr)
+	switch {
+	case invalidUsage.Has(err):
+		fmt.Fprintf(os.Stderr, "%v\n\n", err)
+		printUsage(os.Stderr)
+
+	default:
+		fmt.Fprintf(os.Stderr, "%+v", err)
+	}
+
 	os.Exit(1)
 }
 
-func run(ctx context.Context) (err error) {
-	config, args, err := rothko.ParseConfig(os.Args[1:])
-	if err != nil {
-		return err
-	}
-
-	// load all of the plugins
-	if err := config.LoadPlugins(); err != nil {
-		return err
-	}
-
-	// load the disk
-	di, err := config.LoadDisk(ctx)
-	if err != nil {
-		return err
-	}
-
+func run(ctx context.Context, args []string) (err error) {
 	if len(args) == 0 {
-		return rothko.ErrInvalidParameters.New("no command specified")
+		return invalidUsage.New("no command specified")
 	}
+
+	files_config_data, err := ioutil.ReadFile(*filesConfigPath)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	var filesOptions struct {
+		files.Options
+		Dir string
+	}
+
+	if err := json.Unmarshal(files_config_data, &filesOptions); err != nil {
+		return errs.Wrap(err)
+	}
+
+	di := files.New(filesOptions.Dir, filesOptions.Options)
 
 	switch cmd := args[0]; cmd {
 	case "latest":
 		if len(args) == 1 {
-			return rothko.ErrInvalidParameters.New("no metric specified")
+			return errs.New("no metric specified")
 		}
 
 		start, end, data, err := di.QueryLatest(ctx, args[1], nil)
@@ -78,7 +82,7 @@ func run(ctx context.Context) (err error) {
 		return printData(start, end, data)
 
 	default:
-		return rothko.ErrInvalidParameters.New("unknown command: %q", args[0])
+		return invalidUsage.New("unknown command: %q", args[0])
 	}
 
 	return nil
@@ -86,29 +90,12 @@ func run(ctx context.Context) (err error) {
 
 func printUsage(w io.Writer) {
 	fmt.Fprintln(w, strings.TrimSpace(`
-usage: query [parameters...] <command> [args...]
-
-parameters are of the form <kind>:<value> and there are two kinds:
-
-	plugin:    pass "plugin:<path>" to load the plugin
-	disk:      pass "disk:<name>:<config>" to use the disk
-
-disk is required. config may either be a string literal or a path to
-a file containing the data.
+usage: query <command> [args...]
 
 command can be one of:
 
 	latest:   query the latest value for the metric specified in args
 `))
-}
-
-func listAvailable(w io.Writer) {
-	tw := junk.NewTabbed(w)
-	tw.Write("name", "registrar")
-	for _, reg := range disk.List() {
-		tw.Write(reg.Name, reg.Registrar)
-	}
-	tw.Flush()
 }
 
 func printData(start, end int64, buf []byte) error {

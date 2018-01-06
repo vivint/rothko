@@ -7,8 +7,7 @@
 // of metrics when there are many values from multiple hosts.
 //
 // This package contains a Main function to be called by the actual main
-// package, allowing you to customize the set of plugins you want to distribute
-// with the binary.
+// package, allowing you to customize the configuration of rothko's operation.
 //
 // See the github.com/spacemonkeygo/rothko/bin/rothko package for a rothko
 // binary with implementations loaded from this project.
