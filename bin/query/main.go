@@ -14,10 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/dists"
 	"github.com/spacemonkeygo/rothko/disk/files"
-	"github.com/spacemonkeygo/rothko/internal/junk"
 	"github.com/zeebo/errs"
 )
 
@@ -42,7 +39,7 @@ func main() {
 		printUsage(os.Stderr)
 
 	default:
-		fmt.Fprintf(os.Stderr, "%+v", err)
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
 	}
 
 	os.Exit(1)
@@ -75,11 +72,22 @@ func run(ctx context.Context, args []string) (err error) {
 			return errs.New("no metric specified")
 		}
 
-		start, end, data, err := di.QueryLatest(ctx, args[1], nil)
-		if err != nil {
-			return err
+		return runLatest(ctx, di, args[1])
+
+	case "render":
+		if len(args) == 1 {
+			return errs.New("no metric specified")
 		}
-		return printData(start, end, data)
+		if len(args) == 2 {
+			return errs.New("no duration specified")
+		}
+
+		dur, err := time.ParseDuration(args[2])
+		if err != nil {
+			return errs.Wrap(err)
+		}
+
+		return runRender(ctx, di, args[1], dur)
 
 	default:
 		return invalidUsage.New("unknown command: %q", args[0])
@@ -96,33 +104,4 @@ command can be one of:
 
 	latest:   query the latest value for the metric specified in args
 `))
-}
-
-func printData(start, end int64, buf []byte) error {
-	var rec data.Record
-	if err := rec.Unmarshal(buf); err != nil {
-		return errs.Wrap(err)
-	}
-	dist, err := dists.Load(rec)
-	if err != nil {
-		return errs.Wrap(err)
-	}
-
-	tw := junk.NewTabbed(os.Stdout)
-	tw.Write("start:", time.Unix(0, start).Format(time.RFC1123))
-	tw.Write("end:", time.Unix(0, end).Format(time.RFC1123))
-	tw.Write("obs:", fmt.Sprint(rec.Observations))
-	tw.Write("kind:", rec.DistributionKind.String())
-	tw.Write("data:", fmt.Sprintf("%x", rec.Distribution))
-	tw.Write("min:", fmt.Sprint(rec.Min), fmt.Sprintf("%x", rec.MinId))
-	tw.Write("max:", fmt.Sprint(rec.Max), fmt.Sprintf("%x", rec.MaxId))
-	tw.Write("merged:", fmt.Sprint(rec.Merged))
-
-	for x := 0.0; x <= 1.0; x += 1.0 / 32 {
-		val := dist.Query(x)
-		tw.Write(fmt.Sprintf("%0.2f:", x), fmt.Sprintf("%0.6f", val))
-	}
-	tw.Flush()
-
-	return errs.Wrap(tw.Error())
 }

@@ -33,9 +33,6 @@ func (c Context) Draw(cols []Column) {
 	can := c.Canvas
 	m, _ := can.(*RGB)
 
-	// TODO(jeff): this setup is really complicated lol. there's probably a
-	// good idea to simplify this.
-
 	width, height := can.Size()
 	value_delta := c.Max - c.Min
 	color_scale := float64(len(c.Colors)-1) / 1
@@ -49,11 +46,6 @@ func (c Context) Draw(cols []Column) {
 
 	last_data_len := -1
 	index_scale := 0.0
-
-	// TODO(jeff): right now we do this a column at a time. would it be better
-	// cache locality to do it a row at a time since that's the data layout
-	// for the image? it's going to be hard to avoid some sort of cache
-	// problems due to the data being columns and the image being rows.
 
 	for _, col := range cols {
 		data := col.Data

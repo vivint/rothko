@@ -21,7 +21,7 @@ type Sink interface {
 
 // ResultCallback is a function used to pass results back from Query. The data
 // slice must not be modified, and no references must be kept after the
-// function returns.
+// function returns. Return if you are done iterating.
 type ResultCallback func(ctx context.Context, start, end int64, data []byte) (
 	bool, error)
 
