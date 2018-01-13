@@ -4,6 +4,7 @@ package scribble
 
 import (
 	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -45,6 +46,11 @@ func NewScribbler(params data.DistParams) *Scribbler {
 // under some concurrent scenarios, this can lose updates.
 func (s *Scribbler) Scribble(ctx context.Context, metric string,
 	value float64, id []byte) {
+
+	// skip problematic floating point values
+	if math.IsInf(value, 0) || math.IsNaN(value) {
+		return
+	}
 
 	// load up the page pointer, allocating a fresh page if there isn't one.
 	var pi unsafe.Pointer

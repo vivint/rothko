@@ -54,6 +54,30 @@ func (w Wrapper) Query(x float64) float64 {
 	return w.td.Quantile(x)
 }
 
+func (w Wrapper) CDF(x float64) float64 {
+	// TODO(jeff): tdigest cdf is busted. fix it
+
+	min, max := w.td.Quantile(0), w.td.Quantile(1)
+	if x <= min {
+		return 0
+	}
+	if x >= max {
+		return 1
+	}
+
+	minq, maxq := 0.0, 1.0
+	for i := 0; i < 10; i++ {
+		medq := (minq + maxq) / 2
+		val := w.td.Quantile(medq)
+		if x >= val {
+			minq = medq
+		} else {
+			maxq = medq
+		}
+	}
+	return (minq + maxq) / 2
+}
+
 func (w Wrapper) Len() int64 {
 	return int64(w.td.Count())
 }

@@ -2,7 +2,10 @@
 
 package draw
 
-import "math"
+// Draw is shorthand for calling the Draw method on a Context.
+func Draw(c Context, cols []Column) {
+	Context.Draw(c, cols)
+}
 
 // Column represents a column to draw in a context. Data is expected to be
 // sorted, non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
@@ -18,32 +21,20 @@ type Context struct {
 	// Canvas to draw on to
 	Canvas Canvas
 
-	// Values below and above these get mapped to the first and last color.
-	// All other values get mapped to a color based on their percentage
-	// difference between based on the scaling.
-	Min, Max float64
-
-	// If true, will use logarithms to map between the value scales, where
-	// it finds the p where min + (max - min)^p is equal to the value.
-	Logrithmic bool
+	// Map takes a value from the Data in the column, and expects it to be
+	// mapped to a value in [0,1] specifying the color.
+	Map func(float64) float64
 }
 
+// Draw renders the columns on to the canvas using the provided information in
+// the context.
 func (c Context) Draw(cols []Column) {
 	// type assert the canvas to our optimized fast case
 	can := c.Canvas
 	m, _ := can.(*RGB)
 
+	color_scale := float64(len(c.Colors) - 1)
 	width, height := can.Size()
-	value_delta := c.Max - c.Min
-	color_scale := float64(len(c.Colors)-1) / 1
-
-	linear_scale := 0.0
-	log_scale := 0.0
-	if value_delta > 0 {
-		linear_scale = color_scale / value_delta
-		log_scale = (math.E - 1) / value_delta
-	}
-
 	last_data_len := -1
 	index_scale := 0.0
 
@@ -69,24 +60,9 @@ func (c Context) Draw(cols []Column) {
 			index := int(float64(y) * index_scale)
 
 			// figure out the color if it's different from the last data index
-			if index != last_index && value_delta > 0 {
-				val := data[index] - c.Min
-				if val < 0 {
-					val = 0
-				}
-				if val > value_delta {
-					val = value_delta
-				}
-
-				var scaled int
-				if c.Logrithmic {
-					val = (val * log_scale) + 1
-					scaled = int(math.Log(val) * color_scale)
-				} else {
-					scaled = int(val * linear_scale)
-				}
-
-				last_color = c.Colors[scaled]
+			if index != last_index {
+				color_index := int(c.Map(data[index]) * color_scale)
+				last_color = c.Colors[color_index]
 				last_index = index
 			}
 

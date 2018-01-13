@@ -1,13 +1,14 @@
 # TODO
 
-- Some default implementation of an acceptrix
+- Some default implementation of an acceptrix.
 - Perhaps some other ones that poll prometheus?
 - Perhaps some other ones that poll prometheous enabled servers?
-- Get rid of DistributionKind in favor of strings
-- Exponential decay merging
-- Multiple agg buffers for scribble for moving distributions
-- Write docs for all exported things in rothko
-- Clean up dumper code some
+- Get rid of DistributionKind in favor of strings.
+- Exponential decay merging.
+- Multiple agg buffers for scribble for moving distributions.
+- Write docs for all exported things in rothko.
+- Clean up dumper code some.
 - Ensure package import constraints are on all the packages (or don't).
-- Redo the draw package to draw backwards iteratively
-- Maybe the draw package is in charge of merging to get up to a pixel?
+- Fix CDF function and make it required.
+- Make render take some options/config.
+- Move rendering merge into some other package.
