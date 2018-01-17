@@ -10,19 +10,14 @@ import (
 
 // Load returns the Dist for the record.
 func Load(rec data.Record) (Dist, error) {
-	switch rec.DistributionKind {
-	case data.DistributionKind_TDigest:
+	switch rec.Kind {
+	case data.Kind_TDigest:
 		other, err := tdigest.FromBytes(rec.Distribution)
 		if err != nil {
 			return nil, err
 		}
 		return tdigest_wrapper.Wrap(other), nil
-
-	// more complicated. punt for now.
-	case data.DistributionKind_Random:
-		return nil, Error.New("TODO: implement random querying")
 	}
 
-	return nil, Error.New("unknown distribution kind: %v",
-		rec.DistributionKind)
+	return nil, Error.New("unknown distribution kind: %v", rec.Kind)
 }

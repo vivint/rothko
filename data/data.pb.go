@@ -32,26 +32,27 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type DistributionKind int32
+// Kind is the kind of the distribution.
+type Kind int32
 
 const (
-	DistributionKind_Random  DistributionKind = 0
-	DistributionKind_TDigest DistributionKind = 1
+	Kind_Unknown Kind = 0
+	Kind_TDigest Kind = 1
 )
 
-var DistributionKind_name = map[int32]string{
-	0: "Random",
+var Kind_name = map[int32]string{
+	0: "Unknown",
 	1: "TDigest",
 }
-var DistributionKind_value = map[string]int32{
-	"Random":  0,
+var Kind_value = map[string]int32{
+	"Unknown": 0,
 	"TDigest": 1,
 }
 
-func (x DistributionKind) String() string {
-	return proto.EnumName(DistributionKind_name, int32(x))
+func (x Kind) String() string {
+	return proto.EnumName(Kind_name, int32(x))
 }
-func (DistributionKind) EnumDescriptor() ([]byte, []int) { return fileDescriptorData, []int{0} }
+func (Kind) EnumDescriptor() ([]byte, []int) { return fileDescriptorData, []int{0} }
 
 // Record is an observed distribution over some time period with some
 // additional data about observed minimums and maximums.
@@ -60,18 +61,18 @@ type Record struct {
 	StartTime int64 `protobuf:"varint,1,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	EndTime   int64 `protobuf:"varint,2,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 	// the number of observations in the distribution
-	Observations int64 `protobuf:"varint,11,opt,name=observations,proto3" json:"observations,omitempty"`
+	Observations int64 `protobuf:"varint,3,opt,name=observations,proto3" json:"observations,omitempty"`
 	// a serialized distribution. the kind tells us which type of distribution
 	// it is.
-	Distribution     []byte           `protobuf:"bytes,3,opt,name=distribution,proto3" json:"distribution,omitempty"`
-	DistributionKind DistributionKind `protobuf:"varint,10,opt,name=distribution_kind,json=distributionKind,proto3,enum=sm.rothko.data.DistributionKind" json:"distribution_kind,omitempty"`
+	Distribution []byte `protobuf:"bytes,4,opt,name=distribution,proto3" json:"distribution,omitempty"`
+	Kind         Kind   `protobuf:"varint,5,opt,name=kind,proto3,enum=sm.rothko.data.Kind" json:"kind,omitempty"`
 	// minimum and maximum values observed
-	Min   float64 `protobuf:"fixed64,4,opt,name=min,proto3" json:"min,omitempty"`
-	MinId []byte  `protobuf:"bytes,12,opt,name=min_id,json=minId,proto3" json:"min_id,omitempty"`
-	Max   float64 `protobuf:"fixed64,5,opt,name=max,proto3" json:"max,omitempty"`
-	MaxId []byte  `protobuf:"bytes,13,opt,name=max_id,json=maxId,proto3" json:"max_id,omitempty"`
+	Min   float64 `protobuf:"fixed64,6,opt,name=min,proto3" json:"min,omitempty"`
+	Max   float64 `protobuf:"fixed64,7,opt,name=max,proto3" json:"max,omitempty"`
+	MinId []byte  `protobuf:"bytes,8,opt,name=min_id,json=minId,proto3" json:"min_id,omitempty"`
+	MaxId []byte  `protobuf:"bytes,9,opt,name=max_id,json=maxId,proto3" json:"max_id,omitempty"`
 	// how many records have been merged into this.
-	Merged int64 `protobuf:"varint,9,opt,name=merged,proto3" json:"merged,omitempty"`
+	Merged int64 `protobuf:"varint,10,opt,name=merged,proto3" json:"merged,omitempty"`
 }
 
 func (m *Record) Reset()                    { *m = Record{} }
@@ -81,7 +82,7 @@ func (*Record) Descriptor() ([]byte, []int) { return fileDescriptorData, []int{0
 
 func init() {
 	proto.RegisterType((*Record)(nil), "sm.rothko.data.Record")
-	proto.RegisterEnum("sm.rothko.data.DistributionKind", DistributionKind_name, DistributionKind_value)
+	proto.RegisterEnum("sm.rothko.data.Kind", Kind_name, Kind_value)
 }
 func (m *Record) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
@@ -108,50 +109,50 @@ func (m *Record) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintData(dAtA, i, uint64(m.EndTime))
 	}
+	if m.Observations != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintData(dAtA, i, uint64(m.Observations))
+	}
 	if len(m.Distribution) > 0 {
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintData(dAtA, i, uint64(len(m.Distribution)))
 		i += copy(dAtA[i:], m.Distribution)
 	}
+	if m.Kind != 0 {
+		dAtA[i] = 0x28
+		i++
+		i = encodeVarintData(dAtA, i, uint64(m.Kind))
+	}
 	if m.Min != 0 {
-		dAtA[i] = 0x21
+		dAtA[i] = 0x31
 		i++
 		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Min))))
 		i += 8
 	}
 	if m.Max != 0 {
-		dAtA[i] = 0x29
+		dAtA[i] = 0x39
 		i++
 		encoding_binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.Max))))
 		i += 8
 	}
-	if m.Merged != 0 {
-		dAtA[i] = 0x48
-		i++
-		i = encodeVarintData(dAtA, i, uint64(m.Merged))
-	}
-	if m.DistributionKind != 0 {
-		dAtA[i] = 0x50
-		i++
-		i = encodeVarintData(dAtA, i, uint64(m.DistributionKind))
-	}
-	if m.Observations != 0 {
-		dAtA[i] = 0x58
-		i++
-		i = encodeVarintData(dAtA, i, uint64(m.Observations))
-	}
 	if len(m.MinId) > 0 {
-		dAtA[i] = 0x62
+		dAtA[i] = 0x42
 		i++
 		i = encodeVarintData(dAtA, i, uint64(len(m.MinId)))
 		i += copy(dAtA[i:], m.MinId)
 	}
 	if len(m.MaxId) > 0 {
-		dAtA[i] = 0x6a
+		dAtA[i] = 0x4a
 		i++
 		i = encodeVarintData(dAtA, i, uint64(len(m.MaxId)))
 		i += copy(dAtA[i:], m.MaxId)
+	}
+	if m.Merged != 0 {
+		dAtA[i] = 0x50
+		i++
+		i = encodeVarintData(dAtA, i, uint64(m.Merged))
 	}
 	return i, nil
 }
@@ -174,24 +175,21 @@ func (m *Record) Size() (n int) {
 	if m.EndTime != 0 {
 		n += 1 + sovData(uint64(m.EndTime))
 	}
+	if m.Observations != 0 {
+		n += 1 + sovData(uint64(m.Observations))
+	}
 	l = len(m.Distribution)
 	if l > 0 {
 		n += 1 + l + sovData(uint64(l))
+	}
+	if m.Kind != 0 {
+		n += 1 + sovData(uint64(m.Kind))
 	}
 	if m.Min != 0 {
 		n += 9
 	}
 	if m.Max != 0 {
 		n += 9
-	}
-	if m.Merged != 0 {
-		n += 1 + sovData(uint64(m.Merged))
-	}
-	if m.DistributionKind != 0 {
-		n += 1 + sovData(uint64(m.DistributionKind))
-	}
-	if m.Observations != 0 {
-		n += 1 + sovData(uint64(m.Observations))
 	}
 	l = len(m.MinId)
 	if l > 0 {
@@ -200,6 +198,9 @@ func (m *Record) Size() (n int) {
 	l = len(m.MaxId)
 	if l > 0 {
 		n += 1 + l + sovData(uint64(l))
+	}
+	if m.Merged != 0 {
+		n += 1 + sovData(uint64(m.Merged))
 	}
 	return n
 }
@@ -285,6 +286,25 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 				}
 			}
 		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Observations", wireType)
+			}
+			m.Observations = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowData
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Observations |= (int64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Distribution", wireType)
 			}
@@ -315,7 +335,26 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 				m.Distribution = []byte{}
 			}
 			iNdEx = postIndex
-		case 4:
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Kind", wireType)
+			}
+			m.Kind = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowData
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Kind |= (Kind(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
 			if wireType != 1 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Min", wireType)
 			}
@@ -326,7 +365,7 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			m.Min = float64(math.Float64frombits(v))
-		case 5:
+		case 7:
 			if wireType != 1 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Max", wireType)
 			}
@@ -337,64 +376,7 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			v = uint64(encoding_binary.LittleEndian.Uint64(dAtA[iNdEx:]))
 			iNdEx += 8
 			m.Max = float64(math.Float64frombits(v))
-		case 9:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Merged", wireType)
-			}
-			m.Merged = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Merged |= (int64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 10:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DistributionKind", wireType)
-			}
-			m.DistributionKind = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.DistributionKind |= (DistributionKind(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 11:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Observations", wireType)
-			}
-			m.Observations = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowData
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Observations |= (int64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 12:
+		case 8:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field MinId", wireType)
 			}
@@ -425,7 +407,7 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 				m.MinId = []byte{}
 			}
 			iNdEx = postIndex
-		case 13:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field MaxId", wireType)
 			}
@@ -456,6 +438,25 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 				m.MaxId = []byte{}
 			}
 			iNdEx = postIndex
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Merged", wireType)
+			}
+			m.Merged = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowData
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Merged |= (int64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipData(dAtA[iNdEx:])
@@ -585,27 +586,25 @@ var (
 func init() { proto.RegisterFile("data.proto", fileDescriptorData) }
 
 var fileDescriptorData = []byte{
-	// 340 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x91, 0xb1, 0x6e, 0xfa, 0x30,
-	0x10, 0xc6, 0x31, 0x84, 0x24, 0x1c, 0xfc, 0x91, 0xff, 0x96, 0x8a, 0xdc, 0x4a, 0x8d, 0x22, 0xa6,
-	0xa8, 0x55, 0x83, 0xd4, 0xbe, 0x41, 0xc5, 0x02, 0x55, 0x97, 0x88, 0xa9, 0x0b, 0x72, 0xb0, 0x1b,
-	0x2c, 0x64, 0xbb, 0x4a, 0x4c, 0x95, 0x47, 0x64, 0xec, 0xd2, 0xbd, 0xe5, 0x49, 0xaa, 0x18, 0x06,
-	0x60, 0xbb, 0xef, 0xf7, 0x9d, 0x7d, 0xf7, 0xe9, 0x00, 0x38, 0xb3, 0x2c, 0xfd, 0x28, 0x8d, 0x35,
-	0x64, 0x58, 0xa9, 0xb4, 0x34, 0x76, 0xbd, 0x31, 0x69, 0x43, 0x6f, 0x1e, 0x0a, 0x69, 0xd7, 0xdb,
-	0x3c, 0x5d, 0x19, 0x35, 0x29, 0x4c, 0x61, 0x26, 0xae, 0x2d, 0xdf, 0xbe, 0x3b, 0xe5, 0x84, 0xab,
-	0x0e, 0xcf, 0xc7, 0xdf, 0x6d, 0xf0, 0x33, 0xb1, 0x32, 0x25, 0x27, 0xb7, 0x00, 0x95, 0x65, 0xa5,
-	0x5d, 0x5a, 0xa9, 0x04, 0x45, 0x31, 0x4a, 0x3a, 0x59, 0xcf, 0x91, 0x85, 0x54, 0x82, 0x5c, 0x43,
-	0x28, 0x34, 0x3f, 0x98, 0x6d, 0x67, 0x06, 0x42, 0x73, 0x67, 0x8d, 0x61, 0xc0, 0x65, 0x65, 0x4b,
-	0x99, 0x6f, 0xad, 0x34, 0x9a, 0x76, 0x62, 0x94, 0x0c, 0xb2, 0x33, 0x46, 0x30, 0x74, 0x94, 0xd4,
-	0xd4, 0x8b, 0x51, 0x82, 0xb2, 0xa6, 0x74, 0x84, 0xd5, 0xb4, 0x7b, 0x24, 0xac, 0x26, 0x23, 0xf0,
-	0x95, 0x28, 0x0b, 0xc1, 0x69, 0xcf, 0x0d, 0x38, 0x2a, 0xf2, 0x0a, 0xff, 0x4f, 0xff, 0x5a, 0x6e,
-	0xa4, 0xe6, 0x14, 0x62, 0x94, 0x0c, 0x1f, 0xe3, 0xf4, 0x3c, 0x7f, 0x3a, 0x3d, 0x69, 0x7c, 0x91,
-	0x9a, 0x67, 0x98, 0x5f, 0x90, 0x66, 0x5d, 0x93, 0x57, 0xa2, 0xfc, 0x64, 0x0d, 0xaa, 0x68, 0xdf,
-	0x0d, 0x3b, 0x63, 0xe4, 0x0a, 0x7c, 0x25, 0xf5, 0x52, 0x72, 0x3a, 0x70, 0x61, 0xba, 0x4a, 0xea,
-	0x19, 0x77, 0x98, 0xd5, 0x0d, 0xfe, 0x77, 0xc4, 0xac, 0x9e, 0xf1, 0xb9, 0x17, 0xfa, 0x38, 0x98,
-	0x7b, 0x61, 0x80, 0xc3, 0xb9, 0x17, 0x86, 0xb8, 0x77, 0x77, 0x0f, 0xf8, 0x72, 0x13, 0x02, 0xe0,
-	0x67, 0x4c, 0x73, 0xa3, 0x70, 0x8b, 0xf4, 0x21, 0x58, 0x4c, 0x65, 0x21, 0x2a, 0x8b, 0xd1, 0xf3,
-	0x68, 0xf7, 0x1b, 0xb5, 0x76, 0xfb, 0x08, 0x7d, 0xed, 0x23, 0xf4, 0xb3, 0x8f, 0xd0, 0x9b, 0xd7,
-	0x64, 0xc9, 0x7d, 0x77, 0xa3, 0xa7, 0xbf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x89, 0x42, 0xca, 0x53,
-	0xf0, 0x01, 0x00, 0x00,
+	// 314 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x54, 0x90, 0x41, 0x4e, 0x02, 0x31,
+	0x14, 0x86, 0x29, 0x0c, 0x03, 0x3c, 0x09, 0x21, 0x8d, 0x92, 0x6a, 0xe2, 0x64, 0xc2, 0x6a, 0x62,
+	0xe2, 0x90, 0xe8, 0x0d, 0x8c, 0x1b, 0xe2, 0x6e, 0x82, 0x1b, 0x37, 0xa4, 0x43, 0xeb, 0xd0, 0x90,
+	0xb6, 0xa6, 0x53, 0x74, 0x4e, 0xe3, 0x79, 0x58, 0x7a, 0x04, 0xe5, 0x24, 0xa6, 0x0f, 0x36, 0xb3,
+	0x7b, 0xff, 0xf7, 0xff, 0xcd, 0xfb, 0xfb, 0x00, 0x04, 0xf7, 0x3c, 0xff, 0x70, 0xd6, 0x5b, 0x3a,
+	0xa9, 0x75, 0xee, 0xac, 0xdf, 0xee, 0x6c, 0x1e, 0xe8, 0xcd, 0x7d, 0xa5, 0xfc, 0x76, 0x5f, 0xe6,
+	0x1b, 0xab, 0x17, 0x95, 0xad, 0xec, 0x02, 0x63, 0xe5, 0xfe, 0x1d, 0x15, 0x0a, 0x9c, 0x4e, 0xcf,
+	0xe7, 0xdf, 0x5d, 0x88, 0x0b, 0xb9, 0xb1, 0x4e, 0xd0, 0x5b, 0x80, 0xda, 0x73, 0xe7, 0xd7, 0x5e,
+	0x69, 0xc9, 0x48, 0x4a, 0xb2, 0x5e, 0x31, 0x42, 0xb2, 0x52, 0x5a, 0xd2, 0x6b, 0x18, 0x4a, 0x23,
+	0x4e, 0x66, 0x17, 0xcd, 0x81, 0x34, 0x02, 0xad, 0x39, 0x8c, 0x6d, 0x59, 0x4b, 0xf7, 0xc9, 0xbd,
+	0xb2, 0xa6, 0x66, 0x3d, 0xb4, 0x5b, 0x2c, 0x64, 0x84, 0xaa, 0xbd, 0x53, 0xe5, 0x3e, 0x00, 0x16,
+	0xa5, 0x24, 0x1b, 0x17, 0x2d, 0x46, 0x33, 0x88, 0x76, 0xca, 0x08, 0xd6, 0x4f, 0x49, 0x36, 0x79,
+	0xb8, 0xcc, 0xdb, 0x5f, 0xcb, 0x5f, 0x94, 0x11, 0x05, 0x26, 0xe8, 0x14, 0x7a, 0x5a, 0x19, 0x16,
+	0xa7, 0x24, 0x23, 0x45, 0x18, 0x91, 0xf0, 0x86, 0x0d, 0xce, 0x84, 0x37, 0xf4, 0x0a, 0x62, 0xad,
+	0xcc, 0x5a, 0x09, 0x36, 0xc4, 0x5d, 0x7d, 0xad, 0xcc, 0x52, 0x20, 0xe6, 0x4d, 0xc0, 0xa3, 0x33,
+	0xe6, 0xcd, 0x52, 0xd0, 0x19, 0xc4, 0x5a, 0xba, 0x4a, 0x0a, 0x06, 0xd8, 0xfe, 0xac, 0xee, 0x52,
+	0x88, 0xc2, 0x5e, 0x7a, 0x01, 0x83, 0x57, 0xb3, 0x33, 0xf6, 0xcb, 0x4c, 0x3b, 0x41, 0xac, 0x9e,
+	0x55, 0x25, 0x6b, 0x3f, 0x25, 0x4f, 0xb3, 0xc3, 0x5f, 0xd2, 0x39, 0x1c, 0x13, 0xf2, 0x73, 0x4c,
+	0xc8, 0xef, 0x31, 0x21, 0x6f, 0x51, 0xa8, 0x5b, 0xc6, 0x78, 0xe1, 0xc7, 0xff, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x5d, 0xe5, 0x3f, 0x4d, 0xae, 0x01, 0x00, 0x00,
 }

@@ -77,7 +77,7 @@ func (a *agg) Finish(buf []byte, now time.Time) ([]byte, data.Record) {
 	a.mu.Unlock()
 
 	out.EndTime = now.In(time.UTC).UnixNano()
-	out.DistributionKind = a.dist.Kind()
+	out.Kind = a.dist.Kind()
 	buf = a.dist.Marshal(buf[:0])
 	out.Distribution = buf
 

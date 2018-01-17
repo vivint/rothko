@@ -8,6 +8,13 @@ type Canvas interface {
 	Size() (w, h int)
 }
 
+// Column represents a column to draw in a context. Data is expected to be
+// sorted, non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
+type Column struct {
+	X, W int
+	Data []float64
+}
+
 // Color is a simple 8 bits per channel color.
 type Color struct {
 	R, G, B uint8
@@ -33,17 +40,24 @@ func NewRGB(w, h int) *RGB {
 }
 
 // Size returns the width and height of the RGB.
-func (r *RGB) Size() (w, h int) {
-	return r.Width, r.Height
+func (m *RGB) Size() (w, h int) {
+	return m.Width, m.Height
 }
 
 // Set stores the pixel values in the color to the coordinate at x and y. The
 // top left corner is (0, 0).
-func (r *RGB) Set(x, y int, c Color) {
-	i := y*r.Stride + x*4
-	pix := r.Pix[i : i+4]
+func (m *RGB) Set(x, y int, c Color) {
+	i := y*m.Stride + x*4
+	pix := m.Pix[i : i+4]
 	pix[0] = c.R
 	pix[1] = c.G
 	pix[2] = c.B
 	pix[3] = 255
+}
+
+// Raw returns the raw values at the pixel, including alpha channel. It can
+// be mutated.
+func (m *RGB) Raw(x, y int) []uint8 {
+	i := y*m.Stride + x*4
+	return m.Pix[i : i+4]
 }

@@ -20,14 +20,14 @@
   revision = "ab6bd9fcfe7100326f9ae521386061c6379c9310"
 
 [[projects]]
-  branch = "v1"
-  name = "gopkg.in/spacemonkeygo/random.v1"
-  packages = ["."]
-  revision = "ef957be85a22b33f1a64c7d188d5fd2d5ab0aad1"
+  branch = "master"
+  name = "golang.org/x/image"
+  packages = ["font","font/basicfont","font/inconsolata","font/plan9font","math/fixed"]
+  revision = "12117c17ca67ffa1ce22e9409f3b0b0a93ac08c7"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0d76387e68135c3c70c4e16e0081fb6dd0365efc3da3208a48201df1e32497bf"
+  inputs-digest = "79d5c8afc4d1ff98f0d646ea48242ae050bb6d5d0f2a55cf15d41bc97d4125eb"
   solver-name = "gps-cdcl"
   solver-version = 1

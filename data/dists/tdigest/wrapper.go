@@ -14,8 +14,8 @@ type Params struct {
 }
 
 // Kind returns the TDigest distribution kind.
-func (p Params) Kind() data.DistributionKind {
-	return data.DistributionKind_TDigest
+func (p Params) Kind() data.Kind {
+	return data.Kind_TDigest
 }
 
 // New returns a new TDigest as a data.Dist.
@@ -38,8 +38,8 @@ func Wrap(td *tdigest.TDigest) Wrapper {
 	return Wrapper{td: td}
 }
 
-func (Wrapper) Kind() data.DistributionKind {
-	return data.DistributionKind_TDigest
+func (Wrapper) Kind() data.Kind {
+	return data.Kind_TDigest
 }
 
 func (w Wrapper) Observe(val float64) {
@@ -56,6 +56,7 @@ func (w Wrapper) Query(x float64) float64 {
 
 func (w Wrapper) CDF(x float64) float64 {
 	// TODO(jeff): tdigest cdf is busted. fix it
+	return w.td.CDF(x)
 
 	min, max := w.td.Quantile(0), w.td.Quantile(1)
 	if x <= min {
@@ -66,7 +67,7 @@ func (w Wrapper) CDF(x float64) float64 {
 	}
 
 	minq, maxq := 0.0, 1.0
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 64; i++ {
 		medq := (minq + maxq) / 2
 		val := w.td.Quantile(medq)
 		if x >= val {

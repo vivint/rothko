@@ -6,14 +6,14 @@ import (
 	"context"
 
 	"github.com/spacemonkeygo/rothko/data"
-	tdigest_wrapper "github.com/spacemonkeygo/rothko/data/dists/tdigest"
+	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
 )
 
 // MergeOptions are the arguments passed to Merge.
 type MergeOptions struct {
 	// Params are the parameters for the output distribution the merged record
 	// should have.
-	Params tdigest_wrapper.Params
+	Params tdigest.Params
 
 	// Records are the set of records to merge.
 	Records []data.Record
@@ -53,7 +53,7 @@ func Merge(ctx context.Context, opts MergeOptions) (
 			return out, err
 		}
 	}
-	out.Distribution, out.DistributionKind, err = res.Finish(ctx)
+	out.Distribution, out.Kind, err = res.Finish(ctx)
 	if err != nil {
 		return out, err
 	}

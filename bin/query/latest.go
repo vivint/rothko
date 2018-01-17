@@ -37,7 +37,7 @@ func printData(start, end int64, buf []byte) error {
 	tw.Write("start:", time.Unix(0, start).Format(time.RFC1123))
 	tw.Write("end:", time.Unix(0, end).Format(time.RFC1123))
 	tw.Write("obs:", fmt.Sprint(rec.Observations))
-	tw.Write("kind:", rec.DistributionKind.String())
+	tw.Write("kind:", rec.Kind.String())
 	tw.Write("data:", fmt.Sprintf("%x", rec.Distribution))
 	tw.Write("min:", fmt.Sprint(rec.Min), fmt.Sprintf("%x", rec.MinId))
 	tw.Write("max:", fmt.Sprint(rec.Max), fmt.Sprintf("%x", rec.MaxId))
