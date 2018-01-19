@@ -1,10 +1,12 @@
-package main
+// Copyright (C) 2018. See AUTHORS.
+
+package colors
 
 import (
 	"github.com/spacemonkeygo/rothko/draw"
 )
 
-var viridis = []draw.Color{
+var Viridis = []draw.Color{
 	{R: 0x44, G: 0x1, B: 0x54},
 	{R: 0x44, G: 0x2, B: 0x56},
 	{R: 0x45, G: 0x4, B: 0x57},

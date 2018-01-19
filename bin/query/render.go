@@ -6,14 +6,17 @@ import (
 	"context"
 	"image"
 	"image/png"
-	"io/ioutil"
 	"os"
 	"time"
 
+	"github.com/spacemonkeygo/rothko/data"
+	"github.com/spacemonkeygo/rothko/data/dists"
 	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
 	"github.com/spacemonkeygo/rothko/disk/files"
 	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/spacemonkeygo/rothko/draw/colors"
 	"github.com/spacemonkeygo/rothko/draw/graph"
+	"github.com/spacemonkeygo/rothko/draw/merge"
 	"github.com/zeebo/errs"
 )
 
@@ -24,25 +27,64 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 	const (
 		width       = 1000
 		height      = 300
-		samples     = height
+		samples     = 30
 		compression = 5
 	)
 
-	g := graph.New(graph.Options{
-		Duration: dur,
-		Samples:  samples,
-		Params:   tdigest.Params{Compression: compression},
-		Colors:   viridis,
+	now := time.Now().UnixNano()
+	stop_before := now - dur.Nanoseconds()
+	var earliest dists.Dist
+
+	merger := merge.New(merge.Options{
 		Width:    width,
-		Height:   height,
+		Samples:  samples,
+		Now:      now,
+		Duration: dur,
+		Params:   tdigest.Params{Compression: compression},
 	})
 
-	err := di.Query(ctx, metric, g.Now(), nil, g.Push)
+	err := di.Query(ctx, metric, now, nil,
+		func(ctx context.Context, start, end int64, buf []byte) (
+			bool, error) {
+
+			var rec data.Record
+			if err := rec.Unmarshal(buf); err != nil {
+				return false, errs.Wrap(err)
+			}
+
+			if earliest == nil {
+				dist, err := dists.Load(rec)
+				if err != nil {
+					return false, errs.Wrap(err)
+				}
+				earliest = dist
+			}
+
+			if err := merger.Push(ctx, rec); err != nil {
+				return false, errs.Wrap(err)
+			}
+
+			return end < stop_before, nil
+		})
 	if err != nil {
 		return errs.Wrap(err)
 	}
 
-	out, err := g.Finish(ctx)
+	cols, err := merger.Finish(ctx)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	out, err := graph.Draw(ctx, graph.Options{
+		Now:      now,
+		Duration: dur,
+		Columns:  cols,
+		Colors:   colors.Viridis,
+		Earliest: earliest,
+		Width:    width,
+		Height:   height,
+		NoAxes:   true,
+	})
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -53,7 +95,7 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 	}
 	defer fh.Close()
 
-	return errs.Wrap(png.Encode(ioutil.Discard, asImage(out)))
+	return errs.Wrap(png.Encode(fh, asImage(out)))
 }
 
 func asImage(m *draw.RGB) *image.RGBA {

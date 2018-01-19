@@ -15,9 +15,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/zeebo/float16"
+  packages = ["."]
+  revision = "b97e955423666e5757900ffe8e816bacc557fdcf"
+
+[[projects]]
+  branch = "master"
   name = "github.com/zeebo/tdigest"
   packages = ["."]
-  revision = "ab6bd9fcfe7100326f9ae521386061c6379c9310"
+  revision = "879702e582c98cb9a1f30981d204431445332d71"
 
 [[projects]]
   branch = "master"
@@ -25,9 +31,15 @@
   packages = ["font","font/basicfont","font/inconsolata","font/plan9font","math/fixed"]
   revision = "12117c17ca67ffa1ce22e9409f3b0b0a93ac08c7"
 
+[[projects]]
+  branch = "master"
+  name = "honnef.co/go/js/dom"
+  packages = ["."]
+  revision = "6a8015da13438f4de2c715e781271ab856b4b24c"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "79d5c8afc4d1ff98f0d646ea48242ae050bb6d5d0f2a55cf15d41bc97d4125eb"
+  inputs-digest = "71a8e70d5d1eaa7b8cf8c6e5b6727d333646e95aa3755534b53cc116d41a37ca"
   solver-name = "gps-cdcl"
   solver-version = 1

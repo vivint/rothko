@@ -1,4 +1,8 @@
 required = ["github.com/gogo/protobuf/protoc-gen-gogo"]
+ignored = [
+	"github.com/gopherjs/gopherjs",
+	"github.com/gopherjs/gopherjs/*",
+]
 
 [[constraint]]
   name = "github.com/gogo/protobuf"
@@ -15,3 +19,4 @@ required = ["github.com/gogo/protobuf/protoc-gen-gogo"]
 [[constraint]]
   branch = "v1"
   name = "gopkg.in/spacemonkeygo/random.v1"
+

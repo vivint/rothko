@@ -1,6 +1,6 @@
 // Copyright (C) 2018. See AUTHORS.
 
-package graph
+package merge
 
 import (
 	"context"
@@ -9,12 +9,13 @@ import (
 
 	"github.com/spacemonkeygo/rothko/data"
 	"github.com/spacemonkeygo/rothko/data/dists"
+	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
 	"github.com/spacemonkeygo/rothko/data/merge"
 	"github.com/spacemonkeygo/rothko/draw"
 	"github.com/zeebo/errs"
+	"github.com/zeebo/float16"
 )
 
-// TODO(jeff): put into a package
 // TODO(jeff): a slice is absolutely the wrong data structure
 
 const debug = false
@@ -25,20 +26,20 @@ func debugPrint(vals ...interface{}) {
 	}
 }
 
-// mergerOptions are the options the merger needs to operate.
-type mergerOptions struct {
-	Width        int
-	Samples      int
-	Now          int64
-	Duration     time.Duration
-	MergeOptions merge.MergeOptions
+// Options are the options the Merger needs to operate.
+type Options struct {
+	Width    int
+	Samples  int
+	Now      int64
+	Duration time.Duration
+	Params   tdigest.Params
 }
 
-// merger allows iterative pushing of records in and constructs a series of
+// Merger allows iterative pushing of records in and constructs a series of
 // merged columns. The only requirement is that the end time on the records
 // passed to push are decreasing.
-type merger struct {
-	opts       mergerOptions
+type Merger struct {
+	opts       Options
 	pixel_size int64
 
 	completed_px int64
@@ -46,9 +47,9 @@ type merger struct {
 	columns      []draw.Column
 }
 
-// newMerger constructs a merger with the options.
-func newMerger(opts mergerOptions) *merger {
-	return &merger{
+// New constructs a Merger with the options.
+func New(opts Options) *Merger {
+	return &Merger{
 		opts:       opts,
 		pixel_size: opts.Duration.Nanoseconds() / int64(opts.Width),
 
@@ -57,7 +58,7 @@ func newMerger(opts mergerOptions) *merger {
 }
 
 // timeToPixel maps the time to a pixel.
-func (m *merger) timeToPixel(time int64) int64 {
+func (m *Merger) timeToPixel(time int64) int64 {
 	delta := m.opts.Now - time + m.pixel_size - 1
 	px := int64(m.opts.Width) - (delta / m.pixel_size)
 	if px < 0 {
@@ -66,13 +67,13 @@ func (m *merger) timeToPixel(time int64) int64 {
 	return px
 }
 
-// Push adds the record to the merger. The end time on the records passed to
+// Push adds the record to the Merger. The end time on the records passed to
 // Push must be decreasing.
-func (m *merger) Push(ctx context.Context, rec data.Record) error {
+func (m *Merger) Push(ctx context.Context, rec data.Record) error {
 	rec.StartTime = m.timeToPixel(rec.StartTime)
 	rec.EndTime = m.timeToPixel(rec.EndTime)
 	debugPrint("adding", rec.StartTime, rec.EndTime)
-	if err := m.completed(rec.EndTime + 1); err != nil {
+	if err := m.completed(ctx, rec.EndTime+1); err != nil {
 		return err
 	}
 	m.records = append(m.records, rec)
@@ -80,8 +81,8 @@ func (m *merger) Push(ctx context.Context, rec data.Record) error {
 }
 
 // Finish returns the set of columns to draw.
-func (m *merger) Finish(ctx context.Context) ([]draw.Column, error) {
-	if err := m.completed(0); err != nil {
+func (m *Merger) Finish(ctx context.Context) ([]draw.Column, error) {
+	if err := m.completed(ctx, 0); err != nil {
 		return nil, err
 	}
 	return m.columns, nil
@@ -90,7 +91,7 @@ func (m *merger) Finish(ctx context.Context) ([]draw.Column, error) {
 // completed informs the Merge that the px argument is "completed", meaning
 // no more records are going to be pushed that have any overlap with that px.
 // it also implies that every px >= the argument is completed.
-func (m *merger) completed(completed_px int64) error {
+func (m *Merger) completed(ctx context.Context, completed_px int64) error {
 	debugPrint("completed", completed_px)
 
 	// some variables for our state
@@ -121,7 +122,8 @@ func (m *merger) completed(completed_px int64) error {
 			for _, v := range to_emit {
 				emit_recs = append(emit_recs, m.records[v])
 			}
-			if err := m.emit(px+1, to_emit_end_px, emit_recs); err != nil {
+			err := m.emit(ctx, px+1, to_emit_end_px, emit_recs)
+			if err != nil {
 				return err
 			}
 		}
@@ -137,7 +139,8 @@ func (m *merger) completed(completed_px int64) error {
 		for _, v := range to_emit {
 			emit_recs = append(emit_recs, m.records[v])
 		}
-		if err := m.emit(completed_px, to_emit_end_px, emit_recs); err != nil {
+		err := m.emit(ctx, completed_px, to_emit_end_px, emit_recs)
+		if err != nil {
 			return err
 		}
 	}
@@ -172,15 +175,16 @@ func (m *merger) completed(completed_px int64) error {
 	return nil
 }
 
-var first = false
-
 // emit constructs a column out of the records for the start and end pixels.
-func (m *merger) emit(start, end int64, recs []data.Record) error {
+func (m *Merger) emit(ctx context.Context, start, end int64,
+	recs []data.Record) error {
+
 	debugPrint("emit", start, end)
 
-	opts := m.opts.MergeOptions
-	opts.Records = recs
-	out, err := merge.Merge(context.Background(), opts)
+	out, err := merge.Merge(ctx, merge.MergeOptions{
+		Params:  m.opts.Params,
+		Records: recs,
+	})
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -195,10 +199,13 @@ func (m *merger) emit(start, end int64, recs []data.Record) error {
 	}
 	f64_samples := float64(m.opts.Samples)
 	for i := float64(0); i <= f64_samples; i++ {
-		col.Data = append(col.Data, dist.Query(i/f64_samples))
+		val := dist.Query(i / f64_samples)
+		val16, ok := float16.FromFloat64(val)
+		if ok {
+			val = val16.Float64()
+		}
+		col.Data = append(col.Data, val)
 	}
-
-	first = false
 
 	m.columns = append(m.columns, col)
 	return nil

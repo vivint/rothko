@@ -4,6 +4,7 @@ package heatmap
 
 import (
 	"context"
+	"runtime"
 
 	"github.com/spacemonkeygo/rothko/draw"
 )
@@ -73,20 +74,34 @@ func (d *Heatmap) Draw(ctx context.Context, col draw.Column) {
 			if high > len(m.Pix) {
 				high = len(m.Pix)
 			}
-			pix := m.Pix[low:high]
 
-			for len(pix) >= 4 {
-				pix[0] = last_color.R
-				pix[1] = last_color.G
-				pix[2] = last_color.B
-				pix[3] = 255
-				pix = pix[4:]
+			// reslicing in gopherjs always allocates a slice structure. so
+			// since it doesn't elide bounds checks, we write it this way even
+			// though it'd be slower if compiled by gc.
+			if runtime.GOARCH == "js" {
+				for offset := low; offset < high; offset += 4 {
+					m.Pix[offset+0] = last_color.R
+					m.Pix[offset+1] = last_color.G
+					m.Pix[offset+2] = last_color.B
+					m.Pix[offset+3] = 255
+				}
+			} else {
+				pix := m.Pix[low:high]
+				for len(pix) >= 4 {
+					pix[0] = last_color.R
+					pix[1] = last_color.G
+					pix[2] = last_color.B
+					pix[3] = 255
+					pix = pix[4:]
+				}
 			}
+
 		} else {
 			x1 := col.X + col.W
 			for x := col.X; x < x1 && x < d.width; x++ {
 				d.opts.Canvas.Set(x, y, last_color)
 			}
 		}
+
 	}
 }

@@ -3,6 +3,7 @@
 package axis
 
 import (
+	"context"
 	"image"
 
 	"github.com/spacemonkeygo/rothko/draw"
@@ -40,7 +41,7 @@ type Options struct {
 
 // Draw renders the axis described by the Options into a *draw.RGB. It computes
 // the appropriate sizes.
-func Draw(opts Options) *draw.RGB {
+func Draw(ctx context.Context, opts Options) *draw.RGB {
 	if opts.Vertical {
 		return drawVertical(opts)
 	}

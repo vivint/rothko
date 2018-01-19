@@ -32,10 +32,13 @@ func (p Params) NewUnwrapped() *tdigest.TDigest {
 // Wrapper
 //
 
-type Wrapper struct{ td *tdigest.TDigest }
+type Wrapper struct {
+	td    *tdigest.TDigest
+	cache map[float64]float64
+}
 
-func Wrap(td *tdigest.TDigest) Wrapper {
-	return Wrapper{td: td}
+func Wrap(td *tdigest.TDigest) *Wrapper {
+	return &Wrapper{td: td}
 }
 
 func (Wrapper) Kind() data.Kind {
@@ -54,11 +57,27 @@ func (w Wrapper) Query(x float64) float64 {
 	return w.td.Quantile(x)
 }
 
-func (w Wrapper) CDF(x float64) float64 {
-	// TODO(jeff): tdigest cdf is busted. fix it
-	return w.td.CDF(x)
+func (w *Wrapper) quan(x float64) float64 {
+	if w.cache == nil {
+		w.cache = make(map[float64]float64)
+	}
+	if val, ok := w.cache[x]; ok {
+		return val
+	}
+	val := w.td.Quantile(x)
+	w.cache[x] = val
+	return val
+}
 
-	min, max := w.td.Quantile(0), w.td.Quantile(1)
+func (w *Wrapper) CDF(x float64) float64 {
+	// TODO(jeff): CDF actually works, but i think it's way slower and this is
+	// basically just as accurate since we only have ~256 colors. essentially,
+	// we only have to do ~8 calls to quantile, rather than ~samples calls to
+	// CDF.
+
+	// return w.td.CDF(x)
+
+	min, max := w.quan(0), w.quan(1)
 	if x <= min {
 		return 0
 	}
@@ -67,9 +86,9 @@ func (w Wrapper) CDF(x float64) float64 {
 	}
 
 	minq, maxq := 0.0, 1.0
-	for i := 0; i < 64; i++ {
+	for i := 0; i < 6; i++ {
 		medq := (minq + maxq) / 2
-		val := w.td.Quantile(medq)
+		val := w.quan(medq)
 		if x >= val {
 			minq = medq
 		} else {
