@@ -11,4 +11,4 @@
 //
 // See the github.com/spacemonkeygo/rothko/bin/rothko package for a rothko
 // binary with implementations loaded from this project.
-package rothko // import "github.com/spacemonkeygo/rothko"
+package rothko

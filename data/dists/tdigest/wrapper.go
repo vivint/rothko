@@ -1,7 +1,7 @@
 // Copyright (C) 2017. See AUTHORS.
 
 // package tdigest provides a wrapper around github.com/zeebo/tdigest.
-package tdigest // import "github.com/spacemonkeygo/rothko/data/dists/tdigest"
+package tdigest
 
 import (
 	"github.com/spacemonkeygo/rothko/data"

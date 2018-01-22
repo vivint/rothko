@@ -1,6 +1,6 @@
 // Copyright (C) 2017. See AUTHORS.
 
-package junk // import "github.com/spacemonkeygo/rothko/internal/junk"
+package junk
 
 import (
 	"fmt"

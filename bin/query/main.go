@@ -1,7 +1,7 @@
 // Copyright (C) 2017. See AUTHORS.
 
 // query is a command line interface to querying metrics.
-package main // import "github.com/spacemonkeygo/rothko/bin/query"
+package main
 
 import (
 	"context"
