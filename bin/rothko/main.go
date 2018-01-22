@@ -1,4 +1,4 @@
-// Copyright (C) 2017. See AUTHORS.
+// Copyright (C) 2018. See AUTHORS.
 
 // rothko runs a demo rothko server with standard rothko implementations.
 package main

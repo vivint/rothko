@@ -1,4 +1,4 @@
-// Copyright (C) 2017. See AUTHORS.
+// Copyright (C) 2018. See AUTHORS.
 
 // package merge provides functions to merge two records into a larger one.
 package merge

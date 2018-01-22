@@ -1,4 +1,4 @@
-// Copyright (C) 2017. See AUTHORS.
+// Copyright (C) 2018. See AUTHORS.
 
 // package system provides optimized and dangerous functions for system calls.
 package system

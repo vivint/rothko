@@ -1,4 +1,4 @@
-// Copyright (C) 2017. See AUTHORS.
+// Copyright (C) 2018. See AUTHORS.
 
 // package merge provides a merger for rothko data into a set of columns.
 package merge

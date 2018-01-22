@@ -1,4 +1,4 @@
-// Copyright (C) 2017. See AUTHORS.
+// Copyright (C) 2018. See AUTHORS.
 
 // package files implements a disk.Source and disk.Writer
 package files
