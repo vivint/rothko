@@ -1,7 +1,9 @@
-required = ["github.com/gogo/protobuf/protoc-gen-gogo"]
+required = [
+  "github.com/gogo/protobuf/protoc-gen-gogo",
+]
+
 ignored = [
-	"github.com/gopherjs/gopherjs",
-	"github.com/gopherjs/gopherjs/*",
+	"github.com/spacemonkeygo/rothko/draw/graph/js",
 ]
 
 [[constraint]]

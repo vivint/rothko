@@ -12,6 +12,8 @@ func asImage(m *draw.RGB) *image.RGBA {
 	return &image.RGBA{
 		Pix:    m.Pix,
 		Stride: m.Stride,
-		Rect:   image.Rect(0, 0, m.Width, m.Height),
+		// TODO(jeff): i highly suspect m.Width and m.Height is wrong here.
+		// add a test around boundary conditions.
+		Rect: image.Rect(-m.X, -m.Y, m.Width, m.Height),
 	}
 }

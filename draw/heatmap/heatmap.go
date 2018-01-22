@@ -68,8 +68,8 @@ func (d *Heatmap) Draw(ctx context.Context, col draw.Column) {
 		}
 
 		if m != nil {
-			row := y * m.Stride
-			low := row + 4*col.X
+			row := (y + m.Y) * m.Stride
+			low := row + 4*(col.X+m.X)
 			high := low + 4*col.W
 			if high > len(m.Pix) {
 				high = len(m.Pix)

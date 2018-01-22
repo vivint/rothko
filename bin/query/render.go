@@ -83,7 +83,6 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 		Earliest: earliest,
 		Width:    width,
 		Height:   height,
-		NoAxes:   true,
 	})
 	if err != nil {
 		return errs.Wrap(err)

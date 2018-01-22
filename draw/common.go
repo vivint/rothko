@@ -27,6 +27,7 @@ type RGB struct {
 	Stride int
 	Width  int
 	Height int
+	X, Y   int
 }
 
 // NewRGB contstructs an RGB with space for the width and height.
@@ -47,7 +48,7 @@ func (m *RGB) Size() (w, h int) {
 // Set stores the pixel values in the color to the coordinate at x and y. The
 // top left corner is (0, 0).
 func (m *RGB) Set(x, y int, c Color) {
-	i := y*m.Stride + x*4
+	i := (y+m.Y)*m.Stride + (x+m.X)*4
 	pix := m.Pix[i : i+4]
 	pix[0] = c.R
 	pix[1] = c.G
@@ -58,6 +59,15 @@ func (m *RGB) Set(x, y int, c Color) {
 // Raw returns the raw values at the pixel, including alpha channel. It can
 // be mutated.
 func (m *RGB) Raw(x, y int) []uint8 {
-	i := y*m.Stride + x*4
+	i := (y+m.Y)*m.Stride + (x+m.X)*4
 	return m.Pix[i : i+4]
+}
+
+// View returns a view into the RGB.
+func (m RGB) View(x, y, w, h int) *RGB {
+	m.X = x
+	m.Y = y
+	m.Width = w
+	m.Height = h
+	return &m
 }

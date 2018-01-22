@@ -40,24 +40,27 @@ type Options struct {
 
 // Draw renders a graph with the given options.
 func Draw(ctx context.Context, opts Options) (*draw.RGB, error) {
-	// 1. draw the heatmap (if we have data)
-	canvas := draw.NewRGB(opts.Width, opts.Height)
-
-	if opts.Earliest != nil {
-		hm := heatmap.New(heatmap.Options{
-			Canvas: canvas,
-			Colors: opts.Colors,
-			Map:    opts.Earliest.CDF,
-		})
-
-		for _, col := range opts.Columns {
-			hm.Draw(ctx, col)
-		}
-	}
-
 	if opts.NoAxes {
+		canvas := draw.NewRGB(opts.Width, opts.Height)
+		if opts.Earliest != nil {
+			hm := heatmap.New(heatmap.Options{
+				Canvas: canvas,
+				Colors: opts.Colors,
+				Map:    opts.Earliest.CDF,
+			})
+
+			for _, col := range opts.Columns {
+				hm.Draw(ctx, col)
+			}
+		}
 		return canvas, nil
 	}
+
+	copyLabels := func(labels []axis.Label) (out []axis.Label) {
+		return append(out, labels...)
+	}
+
+	// 1. get the sizes
 
 	// create the axes:
 	var labels []axis.Label
@@ -76,16 +79,18 @@ func Draw(ctx context.Context, opts Options) (*draw.RGB, error) {
 		Text:     "1.00",
 	})
 
-	left := axis.Draw(ctx, axis.Options{
+	left_opts := axis.Options{
 		Face:     inconsolata.Regular8x16,
-		Labels:   labels,
+		Labels:   copyLabels(labels),
 		Vertical: true,
 		Length:   opts.Height + 1,
 		Flip:     true,
-	})
+	}
+	left_w, left_h := axis.Draw(ctx, left_opts)
 
 	// 3. the value axis on the right (if we have data)
-	var right *draw.RGB
+	var right_opts axis.Options
+	right_w, right_h := 0, 0
 
 	if opts.Earliest != nil {
 		labels = labels[:0]
@@ -100,12 +105,13 @@ func Draw(ctx context.Context, opts Options) (*draw.RGB, error) {
 			Position: 1,
 			Text:     fmt.Sprintf("%0.4f", opts.Earliest.Query(1)),
 		})
-		right = axis.Draw(ctx, axis.Options{
+		right_opts = axis.Options{
 			Face:     inconsolata.Regular8x16,
-			Labels:   labels,
+			Labels:   copyLabels(labels),
 			Vertical: true,
 			Length:   opts.Height + 1,
-		})
+		}
+		right_w, right_h = axis.Draw(ctx, right_opts)
 	}
 
 	// 4. draw the time axis on the bottom
@@ -140,57 +146,49 @@ func Draw(ctx context.Context, opts Options) (*draw.RGB, error) {
 		labels[i], labels[si] = labels[si], labels[i]
 	}
 
-	bottom := axis.Draw(ctx, axis.Options{
+	bottom_opts := axis.Options{
 		Face:     inconsolata.Regular8x16,
-		Labels:   labels,
+		Labels:   copyLabels(labels),
 		Vertical: false,
 		Length:   opts.Width,
-	})
-
-	// 5. combine all the rendered stuff
-	width := left.Width + bottom.Width
-	width_canvas := left.Width + canvas.Width
-	if right != nil {
-		width_canvas += right.Width
 	}
+	bottom_w, bottom_h := axis.Draw(ctx, bottom_opts)
+
+	// 5. combine all the rendered stuff sizes
+	width := left_w + bottom_w + right_w
+	width_canvas := left_w + opts.Width + right_w
 	if width_canvas > width {
 		width = width_canvas
 	}
-	height := canvas.Height + bottom.Height
+	height := opts.Height + bottom_h
 
+	// 6. actually draw
 	out := draw.NewRGB(width, height)
 
-	// TODO(jeff): this is insanity!
+	// 6a. the left axis
+	left_opts.Canvas = out.View(0, 0, left_w, left_h)
+	axis.Draw(ctx, left_opts)
 
-	// 5a. copy the left axis
-	for x := 0; x < left.Width; x++ {
-		for y := 0; y < left.Height; y++ {
-			copy(out.Raw(x, y), left.Raw(x, y))
+	// 6b. the heatmap
+	if opts.Earliest != nil {
+		hm := heatmap.New(heatmap.Options{
+			Canvas: out.View(left_w, 0, opts.Width, opts.Height),
+			Colors: opts.Colors,
+			Map:    opts.Earliest.CDF,
+		})
+		for _, col := range opts.Columns {
+			hm.Draw(ctx, col)
 		}
 	}
 
-	// 5b. copy the canvas
-	for x := 0; x < canvas.Width; x++ {
-		for y := 0; y < canvas.Height; y++ {
-			copy(out.Raw(x+left.Width, y), canvas.Raw(x, y))
-		}
-	}
+	// 6c. the bottom axis
+	bottom_opts.Canvas = out.View(left_w, opts.Height, bottom_w, bottom_h)
+	axis.Draw(ctx, bottom_opts)
 
-	// 5c. copy the bottom axis
-	for x := 0; x < bottom.Width; x++ {
-		for y := 0; y < bottom.Height; y++ {
-			copy(out.Raw(x+left.Width, y+canvas.Height), bottom.Raw(x, y))
-		}
-	}
-
-	// 5d. copy the right if it exists
-	if right != nil {
-		offset := left.Width + canvas.Width
-		for x := 0; x < right.Width; x++ {
-			for y := 0; y < right.Height; y++ {
-				copy(out.Raw(x+offset, y), right.Raw(x, y))
-			}
-		}
+	// 6d. the right axis
+	if opts.Earliest != nil {
+		right_opts.Canvas = out.View(left_w+opts.Width, 0, right_w, right_h)
+		axis.Draw(ctx, right_opts)
 	}
 
 	return out, nil

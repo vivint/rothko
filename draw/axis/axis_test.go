@@ -3,6 +3,7 @@
 package axis
 
 import (
+	"context"
 	"image/png"
 	"os"
 	"testing"
@@ -13,8 +14,11 @@ import (
 )
 
 var (
+	ctx = context.Background()
+
 	vopts = Options{
-		Face: inconsolata.Regular8x16,
+		Canvas: draw.NewRGB(5000, 5000),
+		Face:   inconsolata.Regular8x16,
 		Labels: []Label{
 			{0.0, "0.0"},
 			{0.1, "0.1"},
@@ -33,7 +37,8 @@ var (
 	}
 
 	hopts = Options{
-		Face: inconsolata.Regular8x16,
+		Canvas: draw.NewRGB(5000, 5000),
+		Face:   inconsolata.Regular8x16,
 		Labels: []Label{
 			{0.0, "1/16 @ 00:00"},
 			{0.1, "1/16 @ 01:00"},
@@ -53,7 +58,7 @@ var (
 )
 
 func saveImage(t *testing.T, name string, out *draw.RGB) {
-	if false { // set to false to save images
+	if true { // set to false to save images
 		return
 	}
 
@@ -66,13 +71,13 @@ func saveImage(t *testing.T, name string, out *draw.RGB) {
 
 func TestDraw(t *testing.T) {
 	t.Run("Vertical", func(t *testing.T) {
-		out := Draw(vopts)
-		saveImage(t, "testv.png", out)
+		width, height := Draw(ctx, vopts)
+		saveImage(t, "testv.png", vopts.Canvas.View(0, 0, width, height))
 	})
 
 	t.Run("Horizontal", func(t *testing.T) {
-		out := Draw(hopts)
-		saveImage(t, "testh.png", out)
+		width, height := Draw(ctx, hopts)
+		saveImage(t, "testh.png", hopts.Canvas.View(0, 0, width, height))
 	})
 }
 
@@ -82,7 +87,7 @@ func BenchmarkDraw(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			Draw(vopts)
+			Draw(ctx, vopts)
 		}
 	})
 
@@ -91,7 +96,7 @@ func BenchmarkDraw(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			Draw(hopts)
+			Draw(ctx, hopts)
 		}
 	})
 }

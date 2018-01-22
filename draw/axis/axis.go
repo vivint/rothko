@@ -22,6 +22,10 @@ type Label struct {
 
 // Options describe the axis rendering options.
 type Options struct {
+	// Canvas to draw on. If the canvas is too small, nothing is drawn. If
+	// Canvas is nil, the size of the appropriate canvas is returned.
+	Canvas *draw.RGB
+
 	// Face is the font face to use for rendering the label text.
 	Face font.Face
 
@@ -39,9 +43,10 @@ type Options struct {
 	Flip bool
 }
 
-// Draw renders the axis described by the Options into a *draw.RGB. It computes
-// the appropriate sizes.
-func Draw(ctx context.Context, opts Options) *draw.RGB {
+// Draw renders the axis described by the Options. It computes the appropriate
+// sizes and returns them. If the Canvas is not big enough, zero is returned
+// for the sizes.
+func Draw(ctx context.Context, opts Options) (w, h int) {
 	if opts.Vertical {
 		return drawVertical(opts)
 	}
@@ -58,7 +63,7 @@ const (
 	textOffset = axisWidth + tickSize + tickPadding // px
 )
 
-func drawVertical(opts Options) *draw.RGB {
+func drawVertical(opts Options) (w, h int) {
 	// TODO(jeff): i know the vertical checking here is off by a pixel or two,
 	// but it produces results that are good enough for now.
 
@@ -84,13 +89,18 @@ func drawVertical(opts Options) *draw.RGB {
 		}
 	}
 
-	// compute the size and allocate the canvas
+	// compute the size and allocate the canvas if necessary
 	width := textOffset + extra_width
-	out := draw.NewRGB(width, max_height)
+	if opts.Canvas == nil {
+		return width, max_height
+	}
+	if w, h := opts.Canvas.Size(); w < width || h < max_height {
+		return 0, 0
+	}
 
 	// set up the drawer
 	d := font.Drawer{
-		Dst:  asImage(out),
+		Dst:  asImage(opts.Canvas),
 		Src:  image.Black,
 		Face: opts.Face,
 	}
@@ -105,7 +115,7 @@ func drawVertical(opts Options) *draw.RGB {
 	// first draw the axis
 	for y := 0; y < opts.Length; y++ {
 		for x := 0; x < axisWidth; x++ {
-			out.Set(maybeFlip(x), y, draw.Color{})
+			opts.Canvas.Set(maybeFlip(x), y, draw.Color{})
 		}
 	}
 
@@ -118,7 +128,7 @@ func drawVertical(opts Options) *draw.RGB {
 		y := int(float64(opts.Length-1) * label.Position)
 
 		for x := 0; x < tickSize; x++ {
-			out.Set(maybeFlip(axisWidth+x), y, draw.Color{})
+			opts.Canvas.Set(maybeFlip(axisWidth+x), y, draw.Color{})
 		}
 
 		if occupied > 0 && y < occupied+vertLabelSpacing {
@@ -139,10 +149,10 @@ func drawVertical(opts Options) *draw.RGB {
 		d.DrawString(label.Text)
 	}
 
-	return out
+	return width, max_height
 }
 
-func drawHorizontal(opts Options) *draw.RGB {
+func drawHorizontal(opts Options) (w, h int) {
 	// TODO(jeff): this assumes all the labels have the same height, or close
 	// to it. we could maybe do better.
 
@@ -184,11 +194,16 @@ func drawHorizontal(opts Options) *draw.RGB {
 
 	// compute the size of and allocate the canvas
 	height := textOffset + (max_slot+1)*max_height
-	out := draw.NewRGB(max_width, height)
+	if opts.Canvas == nil {
+		return max_width, height
+	}
+	if w, h := opts.Canvas.Size(); w < max_width || h < height {
+		return 0, 0
+	}
 
 	// set up the drawer
 	d := font.Drawer{
-		Dst:  asImage(out),
+		Dst:  asImage(opts.Canvas),
 		Src:  image.Black,
 		Face: opts.Face,
 	}
@@ -196,7 +211,7 @@ func drawHorizontal(opts Options) *draw.RGB {
 	// draw the axis
 	for x := 0; x < opts.Length; x++ {
 		for y := 0; y < axisWidth; y++ {
-			out.Set(x, y, draw.Color{})
+			opts.Canvas.Set(x, y, draw.Color{})
 		}
 	}
 
@@ -207,7 +222,7 @@ func drawHorizontal(opts Options) *draw.RGB {
 		x := int(float64(opts.Length-1) * label.Position)
 
 		for y := 0; y < tickSize; y++ {
-			out.Set(x, axisWidth+y, draw.Color{})
+			opts.Canvas.Set(x, axisWidth+y, draw.Color{})
 		}
 
 		slot := 0
@@ -228,5 +243,5 @@ func drawHorizontal(opts Options) *draw.RGB {
 		occupied[slot] = d.Dot.X.Ceil()
 	}
 
-	return out
+	return max_width, height
 }

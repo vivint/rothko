@@ -31,15 +31,9 @@
   packages = ["font","font/basicfont","font/inconsolata","font/plan9font","math/fixed"]
   revision = "12117c17ca67ffa1ce22e9409f3b0b0a93ac08c7"
 
-[[projects]]
-  branch = "master"
-  name = "honnef.co/go/js/dom"
-  packages = ["."]
-  revision = "6a8015da13438f4de2c715e781271ab856b4b24c"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "71a8e70d5d1eaa7b8cf8c6e5b6727d333646e95aa3755534b53cc116d41a37ca"
+  inputs-digest = "f59094f7b981177458eecff78cd934ca6ed32bcacdf63ef468df11c3c9a25bc0"
   solver-name = "gps-cdcl"
   solver-version = 1
