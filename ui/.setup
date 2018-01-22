@@ -1,0 +1,24 @@
+# this script is meant to be sourced
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+log() {
+	echo "---" $@
+}
+
+add_path() {
+	if [ "${!1}" == "" ]; then
+		echo Adding $2 to $1
+		export $1=$2
+		return 0
+	fi
+	if [[ ":${!1}:" != *":$2:"* ]]; then
+		echo Adding $2 to $1
+		export $1="$2:${!1}"
+	fi
+}
+
+add_path PATH "${SCRIPTDIR}/bin"
+add_path PATH "$(npm prefix)/node_modules/.bin"
+
+unset -f log add_path

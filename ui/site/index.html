@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Rothko</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="/css/main.css">
+  </head>
+  <body>
+    <canvas id="canvas" width="0" height="0"></canvas>
+    <div id="main"></div>
+    <script src='/js/flags.js' type='application/javascript'></script>
+    <script src='/js/Main.js' type='application/javascript'></script>
+    <script type="text/javascript">
+      var graph = new Worker('/js/graph.js');
+      var main = document.getElementById('main');
+      var app = Elm.Main.embed(main, flags);
+
+      app.ports.draw.subscribe(function() {
+        let canvas = document.querySelector("#canvas");
+        canvas.width = 0;
+        canvas.height = 0;
+        graph.postMessage({});
+      });
+
+      graph.addEventListener("message", function(result) {
+        if (result.data === undefined) {
+          app.ports.starting.send(null);
+          return;
+        }
+
+        let canvas = document.querySelector("#canvas");
+        canvas.width = result.data.Width;
+        canvas.height = result.data.Height;
+        let ctx2d = canvas.getContext("2d");
+        let img = ctx2d.getImageData(0, 0, canvas.width, canvas.height);
+        img.data.set(result.data.Pix);
+        ctx2d.putImageData(img, 0, 0);
+
+        app.ports.done.send(null);
+    });
+
+    </script>
+  </body>
+</html>

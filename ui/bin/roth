@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SUBCOMMAND=$1
+shift || true
+
+COMMANDS="${SCRIPTDIR}/roth-*"
+
+if [ -z "${SUBCOMMAND}" ]; then
+	echo "Usage: roth <subcommand> [subcommand args...]"
+	echo
+
+	for CMD in ${COMMANDS}; do
+		SUBCMD=$(basename "${CMD}" | cut -d - -f 2-)
+		USAGE=$(ROTH_USAGE=y ${CMD})
+		echo -e "\t${SUBCMD}:${USAGE}"
+	done | column -t -s :
+
+	echo
+	exit 0
+fi
+
+"${SCRIPTDIR}/roth-${SUBCOMMAND}" "$@"

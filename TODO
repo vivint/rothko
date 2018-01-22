@@ -7,6 +7,3 @@
 - Multiple agg buffers for scribble for moving distributions.
 - Write docs for all exported things in rothko.
 - Clean up dumper code some.
-- Fix CDF function and make it required.
-- Make render take some options/config.
-- Move rendering merge into some other package.

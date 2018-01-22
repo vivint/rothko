@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+
+if [ ! -z "$ROTH_USAGE" ]; then
+	echo "sets up the developer environment to build and run the codebase"
+	exit 0
+fi
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${SCRIPTDIR}/.."
+
+log() {
+	echo "---" "$@"
+}
+
+log "Installing node modules..."
+
+rm -rf node_modules
+npm install --save-dev \
+	elm \
+	elm-live \
+	google-closure-compiler-js \
+	html-minifier \
+	vulcanize
+
+log "Done."
