@@ -1,6 +1,7 @@
 elm-stuff
 tests/elm-stuff
 node_modules
+package-lock.json
 
 site/js/Main.js
 site/js/graph.js

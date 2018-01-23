@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ ! -z "$ROTH_USAGE" ]; then
+	echo "builds all the gopherjs packages"
+	exit 0
+fi
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${SCRIPTDIR}/.."
+
+log() {
+	echo "---" "$@"
+}
+
+declare -A packages=(
+	["github.com/spacemonkeygo/rothko/draw/graph/js"]="graph.js"
+)
+
+for pkg in "${!packages[@]}"
+do
+	js="${packages[$pkg]}"
+	log "Building $pkg to $js..."
+	gopherjs build -o "site/js/$js" "$pkg"
+done
+
+log "Done."

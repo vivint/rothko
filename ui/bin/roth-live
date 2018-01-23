@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 
-if [ ! -z "$roth_USAGE" ]; then
+if [ ! -z "$ROTH_USAGE" ]; then
 	echo "runs a live server"
 	exit 0
 fi
@@ -22,6 +22,7 @@ if [ ! -f "$LIVE" ]; then
 fi
 
 "$LIVE" \
+	--before-build="roth-gopher" \
 	--dir=./site \
 	--output=site/js/Main.js \
 	--pushstate \

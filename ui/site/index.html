@@ -4,40 +4,61 @@
     <title>Rothko</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="/css/mini.min.css">
     <link rel="stylesheet" href="/css/main.css">
   </head>
   <body>
-    <canvas id="canvas" width="0" height="0"></canvas>
     <div id="main"></div>
+    <script src='/js/data.js' type='application/javascript'></script>
     <script src='/js/flags.js' type='application/javascript'></script>
     <script src='/js/Main.js' type='application/javascript'></script>
     <script type="text/javascript">
-      var graph = new Worker('/js/graph.js');
-      var main = document.getElementById('main');
-      var app = Elm.Main.embed(main, flags);
+      let graph = new Worker('/js/graph.js');
+      let main = document.getElementById('main');
+      let app = Elm.Main.embed(main, flags);
 
-      app.ports.draw.subscribe(function() {
-        let canvas = document.querySelector("#canvas");
-        canvas.width = 0;
-        canvas.height = 0;
-        graph.postMessage({});
+      app.ports.drawP.subscribe(function() {
+        let ctx2d = document.querySelector("#canvas").getContext("2d");
+        let container = document.querySelector('#canvas-container').getBoundingClientRect();
+
+        ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+        graph.postMessage({
+          "columns": columns_data,
+          "earliest": earliest_data,
+          "now": 86400000000000,
+          "duration": 86400000000000,
+          "width": 1000,
+          "height": 300,
+        });
       });
 
       graph.addEventListener("message", function(result) {
+        let ctx2d = document.querySelector("#canvas").getContext("2d");
+
         if (result.data === undefined) {
-          app.ports.starting.send(null);
+          app.ports.startingP.send(null);
           return;
         }
 
-        let canvas = document.querySelector("#canvas");
-        canvas.width = result.data.Width;
-        canvas.height = result.data.Height;
-        let ctx2d = canvas.getContext("2d");
-        let img = ctx2d.getImageData(0, 0, canvas.width, canvas.height);
-        img.data.set(result.data.Pix);
+        if (result.data.error !== "") {
+          app.ports.done.send({
+            "ok": false,
+            "error": result.data.error,
+          });
+          return;
+        }
+
+        let out = result.data.out;
+        ctx2d.canvas.width = out.Width;
+        ctx2d.canvas.height = out.Height;
+        let img = ctx2d.getImageData(0, 0, out.Width, out.Height);
+        img.data.set(out.Pix);
         ctx2d.putImageData(img, 0, 0);
 
-        app.ports.done.send(null);
+        app.ports.done.send({
+          "ok": true,
+          "error": "",
+        });
     });
 
     </script>

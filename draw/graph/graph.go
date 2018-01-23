@@ -11,6 +11,7 @@ import (
 	"github.com/spacemonkeygo/rothko/draw"
 	"github.com/spacemonkeygo/rothko/draw/axis"
 	"github.com/spacemonkeygo/rothko/draw/heatmap"
+	"github.com/zeebo/float16"
 	"golang.org/x/image/font/inconsolata"
 )
 
@@ -31,7 +32,7 @@ type Options struct {
 	// Earliest is the distribution for the earliest (closest to Now) column.
 	Earliest dists.Dist
 
-	// Width and Height for the heatmap. The axes are extra.
+	// Width and Height for the z
 	Width, Height int
 
 	// NoAxes will turn of rendering the axes.
@@ -59,6 +60,11 @@ func Draw(ctx context.Context, opts Options) (*draw.RGB, error) {
 	copyLabels := func(labels []axis.Label) (out []axis.Label) {
 		return append(out, labels...)
 	}
+
+	// TODO(jeff): two step api for axis drawing or something to reduce the
+	// work if we have already measured.
+	// TODO(jeff): ugh we have to measure the axes BEFORE we know how we're
+	// going to merge the records.
 
 	// 1. get the sizes
 
@@ -96,15 +102,25 @@ func Draw(ctx context.Context, opts Options) (*draw.RGB, error) {
 		labels = labels[:0]
 		for y := 0; y <= opts.Height-30; y += 30 {
 			pos := float64(y) / float64(opts.Height)
+			val := opts.Earliest.Query(pos)
+			if val16, ok := float16.FromFloat64(val); ok {
+				val = val16.Float64()
+			}
 			labels = append(labels, axis.Label{
 				Position: pos,
-				Text:     fmt.Sprintf("%0.4f", opts.Earliest.Query(pos)),
+				Text:     fmt.Sprintf("%#.3g", val),
 			})
 		}
-		labels = append(labels, axis.Label{
-			Position: 1,
-			Text:     fmt.Sprintf("%0.4f", opts.Earliest.Query(1)),
-		})
+		{
+			val := opts.Earliest.Query(1)
+			if val16, ok := float16.FromFloat64(val); ok {
+				val = val16.Float64()
+			}
+			labels = append(labels, axis.Label{
+				Position: 1,
+				Text:     fmt.Sprintf("%#.3g", val),
+			})
+		}
 		right_opts = axis.Options{
 			Face:     inconsolata.Regular8x16,
 			Labels:   copyLabels(labels),
