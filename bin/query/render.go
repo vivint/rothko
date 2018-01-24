@@ -4,6 +4,9 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"image"
 	"image/png"
 	"os"
@@ -26,17 +29,25 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 	// TODO(jeff): parameterize these constants
 	const (
 		width       = 1000
-		height      = 300
+		height      = 360
 		samples     = 30
 		compression = 5
 	)
 
 	now := time.Now().UnixNano()
 	stop_before := now - dur.Nanoseconds()
-	var earliest dists.Dist
+
+	fmt.Println(now, dur.Nanoseconds())
+
+	var measured graph.Measured
+	measure_opts := graph.MeasureOptions{
+		Now:      now,
+		Duration: dur,
+		Width:    width,
+		Height:   height,
+	}
 
 	merger := merge.New(merge.Options{
-		Width:    width,
 		Samples:  samples,
 		Now:      now,
 		Duration: dur,
@@ -52,12 +63,17 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 				return false, errs.Wrap(err)
 			}
 
-			if earliest == nil {
+			if measure_opts.Earliest == nil {
 				dist, err := dists.Load(rec)
 				if err != nil {
 					return false, errs.Wrap(err)
 				}
-				earliest = dist
+
+				fmt.Println(base64.StdEncoding.EncodeToString(buf))
+
+				measure_opts.Earliest = dist
+				measured = graph.Measure(ctx, measure_opts)
+				merger.SetWidth(measured.Width)
 			}
 
 			if err := merger.Push(ctx, rec); err != nil {
@@ -75,18 +91,17 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 		return errs.Wrap(err)
 	}
 
-	out, err := graph.Draw(ctx, graph.Options{
-		Now:      now,
-		Duration: dur,
-		Columns:  cols,
-		Colors:   colors.Viridis,
-		Earliest: earliest,
-		Width:    width,
-		Height:   height,
-	})
-	if err != nil {
-		return errs.Wrap(err)
+	json.NewEncoder(os.Stdout).Encode(cols)
+
+	if measure_opts.Earliest == nil {
+		measured = graph.Measure(ctx, measure_opts)
 	}
+
+	out := measured.Draw(ctx, graph.DrawOptions{
+		Canvas:  nil,
+		Columns: cols,
+		Colors:  colors.Viridis,
+	})
 
 	fh, err := os.OpenFile("test.png", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
 	if err != nil {

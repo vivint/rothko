@@ -20,15 +20,7 @@ func render(obj *js.Object) {
 	self := js.Global.Get("self")
 	self.Call("postMessage", js.Undefined)
 
-	data := obj.Get("data")
-	out, err := runRender(ctx, renderData{
-		Columns:  data.Get("columns").String(),
-		Earliest: data.Get("earliest").String(),
-		Now:      data.Get("now").Int64(),
-		Duration: time.Duration(data.Get("duration").Int64()),
-		Width:    data.Get("width").Int(),
-		Height:   data.Get("height").Int(),
-	})
+	out, err := runRender(context.Background(), obj.Get("data"))
 
 	self.Call("postMessage", D{
 		"error": errorString(err),
@@ -36,16 +28,7 @@ func render(obj *js.Object) {
 	})
 }
 
-type renderData struct {
-	Columns  string
-	Earliest string
-	Now      int64
-	Duration time.Duration
-	Width    int
-	Height   int
-}
-
-func runRender(ctx context.Context, rdata renderData) (
+func runRender(ctx context.Context, obj *js.Object) (
 	out *draw.RGB, err error) {
 
 	defer func() {
@@ -58,7 +41,7 @@ func runRender(ctx context.Context, rdata renderData) (
 		}
 	}()
 
-	parsed := js.Global.Get("JSON").Call("parse", rdata.Columns)
+	parsed := js.Global.Get("JSON").Call("parse", obj.Get("columns").String())
 	columns := make([]draw.Column, 0, parsed.Length())
 	for i := 0; i < parsed.Length(); i++ {
 		col := parsed.Index(i)
@@ -69,7 +52,8 @@ func runRender(ctx context.Context, rdata renderData) (
 		})
 	}
 
-	earliest_buf, err := base64.StdEncoding.DecodeString(rdata.Earliest)
+	earliest_buf, err := base64.StdEncoding.DecodeString(
+		obj.Get("earliest").String())
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -82,15 +66,17 @@ func runRender(ctx context.Context, rdata renderData) (
 		return nil, errs.Wrap(err)
 	}
 
-	return graph.Draw(ctx, graph.Options{
-		Now:      rdata.Now,
-		Duration: rdata.Duration,
-		Columns:  columns,
-		Colors:   colors.Viridis,
+	return graph.Measure(ctx, graph.MeasureOptions{
 		Earliest: earliest,
-		Width:    rdata.Width,
-		Height:   rdata.Height,
-	})
+		Now:      obj.Get("now").Int64(),
+		Duration: time.Duration(obj.Get("duration").Int64()),
+		Width:    obj.Get("width").Int(),
+		Height:   obj.Get("height").Int(),
+	}).Draw(ctx, graph.DrawOptions{
+		Canvas:  nil,
+		Columns: columns,
+		Colors:  colors.Viridis,
+	}), nil
 }
 
 func float64s(x *js.Object) []float64 {

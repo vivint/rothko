@@ -56,7 +56,7 @@ var (
 )
 
 func saveImage(t *testing.T, name string, out *draw.RGB) {
-	if true { // set to false to save images
+	if false { // set to false to save images
 		return
 	}
 

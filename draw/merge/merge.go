@@ -28,7 +28,6 @@ func debugPrint(vals ...interface{}) {
 
 // Options are the options the Merger needs to operate.
 type Options struct {
-	Width    int
 	Samples  int
 	Now      int64
 	Duration time.Duration
@@ -41,6 +40,7 @@ type Options struct {
 type Merger struct {
 	opts       Options
 	pixel_size int64
+	width      int
 
 	completed_px int64
 	records      []data.Record
@@ -50,17 +50,22 @@ type Merger struct {
 // New constructs a Merger with the options.
 func New(opts Options) *Merger {
 	return &Merger{
-		opts:       opts,
-		pixel_size: opts.Duration.Nanoseconds() / int64(opts.Width),
-
-		completed_px: int64(opts.Width),
+		opts: opts,
 	}
+}
+
+// SetWidth sets the width for all of the Push operations. Must be set before
+// any Push operations happen.
+func (m *Merger) SetWidth(width int) {
+	m.width = width
+	m.pixel_size = m.opts.Duration.Nanoseconds() / int64(width)
+	m.completed_px = int64(width)
 }
 
 // timeToPixel maps the time to a pixel.
 func (m *Merger) timeToPixel(time int64) int64 {
 	delta := m.opts.Now - time + m.pixel_size - 1
-	px := int64(m.opts.Width) - (delta / m.pixel_size)
+	px := int64(m.width) - (delta / m.pixel_size)
 	if px < 0 {
 		px = 0
 	}
@@ -70,6 +75,10 @@ func (m *Merger) timeToPixel(time int64) int64 {
 // Push adds the record to the Merger. The end time on the records passed to
 // Push must be decreasing.
 func (m *Merger) Push(ctx context.Context, rec data.Record) error {
+	if m.width == 0 {
+		return errs.New("invalid: must call SetWidth before Push")
+	}
+
 	rec.StartTime = m.timeToPixel(rec.StartTime)
 	rec.EndTime = m.timeToPixel(rec.EndTime)
 	debugPrint("adding", rec.StartTime, rec.EndTime)

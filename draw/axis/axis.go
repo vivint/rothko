@@ -15,7 +15,7 @@ const (
 	tickSize          = 10 // px
 	axisWidth         = 1  // px
 	tickPadding       = 2  // px
-	horizLabelSpacing = 20 // px
+	horizLabelSpacing = 10 // px
 	vertLabelSpacing  = 2  // px
 
 	textOffset = axisWidth + tickSize + tickPadding // px
@@ -65,6 +65,9 @@ type Options struct {
 	// If true, vertical axes will be drawn for the left size. Horizontal axes
 	// ignore this field.
 	Flip bool
+
+	// If true, the label text will not go past the boundaries of Length.
+	DontBleed bool
 }
 
 // copy returns a deep copy of the Options.
@@ -105,8 +108,8 @@ func measureVertical(ctx context.Context, opts Options) Measured {
 	// but it produces results that are good enough for now.
 
 	// determine the extra space we need to draw the labels
-	extra_width := 0
-	max_height := 0
+	max_width := 0
+	max_height := opts.Length
 	occupied := 0
 	bounds := make([]fixed.Rectangle26_6, 0, len(opts.Labels))
 
@@ -114,24 +117,30 @@ func measureVertical(ctx context.Context, opts Options) Measured {
 		b, _ := font.BoundString(opts.Face, label.Text)
 		bounds = append(bounds, b)
 
-		if width := b.Max.X.Ceil(); width > extra_width {
-			extra_width = width
+		y := int(float64(opts.Length-1) * label.Position)
+		height := y - b.Min.Y.Ceil()
+
+		if opts.DontBleed && height > opts.Length {
+			continue
 		}
 
-		y := int(float64(opts.Length-1) * label.Position)
+		if height > max_height {
+			max_height = height
+		}
+
+		label_width := b.Max.X.Ceil()
+		if label_width > max_width {
+			max_width = label_width
+		}
 
 		if occupied > 0 && y < occupied+vertLabelSpacing {
 			continue
 		}
-
-		occupied = y - b.Min.Y.Ceil() - b.Max.Y.Ceil()
-		if occupied > max_height {
-			max_height = occupied
-		}
+		occupied = height
 	}
 
 	return Measured{
-		Width:  textOffset + extra_width,
+		Width:  textOffset + max_width,
 		Height: max_height,
 
 		opts:   opts.copy(),
@@ -176,9 +185,14 @@ func (m Measured) drawVertical(ctx context.Context, canvas *draw.RGB) (
 	for i, label := range m.opts.Labels {
 		b := m.bounds[i]
 		y := int(float64(m.opts.Length-1) * label.Position)
+		height := y - b.Min.Y.Ceil()
 
 		for x := 0; x < tickSize; x++ {
 			canvas.Set(maybeFlip(axisWidth+x), y, draw.Color{})
+		}
+
+		if m.opts.DontBleed && height > m.opts.Length {
+			continue
 		}
 
 		if occupied > 0 && y < occupied+vertLabelSpacing {
@@ -187,10 +201,10 @@ func (m Measured) drawVertical(ctx context.Context, canvas *draw.RGB) (
 
 		text_size := b.Max.X - b.Min.X
 		d.Dot = fixed.Point26_6{
-			Y: fixed.I(y) - b.Min.Y - b.Max.Y,
+			Y: fixed.I(y - b.Min.Y.Ceil()),
 		}
 		if m.opts.Flip {
-			d.Dot.X = fixed.I(m.Width-textOffset) - text_size
+			d.Dot.X = fixed.I(m.Width - textOffset - text_size.Ceil())
 		} else {
 			d.Dot.X = fixed.I(textOffset)
 		}
@@ -208,40 +222,55 @@ func measureHorizontal(ctx context.Context, opts Options) Measured {
 
 	// determine the max height of a label. this breaks it up into slots.
 	// then determine the largest slot we will occupy so we can figure out the
-	// size.
+	// height.
 	max_height := 0
-	max_slot := 0
 	max_width := opts.Length
+	max_slot := 0
 	bounds := make([]fixed.Rectangle26_6, 0, len(opts.Labels))
 	occupied := make(map[int]int)
 
-	for _, label := range opts.Labels {
-		b, a := font.BoundString(opts.Face, label.Text)
-		bounds = append(bounds, b)
-
-		label_height := (b.Max.Y - b.Min.Y).Ceil() + vertLabelSpacing
-		if label_height > max_height {
-			max_height = label_height
-		}
-
-		x := int(float64(opts.Length-1) * label.Position)
-
-		slot := 0
+	findSlot := func(x int) (slot int) {
 		for len(occupied) > 0 &&
 			x > horizLabelSpacing &&
 			occupied[slot]+horizLabelSpacing > x {
 
 			slot++
 		}
+		return slot
+	}
+
+	for _, label := range opts.Labels {
+		b, _ := font.BoundString(opts.Face, label.Text)
+		bounds = append(bounds, b)
+
+		x := int(float64(opts.Length-1) * label.Position)
+		label_end := x + (b.Max.X - b.Min.X).Ceil()
+		slot := findSlot(x)
+
+		if opts.DontBleed && label_end > opts.Length {
+			// as a special case, if we can nudge the x back so that it's just
+			// on opts.Length and still have the same slot, draw it.
+			label_end = opts.Length
+			x = label_end - (b.Max.X - b.Min.X).Ceil()
+			if findSlot(x) != slot {
+				continue
+			}
+		}
+
 		if slot > max_slot {
 			max_slot = slot
 		}
 
-		width := (fixed.I(x) + a).Ceil()
-		if width > max_width {
-			max_width = width
+		if label_end > max_width {
+			max_width = label_end
 		}
-		occupied[slot] = width
+
+		label_height := (b.Max.Y - b.Min.Y).Ceil() + vertLabelSpacing
+		if label_height > max_height {
+			max_height = label_height
+		}
+
+		occupied[slot] = label_end
 	}
 
 	return Measured{
@@ -281,26 +310,41 @@ func (m Measured) drawHorizontal(ctx context.Context, canvas *draw.RGB) (
 
 	// render the ticks and labels
 	occupied := make(map[int]int)
-	for i, label := range m.opts.Labels {
-		b := m.bounds[i]
-		x := int(float64(m.opts.Length-1) * label.Position)
 
-		for y := 0; y < tickSize; y++ {
-			canvas.Set(x, axisWidth+y, draw.Color{})
-		}
-
-		slot := 0
+	findSlot := func(x int) (slot int) {
 		for len(occupied) > 0 &&
 			x > horizLabelSpacing &&
 			occupied[slot]+horizLabelSpacing > x {
 
 			slot++
 		}
+		return slot
+	}
 
-		offset := fixed.I(textOffset + slot*m.maxHeight)
+	for i, label := range m.opts.Labels {
+		b := m.bounds[i]
+
+		x := int(float64(m.opts.Length-1) * label.Position)
+		label_end := x + (b.Max.X - b.Min.X).Ceil()
+		slot := findSlot(x)
+
+		for y := 0; y < tickSize; y++ {
+			canvas.Set(x, axisWidth+y, draw.Color{})
+		}
+
+		if m.opts.DontBleed && label_end > m.opts.Length {
+			// as a special case, if we can nudge the x back so that it's just
+			// on ,.opts.Length and still have the same slot, draw it.
+			label_end = m.opts.Length
+			x = label_end - (b.Max.X - b.Min.X).Ceil()
+			if findSlot(x) != slot {
+				continue
+			}
+		}
+
 		d.Dot = fixed.Point26_6{
 			X: fixed.I(x),
-			Y: offset - b.Min.Y,
+			Y: fixed.I(textOffset + slot*m.maxHeight - b.Min.Y.Ceil()),
 		}
 
 		d.DrawString(label.Text)

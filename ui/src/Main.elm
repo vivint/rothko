@@ -74,73 +74,103 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     Html.div []
-        [ header
+        [ view_header
         , Html.br [] []
         , Html.div [ Attr.class "container" ]
-            [ Html.div [ Attr.class "row" ]
-                [ Html.div [ Attr.class "col-sm-8 col-sm-offset-2", Attr.id "canvas-container" ]
-                    [ Html.canvas [ Attr.id "canvas" ] []
-                    , inputForm model
-                    , case model.graphState of
-                        Failed error ->
-                            Html.pre [] [ text error ]
-
-                        _ ->
-                            text ""
-                    ]
+            [ view_centeredRow
+                [ view_canvas
+                ]
+            , view_centeredRow
+                [ view_inputForm model
+                , view_errorText model
                 ]
             ]
         ]
 
 
-header : Html Msg
-header =
+view_centeredRow : List (Html msg) -> Html msg
+view_centeredRow children =
+    Html.div [ Attr.class "row" ]
+        [ Html.div [ Attr.class "col-sm-8 col-sm-offset-2" ] children
+        ]
+
+
+view_canvas : Html msg
+view_canvas =
+    Html.div [ Attr.id "canvas-container" ]
+        [ Html.canvas [ Attr.id "canvas" ] [] ]
+
+
+view_errorText : Model -> Html msg
+view_errorText model =
+    case model.graphState of
+        Failed error ->
+            Html.pre [] [ text error ]
+
+        _ ->
+            text ""
+
+
+view_header : Html Msg
+view_header =
     Html.header [ Attr.class "sticky" ]
         [ Html.a [ Attr.href "#", Attr.class "logo" ] [ text "Rothko" ]
         ]
 
 
-inputForm : Model -> Html Msg
-inputForm model =
-    Html.form []
+view_inputForm : Model -> Html Msg
+view_inputForm model =
+    Html.form [ Attr.action "#" ]
         [ Html.fieldset []
             [ Html.legend [] [ text "Graph" ]
-            , Html.div [ Attr.class "row responsive-label" ]
-                [ Html.div [ Attr.class "col-sm-12 col-md-3" ]
-                    [ Html.label [ Attr.for "metric" ] [ text "Metric" ]
-                    ]
-                , Html.div [ Attr.class "col-sm-12 col-md-9" ]
-                    [ Html.input [ Attr.value "goflud.env.process.uptime", Attr.id "metric", Attr.style [ ( "width", "100%" ) ] ] []
-                    ]
-                ]
-            , Html.div [ Attr.class "row responsive-label" ]
-                [ Html.div [ Attr.class "col-sm-12 col-md-3" ]
-                    [ Html.label [ Attr.for "duration" ] [ text "Duration" ]
-                    ]
-                , Html.div [ Attr.class "col-sm-12 col-md-9" ]
-                    [ Html.input [ Attr.value "24h", Attr.id "duration", Attr.style [ ( "width", "100%" ) ] ] []
-                    ]
-                ]
-            , Html.div [ Attr.class "row" ]
-                [ Html.div [ Attr.class "col-sm-12 col-md-12" ]
-                    [ Html.button [ Attr.id "update", Attr.class "primary", Ev.onClick Draw ] [ text "Update" ] ]
-                ]
+            , view_entry "metric" "goflud.env.process.uptime"
+            , view_entry "duration" "24h"
+            , view_button "update" Draw
             , Html.hr [] []
-            , Html.div [ Attr.class "row responsive-label" ]
-                [ Html.div [ Attr.class "col-sm-12 col-md-3" ]
-                    [ Html.label [ Attr.for "width" ] [ text "Width" ]
-                    ]
-                , Html.div [ Attr.class "col-sm-12 col-md-9" ]
-                    [ Html.input [ Attr.value "1000", Attr.id "width", Attr.style [ ( "width", "100%" ) ] ] []
-                    ]
+            , view_entry "width" "1000"
+            , view_entry "height" "300"
+            ]
+        ]
+
+
+utils_titleCase : String -> String
+utils_titleCase val =
+    let
+        upperWord word =
+            String.toUpper (String.left 1 word) ++ (String.dropLeft 1 word)
+    in
+        val
+            |> String.words
+            |> List.map upperWord
+            |> String.join " "
+
+
+view_entry : String -> String -> Html msg
+view_entry id value =
+    Html.div [ Attr.class "row responsive-label" ]
+        [ Html.div [ Attr.class "col-sm-12 col-md-3" ]
+            [ Html.label [ Attr.for id ] [ text (utils_titleCase id) ]
+            ]
+        , Html.div [ Attr.class "col-sm-12 col-md-9" ]
+            [ Html.input
+                [ Attr.value value
+                , Attr.id id
+                , Attr.style [ ( "width", "100%" ) ]
                 ]
-            , Html.div [ Attr.class "row responsive-label" ]
-                [ Html.div [ Attr.class "col-sm-12 col-md-3" ]
-                    [ Html.label [ Attr.for "height" ] [ text "Height" ]
-                    ]
-                , Html.div [ Attr.class "col-sm-12 col-md-9" ]
-                    [ Html.input [ Attr.value "300", Attr.id "height", Attr.style [ ( "width", "100%" ) ] ] []
-                    ]
+                []
+            ]
+        ]
+
+
+view_button : String -> msg -> Html msg
+view_button id msg =
+    Html.div [ Attr.class "row" ]
+        [ Html.div [ Attr.class "col-sm-12 col-md-12" ]
+            [ Html.button
+                [ Attr.id id
+                , Attr.class "primary"
+                , Ev.onClick msg
                 ]
+                [ text (utils_titleCase id) ]
             ]
         ]

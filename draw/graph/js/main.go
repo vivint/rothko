@@ -3,14 +3,11 @@
 package main
 
 import (
-	"context"
-
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/zeebo/errs"
 )
 
 var (
-	ctx      = context.Background()
 	panicErr = errs.Class("panic")
 )
 
