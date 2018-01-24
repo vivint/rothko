@@ -17,8 +17,7 @@ var (
 	ctx = context.Background()
 
 	vopts = Options{
-		Canvas: draw.NewRGB(5000, 5000),
-		Face:   inconsolata.Regular8x16,
+		Face: inconsolata.Regular8x16,
 		Labels: []Label{
 			{0.0, "0.0"},
 			{0.1, "0.1"},
@@ -37,8 +36,7 @@ var (
 	}
 
 	hopts = Options{
-		Canvas: draw.NewRGB(5000, 5000),
-		Face:   inconsolata.Regular8x16,
+		Face: inconsolata.Regular8x16,
 		Labels: []Label{
 			{0.0, "1/16 @ 00:00"},
 			{0.1, "1/16 @ 01:00"},
@@ -71,32 +69,34 @@ func saveImage(t *testing.T, name string, out *draw.RGB) {
 
 func TestDraw(t *testing.T) {
 	t.Run("Vertical", func(t *testing.T) {
-		width, height := Draw(ctx, vopts)
-		saveImage(t, "testv.png", vopts.Canvas.View(0, 0, width, height))
+		saveImage(t, "testv.png", Draw(ctx, vopts))
 	})
 
 	t.Run("Horizontal", func(t *testing.T) {
-		width, height := Draw(ctx, hopts)
-		saveImage(t, "testh.png", hopts.Canvas.View(0, 0, width, height))
+		saveImage(t, "testh.png", Draw(ctx, hopts))
 	})
 }
 
 func BenchmarkDraw(b *testing.B) {
 	b.Run("Vertical", func(b *testing.B) {
+		canvas := Draw(ctx, vopts)
+
 		b.ReportAllocs()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			Draw(ctx, vopts)
+			Measure(ctx, vopts).Draw(ctx, canvas)
 		}
 	})
 
 	b.Run("Horizontal", func(b *testing.B) {
+		canvas := Draw(ctx, hopts)
+
 		b.ReportAllocs()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			Draw(ctx, hopts)
+			Measure(ctx, hopts).Draw(ctx, canvas)
 		}
 	})
 }
