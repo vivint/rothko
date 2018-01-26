@@ -125,10 +125,9 @@ view_inputForm model =
             [ Html.legend [] [ text "Graph" ]
             , view_entry "metric" "goflud.env.process.uptime"
             , view_entry "duration" "24h"
-            , view_button "update" Draw
-            , Html.hr [] []
             , view_entry "width" "1000"
-            , view_entry "height" "300"
+            , view_entry "height" "360"
+            , view_button "update" Draw
             ]
         ]
 

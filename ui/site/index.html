@@ -19,7 +19,6 @@
 
       app.ports.drawP.subscribe(function() {
         let ctx2d = document.querySelector("#canvas").getContext("2d");
-        let container = document.querySelector('#canvas-container').getBoundingClientRect();
 
         ctx2d.clearRect(0, 0, canvas.width, canvas.height);
         graph.postMessage({

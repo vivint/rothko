@@ -89,7 +89,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 	}
 
 	bottom := axis.Measure(ctx, axis.Options{
-		Face:      &example,
+		Face:      &iosevka,
 		Labels:    labels,
 		Vertical:  false,
 		Length:    opts.Width,
@@ -105,16 +105,16 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 		pos := float64(y) / float64(height)
 		labels = append(labels, axis.Label{
 			Position: pos,
-			Text:     fmt.Sprintf("%0.2f", pos),
+			Text:     fmt.Sprintf("%0.2f", 1-pos),
 		})
 	}
 	labels = append(labels, axis.Label{
 		Position: 1,
-		Text:     "1.00",
+		Text:     "0.00",
 	})
 
 	left := axis.Measure(ctx, axis.Options{
-		Face:     &example,
+		Face:     &iosevka,
 		Labels:   labels,
 		Vertical: true,
 		Length:   height,
@@ -128,7 +128,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 		labels = labels[:0]
 		for y := 0; y <= height-labelGap; y += labelGap {
 			pos := float64(y) / float64(height)
-			val := opts.Earliest.Query(pos)
+			val := opts.Earliest.Query(1 - pos)
 			if val16, ok := float16.FromFloat64(val); ok {
 				val = val16.Float64()
 			}
@@ -138,7 +138,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 			})
 		}
 
-		val := opts.Earliest.Query(1)
+		val := opts.Earliest.Query(0)
 		if val16, ok := float16.FromFloat64(val); ok {
 			val = val16.Float64()
 		}
@@ -148,7 +148,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 		})
 
 		right = axis.Measure(ctx, axis.Options{
-			Face:     &example,
+			Face:     &iosevka,
 			Labels:   labels,
 			Vertical: true,
 			Length:   height,

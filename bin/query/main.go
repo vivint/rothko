@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/spacemonkeygo/rothko/api"
 	"github.com/spacemonkeygo/rothko/disk/files"
 	"github.com/zeebo/errs"
 )
@@ -89,6 +91,18 @@ func run(ctx context.Context, args []string) (err error) {
 
 		return runRender(ctx, di, args[1], dur)
 
+	case "serve":
+		if len(args) == 1 {
+			return errs.New("no address specified")
+		}
+
+		go func() {
+			fmt.Println("populating metrics...")
+			fmt.Println("done. err:", di.PopulateMetrics(ctx))
+		}()
+
+		return errs.Wrap(http.ListenAndServe(args[1], api.New(di)))
+
 	default:
 		return invalidUsage.New("unknown command: %q", args[0])
 	}
@@ -102,6 +116,8 @@ usage: query <command> [args...]
 
 command can be one of:
 
-	latest:   query the latest value for the metric specified in args
+	latest   query the latest value for the metric specified in args
+	query    save out a default image for some metric as test.png
+	serve    run an http server for serving requests
 `))
 }
