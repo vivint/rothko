@@ -10,7 +10,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/zeebo/errs"
-  packages = ["."]
+  packages = [".","errdata"]
   revision = "08f08a1132e5cbf2c0708b6acdaad6bfbc14aadd"
 
 [[projects]]
@@ -34,6 +34,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f59094f7b981177458eecff78cd934ca6ed32bcacdf63ef468df11c3c9a25bc0"
+  inputs-digest = "2e3dc2908982676c492dd8fcc6139ae786d38dace0dd3a349a6a7fe776396372"
   solver-name = "gps-cdcl"
   solver-version = 1

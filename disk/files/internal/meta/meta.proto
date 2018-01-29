@@ -11,6 +11,10 @@ option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.goproto_enum_stringer_all) = false;
+option (gogoproto.enum_stringer_all) = true;
+
 
 // Metadata contains information about a file.
 message Metadata {

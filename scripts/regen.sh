@@ -12,3 +12,15 @@ VENDOR=$(go list -f '{{ .Dir }}' github.com/spacemonkeygo/rothko)/vendor
 
 go install -v $PLUGIN
 protoc --plugin=protoc-gen-gogo=${PLUGIN_PATH} -I${VENDOR} -I. --gogo_out=. *.proto
+
+# strip out the proto imports because we don't need them and they're silly
+SED=sed
+case $(uname) in
+	Darwin )
+		SED=gsed
+		;;
+esac
+
+$SED -i '/proto\./d' *.pb.go
+$SED -i '/^import proto/d' *.pb.go
+$SED -i '/gogoproto/d' *.pb.go
