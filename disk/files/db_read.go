@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/spacemonkeygo/rothko/disk"
+	"github.com/spacemonkeygo/rothko/disk/files/internal/sset"
 	"github.com/spacemonkeygo/rothko/disk/files/internal/system"
 )
 
@@ -48,13 +49,13 @@ func (db *DB) QueryLatest(ctx context.Context, metric string, buf []byte) (
 }
 
 // Metrics calls the callback once for every metric stored.
-func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
-	err error) {
+func (db *DB) Metrics(ctx context.Context,
+	cb func(name string) (bool, error)) (err error) {
 
 	// load up the readonly names value
-	names, ok := db.names.Load().(map[string]struct{})
+	names, ok := db.names.Load().(*sset.Set)
 	if !ok {
-		names = make(map[string]struct{})
+		names = sset.New(0)
 	}
 
 	// merge the worker sets in if we have a flag for it
@@ -62,7 +63,7 @@ func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 	locked := false
 	for i, names_w := range db.names_w {
 		db.names_w_mu[i].Lock()
-		len_names_w := len(names_w)
+		len_names_w := names_w.Len()
 		db.names_w_mu[i].Unlock()
 
 		// skip if we don't need to merge it in
@@ -84,20 +85,18 @@ func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 		// we reload the names map here after we have the mutex in case
 		// some concurrent Metrics call has updated the atomic.Value
 		if !copied {
-			new_names, ok := db.names.Load().(map[string]struct{})
-			if ok && len(new_names) > 0 {
-				names = copyStringSet(new_names)
+			new_names, ok := db.names.Load().(*sset.Set)
+			if ok && new_names.Len() > 0 {
+				names = new_names.Copy()
 			}
 			copied = true
 		}
 
 		// merge the worker map in
-		for name := range names_w {
-			names[name] = struct{}{}
-		}
+		names.Merge(names_w)
 
 		// clear out the worker map
-		db.names_w[i] = make(map[string]struct{})
+		db.names_w[i] = sset.New(0)
 		db.names_w_mu[i].Unlock()
 	}
 
@@ -112,12 +111,11 @@ func (db *DB) Metrics(ctx context.Context, cb func(name string) error) (
 	}
 
 	// yay do callbacks
-	for name := range names {
-		if err := cb(name); err != nil {
-			return err
-		}
-	}
-	return nil
+	names.Iter(func(name string) (ok bool) {
+		ok, err = cb(name)
+		return ok && err == nil
+	})
+	return err
 }
 
 // PopulateMetrics walks the directory tree of the metrics recreating the
@@ -143,7 +141,7 @@ func (db *DB) PopulateMetrics(ctx context.Context) (err error) {
 
 type dbPopulator struct {
 	dir     string
-	out     map[string]struct{}
+	out     *sset.Set
 	namebuf []byte // buffer for the metric name
 	dirbuf  []byte // buffer for the directory name
 	pathbuf []byte // buffer for the path
@@ -152,7 +150,7 @@ type dbPopulator struct {
 func newDBPopulator(dir string) *dbPopulator {
 	return &dbPopulator{
 		dir: dir,
-		out: make(map[string]struct{}),
+		out: sset.New(0),
 	}
 }
 
@@ -222,7 +220,7 @@ func (dp *dbPopulator) populate(ctx context.Context) (err error) {
 			if err != nil {
 				return err
 			}
-			dp.out[string(dp.namebuf)] = struct{}{}
+			dp.out.Add(string(dp.namebuf))
 
 			// mark it added so we skip over adding other .data files
 			added = true

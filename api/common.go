@@ -35,14 +35,21 @@ func getStatusCode(err error) int {
 type respTracker struct {
 	http.ResponseWriter
 	wrote bool
+	code  int
 }
 
 func (r *respTracker) Write(p []byte) (n int, err error) {
+	if !r.wrote {
+		r.code = 200
+	}
 	r.wrote = true
 	return r.ResponseWriter.Write(p)
 }
 
 func (r *respTracker) WriteHeader(code int) {
+	if !r.wrote {
+		r.code = code
+	}
 	r.wrote = true
 	r.ResponseWriter.WriteHeader(code)
 }

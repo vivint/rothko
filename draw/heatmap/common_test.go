@@ -3,10 +3,13 @@
 package heatmap
 
 import (
+	"context"
 	"math"
 
 	"github.com/spacemonkeygo/rothko/draw"
 )
+
+var ctx = context.Background()
 
 var grayscale []draw.Color
 

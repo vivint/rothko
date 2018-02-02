@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/spacemonkeygo/rothko/disk"
+	"github.com/spacemonkeygo/rothko/disk/files/internal/sset"
 	"github.com/spacemonkeygo/rothko/external"
 )
 
@@ -79,7 +80,7 @@ type DB struct {
 
 	// cache of metric names. one per worker with unions on reads
 	names_w_mu []sync.Mutex
-	names_w    []map[string]struct{}
+	names_w    []*sset.Set
 
 	// metric names cache for easy atomic swapping. is a map[string]struct{}
 	// and it is readonly. the names_mu is held during population of the
@@ -130,9 +131,9 @@ func New(dir string, opts Options) *DB {
 		opts.Handles = 0
 	}
 
-	names_w := make([]map[string]struct{}, opts.Workers)
+	names_w := make([]*sset.Set, opts.Workers)
 	for i := range names_w {
-		names_w[i] = make(map[string]struct{})
+		names_w[i] = sset.New(0)
 	}
 
 	return &DB{

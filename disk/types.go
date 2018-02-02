@@ -40,7 +40,7 @@ type Source interface {
 		start, end int64, data []byte, err error)
 
 	// Metrics calls the callback once for every metric stored.
-	Metrics(ctx context.Context, cb func(name string) error) error
+	Metrics(ctx context.Context, cb func(name string) (bool, error)) error
 }
 
 // Disk represents a Source and a Sink.

@@ -26,9 +26,9 @@ func TestDBRead(t *testing.T) {
 		expected := testPopulateDB(t, db, 100)
 
 		names := make(map[string]struct{})
-		err := db.Metrics(ctx, func(name string) (err error) {
+		err := db.Metrics(ctx, func(name string) (ok bool, err error) {
 			names[name] = struct{}{}
-			return nil
+			return true, nil
 		})
 		assert.NoError(t, err)
 		assert.DeepEqual(t, names, expected)
@@ -59,8 +59,8 @@ func BenchmarkDBRead(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			db.Metrics(ctx, func(name string) (err error) {
-				return nil
+			db.Metrics(ctx, func(name string) (ok bool, err error) {
+				return true, nil
 			})
 		}
 	})
@@ -89,8 +89,8 @@ func BenchmarkDBRead(b *testing.B) {
 
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				db.Metrics(ctx, func(name string) (err error) {
-					return nil
+				db.Metrics(ctx, func(name string) (ok bool, err error) {
+					return true, nil
 				})
 			}
 		})

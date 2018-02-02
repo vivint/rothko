@@ -97,8 +97,9 @@ func run(ctx context.Context, args []string) (err error) {
 		}
 
 		go func() {
+			n := time.Now()
 			fmt.Println("populating metrics...")
-			fmt.Println("done. err:", di.PopulateMetrics(ctx))
+			fmt.Println("done. err:", di.PopulateMetrics(ctx), time.Since(n))
 		}()
 
 		return errs.Wrap(http.ListenAndServe(args[1], api.New(di)))

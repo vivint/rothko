@@ -4,6 +4,8 @@ package files
 
 import (
 	"context"
+
+	"github.com/spacemonkeygo/rothko/disk/files/internal/sset"
 )
 
 // Queue adds the data for the metric and the given start and end times. If
@@ -94,16 +96,16 @@ func (db *DB) write(ctx context.Context, num int, value queuedValue) (
 	if ok {
 		should_store := false
 
-		names, found := db.names.Load().(map[string]struct{})
+		names, found := db.names.Load().(*sset.Set)
 		if !found {
 			should_store = true
-		} else if _, found := names[value.metric]; !found {
+		} else if found := names.Has(value.metric); !found {
 			should_store = true
 		}
 
 		if should_store {
 			db.names_w_mu[num].Lock()
-			db.names_w[num][value.metric] = struct{}{}
+			db.names_w[num].Add(value.metric)
 			db.names_w_mu[num].Unlock()
 		}
 	}

@@ -23,9 +23,10 @@ type record struct {
 	data    []byte
 }
 
-// we manually compute this to avoid a dependency on unsafe. it's too bad that
-// unsafe.Sizeof (which is fully safe) requires an unsafe import.
-const recordHeaderSize = 1 + 1 + 8 + 8 + 2 + 4
+// recordHeaderSize is the size of the record, without the data field, but
+// with a crc at the end. sizeof makes this tricky to compute, so we just
+// manually add.
+const recordHeaderSize = (1 + 1 + 8 + 8 + 2) + 4
 
 // recordKind is an enumeration of kinds of records.
 type recordKind int8

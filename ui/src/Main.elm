@@ -1,10 +1,12 @@
 module Main exposing (..)
 
+import Api
 import Graph
 import Html exposing (Html, text)
 import Html.Attributes as Attr
 import Html.Events as Ev
 import Window
+import Http
 
 
 main =
@@ -24,6 +26,10 @@ type Msg
     = DrawStarting
     | DrawDone Graph.Result
     | Draw
+    | Render
+    | RenderResponse (Result Http.Error String)
+    | Metrics
+    | MetricsResponse (Result Http.Error (List String))
 
 
 type GraphState
@@ -34,15 +40,26 @@ type GraphState
 
 
 type alias Model =
-    { graphState : GraphState }
+    { graphState : GraphState
+    , metrics : List String
+    }
 
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     ( { graphState = Stale
+      , metrics = []
       }
-    , Graph.draw
+    , Cmd.batch
+        [ Graph.draw
+        , Http.send MetricsResponse Api.metrics
+        ]
     )
+
+
+withModel : Model -> Cmd Msg -> ( Model, Cmd Msg )
+withModel model msg =
+    ( model, msg )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -61,6 +78,28 @@ update msg model =
 
         Draw ->
             ( model, Graph.draw )
+
+        Render ->
+            Api.renderRequest "goflud.env.process.uptime"
+                |> Api.render
+                |> Http.send RenderResponse
+                |> withModel model
+
+        RenderResponse response ->
+            ( model, Cmd.none )
+
+        Metrics ->
+            Api.metrics
+                |> Http.send MetricsResponse
+                |> withModel model
+
+        MetricsResponse response ->
+            case response of
+                Ok metrics ->
+                    ( { model | metrics = metrics }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -127,7 +166,7 @@ view_inputForm model =
             , view_entry "duration" "24h"
             , view_entry "width" "1000"
             , view_entry "height" "360"
-            , view_button "update" Draw
+            , view_button "update" Render
             ]
         ]
 

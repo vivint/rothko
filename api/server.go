@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"io"
 	"net/http"
 	"path"
 	"time"
 
+	"github.com/spacemonkeygo/rothko/api/query"
 	"github.com/spacemonkeygo/rothko/data"
 	"github.com/spacemonkeygo/rothko/data/dists"
 	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
@@ -38,13 +38,25 @@ func New(di disk.Disk) *Server {
 // ServeHTTP implements the http.Handler interface for the server. It just
 // looks at the method and last path component to route.
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	tracker := &respTracker{ResponseWriter: w, wrote: false}
-	if err := s.serveHTTP(req.Context(), w, req); err != nil {
+	now := time.Now()
+
+	// TODO(jeff): do a stupid thing for now
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	tracker := &respTracker{ResponseWriter: w, wrote: false, code: 0}
+	if err := s.serveHTTP(req.Context(), tracker, req); err != nil {
 		if !tracker.wrote {
 			w.WriteHeader(getStatusCode(err))
 			fmt.Fprintf(w, "%+v\n", err)
 		}
 	}
+
+	fmt.Printf("% 5v %4d % 5s %v\n",
+		time.Since(now).Round(time.Millisecond),
+		tracker.code,
+		req.Method,
+		req.URL.Path,
+	)
 }
 
 // serveHTTP is a little wrapper for making error handling easier.
@@ -56,52 +68,15 @@ func (s *Server) serveHTTP(ctx context.Context, w http.ResponseWriter,
 	}
 
 	switch _, last := path.Split(req.URL.Path); last {
-	case "metrics":
-		return s.serveMetrics(ctx, w, req)
-
 	case "render":
 		return s.serveRender(ctx, w, req)
+
+	case "query":
+		return s.serveQuery(ctx, w, req)
 
 	default:
 		return errNotFound.New("path: %q", last)
 	}
-}
-
-// TODO(jeff): maybe we need a query metrics call? maybe this server also
-// handles auto complete results? if so we can just perioidcally cache all
-// the metrics here.
-
-// serveMetrics serves up the set of metrics that are available. It streams
-// the response.
-func (s *Server) serveMetrics(ctx context.Context, w http.ResponseWriter,
-	req *http.Request) (err error) {
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if _, err := io.WriteString(w, "["); err != nil {
-		return errs.Wrap(err)
-	}
-
-	enc := json.NewEncoder(w)
-	first := true
-
-	err = s.di.Metrics(ctx, func(name string) error {
-		if !first {
-			if _, err := io.WriteString(w, ","); err != nil {
-				return errs.Wrap(err)
-			}
-		}
-		return errs.Wrap(enc.Encode(name))
-	})
-	if err != nil {
-		return errs.Wrap(err)
-	}
-
-	if _, err := io.WriteString(w, "]"); err != nil {
-		return errs.Wrap(err)
-	}
-
-	return nil
 }
 
 // serveRender serves either a png of the graph, or a json encoded set of
@@ -184,6 +159,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 
 	// if it's json, encode it out
 	if req.Header.Get("Accept") == "application/json" {
+		w.Header().Set("Content-Type", "application/json")
 		type D = map[string]interface{}
 		return errs.Wrap(json.NewEncoder(w).Encode(D{
 			"Columns":  cols,
@@ -205,9 +181,30 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 	})
 
 	// encode it out as a png
+	w.Header().Set("Content-Type", "image/png")
 	return errs.Wrap(png.Encode(w, &image.RGBA{
 		Pix:    out.Pix,
 		Stride: out.Stride,
 		Rect:   image.Rect(0, 0, out.Width, out.Height),
 	}))
+}
+
+// serveQuery returns a set of metrics that match the query as a json list.
+func (s *Server) serveQuery(ctx context.Context, w http.ResponseWriter,
+	req *http.Request) (err error) {
+
+	// get the render parameters
+	_query := req.FormValue("query")
+	if _query == "" {
+		return errBadRequest.New("query required")
+	}
+	results := getInt(req.FormValue("results"), 10)
+
+	search := query.New(_query, results)
+	if err := s.di.Metrics(ctx, search.Add); err != nil {
+		return errs.Wrap(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	return errs.Wrap(json.NewEncoder(w).Encode(search.Matched()))
 }

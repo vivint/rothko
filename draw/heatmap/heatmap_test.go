@@ -21,7 +21,7 @@ func TestContext(t *testing.T) {
 			Map:    linear,
 		})
 		for _, col := range cols {
-			d.Draw(col)
+			d.Draw(ctx, col)
 		}
 	})
 }
@@ -45,7 +45,7 @@ func BenchmarkContext(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			for _, col := range cols {
-				d.Draw(col)
+				d.Draw(ctx, col)
 			}
 		}
 	})

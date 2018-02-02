@@ -28,7 +28,7 @@ func TestAgg(t *testing.T) {
 	assert.Equal(t, rec.Max, float64(9))
 	assert.Equal(t, string(rec.MaxId), "9")
 	assert.That(t, rec.StartTime < rec.EndTime)
-	assert.Equal(t, rec.DistributionKind, params.Kind())
+	assert.Equal(t, rec.Kind, params.Kind())
 	assert.That(t, len(rec.Distribution) > 0)
 }
 
