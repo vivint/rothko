@@ -28,8 +28,8 @@ type Msg
     | Draw
     | Render
     | RenderResponse (Result Http.Error String)
-    | Metrics
-    | MetricsResponse (Result Http.Error (List String))
+    | Query String
+    | QueryResponse (Result Http.Error (List String))
 
 
 type GraphState
@@ -41,18 +41,17 @@ type GraphState
 
 type alias Model =
     { graphState : GraphState
-    , metrics : List String
+    , query_result : Maybe (List String)
     }
 
 
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     ( { graphState = Stale
-      , metrics = []
+      , query_result = Nothing
       }
     , Cmd.batch
         [ Graph.draw
-        , Http.send MetricsResponse Api.metrics
         ]
     )
 
@@ -88,15 +87,16 @@ update msg model =
         RenderResponse response ->
             ( model, Cmd.none )
 
-        Metrics ->
-            Api.metrics
-                |> Http.send MetricsResponse
+        Query query ->
+            Api.queryRequest query
+                |> Api.query
+                |> Http.send QueryResponse
                 |> withModel model
 
-        MetricsResponse response ->
+        QueryResponse response ->
             case response of
-                Ok metrics ->
-                    ( { model | metrics = metrics }, Cmd.none )
+                Ok result ->
+                    ( { model | query_result = Just result }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )

@@ -6,6 +6,10 @@ import Dict exposing (Dict)
 import Json.Decode exposing (list, string)
 
 
+makeUrl path query =
+    "http://localhost:9998/" ++ path ++ Query.render query
+
+
 type alias RenderRequest =
     { metric : String
     , width : Maybe Int
@@ -34,7 +38,7 @@ render req =
     Http.request
         { method = "GET"
         , headers = [ Http.header "Accept" "application/json" ]
-        , url = "http://localhost:9998/render" ++ renderRequestQuery req
+        , url = makeUrl "render" (renderRequestQuery req)
         , body = Http.emptyBody
         , expect = Http.expectString
         , timeout = Nothing
@@ -52,7 +56,7 @@ maybeAdd key val query =
             Query.add key (Basics.toString val) query
 
 
-renderRequestQuery : RenderRequest -> String
+renderRequestQuery : RenderRequest -> Query
 renderRequestQuery req =
     Query.empty
         |> Query.add "metric" req.metric
@@ -62,7 +66,6 @@ renderRequestQuery req =
         |> maybeAdd "duration" req.duration
         |> maybeAdd "samples" req.samples
         |> maybeAdd "compression" req.compression
-        |> Query.render
 
 
 type alias QueryRequest =
@@ -80,16 +83,11 @@ queryRequest query =
 
 query : QueryRequest -> Http.Request (List String)
 query req =
-    let
-        url =
-            "http://localhost:9998/query" ++ queryRequestQuery req
-    in
-        Http.get url (list string)
+    Http.get (makeUrl "query" (queryRequestQuery req)) (list string)
 
 
-queryRequestQuery : QueryRequest -> String
+queryRequestQuery : QueryRequest -> Query
 queryRequestQuery req =
     Query.empty
         |> Query.add "query" req.query
         |> maybeAdd "results" req.results
-        |> Query.render
