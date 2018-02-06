@@ -9,7 +9,6 @@
   </head>
   <body>
     <div id="main"></div>
-    <script src='/js/data.js' type='application/javascript'></script>
     <script src='/js/flags.js' type='application/javascript'></script>
     <script src='/js/Main.js' type='application/javascript'></script>
     <script type="text/javascript">
@@ -17,18 +16,10 @@
       let main = document.getElementById('main');
       let app = Elm.Main.embed(main, flags);
 
-      app.ports.drawP.subscribe(function() {
+      app.ports.draw.subscribe(function(data) {
         let ctx2d = document.querySelector("#canvas").getContext("2d");
-
         ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-        graph.postMessage({
-          "columns": columns_data,
-          "earliest": earliest_data,
-          "now": 1516832442982353973,
-          "duration": 345600000000000,
-          "width": 1000,
-          "height": 360,
-        });
+        graph.postMessage(JSON.parse(data));
       });
 
       graph.addEventListener("message", function(result) {
@@ -59,7 +50,6 @@
           "error": "",
         });
     });
-
     </script>
   </body>
 </html>

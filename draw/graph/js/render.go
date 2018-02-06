@@ -41,10 +41,10 @@ func runRender(ctx context.Context, obj *js.Object) (
 		}
 	}()
 
-	parsed := js.Global.Get("JSON").Call("parse", obj.Get("columns").String())
-	columns := make([]draw.Column, 0, parsed.Length())
-	for i := 0; i < parsed.Length(); i++ {
-		col := parsed.Index(i)
+	js_columns := obj.Get("columns")
+	columns := make([]draw.Column, 0, js_columns.Length())
+	for i := 0; i < js_columns.Length(); i++ {
+		col := js_columns.Index(i)
 		columns = append(columns, draw.Column{
 			W:    col.Get("W").Int(),
 			X:    col.Get("X").Int(),

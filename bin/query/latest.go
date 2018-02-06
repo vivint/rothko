@@ -34,8 +34,8 @@ func printData(start, end int64, buf []byte) error {
 	}
 
 	tw := junk.NewTabbed(os.Stdout)
-	tw.Write("start:", time.Unix(0, start).Format(time.RFC1123))
-	tw.Write("end:", time.Unix(0, end).Format(time.RFC1123))
+	tw.Write("start:", time.Unix(0, start).Format(time.RFC1123), fmt.Sprintf("(%d)", start))
+	tw.Write("end:", time.Unix(0, end).Format(time.RFC1123), fmt.Sprintf("(%d)", end))
 	tw.Write("obs:", fmt.Sprint(rec.Observations))
 	tw.Write("kind:", rec.Kind.String())
 	tw.Write("data:", fmt.Sprintf("%x", rec.Distribution))

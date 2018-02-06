@@ -1,13 +1,13 @@
 module Api exposing (..)
 
 import Http
-import Query exposing (Query)
+import URLQuery exposing (URLQuery)
 import Dict exposing (Dict)
 import Json.Decode exposing (list, string)
 
 
 makeUrl path query =
-    "http://localhost:9998/" ++ path ++ Query.render query
+    "http://localhost:9998/" ++ path ++ URLQuery.render query
 
 
 type alias RenderRequest =
@@ -38,7 +38,7 @@ render req =
     Http.request
         { method = "GET"
         , headers = [ Http.header "Accept" "application/json" ]
-        , url = makeUrl "render" (renderRequestQuery req)
+        , url = makeUrl "render" (renderRequestURLQuery req)
         , body = Http.emptyBody
         , expect = Http.expectString
         , timeout = Nothing
@@ -46,48 +46,56 @@ render req =
         }
 
 
-maybeAdd : String -> Maybe a -> Query -> Query
+maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
 maybeAdd key val query =
     case val of
         Nothing ->
             query
 
         Just val ->
-            Query.add key (Basics.toString val) query
+            URLQuery.add key val query
 
 
-renderRequestQuery : RenderRequest -> Query
-renderRequestQuery req =
-    Query.empty
-        |> Query.add "metric" req.metric
-        |> maybeAdd "width" req.width
-        |> maybeAdd "height" req.height
-        |> maybeAdd "now" req.now
-        |> maybeAdd "duration" req.duration
-        |> maybeAdd "samples" req.samples
-        |> maybeAdd "compression" req.compression
+renderRequestURLQuery : RenderRequest -> URLQuery
+renderRequestURLQuery req =
+    let
+        ts =
+            Maybe.map toString
+    in
+        URLQuery.empty
+            |> URLQuery.add "metric" req.metric
+            |> maybeAdd "width" (ts req.width)
+            |> maybeAdd "height" (ts req.height)
+            |> maybeAdd "now" (ts req.now)
+            |> maybeAdd "duration" req.duration
+            |> maybeAdd "samples" (ts req.samples)
+            |> maybeAdd "compression" (ts req.compression)
 
 
-type alias QueryRequest =
+type alias URLQueryRequest =
     { query : String
     , results : Maybe Int
     }
 
 
-queryRequest : String -> QueryRequest
+queryRequest : String -> URLQueryRequest
 queryRequest query =
     { query = query
     , results = Nothing
     }
 
 
-query : QueryRequest -> Http.Request (List String)
+query : URLQueryRequest -> Http.Request (List String)
 query req =
-    Http.get (makeUrl "query" (queryRequestQuery req)) (list string)
+    Http.get (makeUrl "query" (queryRequestURLQuery req)) (list string)
 
 
-queryRequestQuery : QueryRequest -> Query
-queryRequestQuery req =
-    Query.empty
-        |> Query.add "query" req.query
-        |> maybeAdd "results" req.results
+queryRequestURLQuery : URLQueryRequest -> URLQuery
+queryRequestURLQuery req =
+    let
+        ts =
+            Maybe.map toString
+    in
+        URLQuery.empty
+            |> URLQuery.add "query" req.query
+            |> maybeAdd "results" (ts req.results)

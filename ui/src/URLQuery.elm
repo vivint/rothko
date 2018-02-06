@@ -1,21 +1,21 @@
-module Query exposing (Query, empty, add, render)
+module URLQuery exposing (URLQuery, empty, add, render)
 
 import Http exposing (encodeUri)
 import Dict exposing (Dict)
 
 
-type Query
-    = Query (Dict String (List String))
+type URLQuery
+    = URLQuery (Dict String (List String))
 
 
-empty : Query
+empty : URLQuery
 empty =
-    Query <| Dict.empty
+    URLQuery <| Dict.empty
 
 
-add : String -> String -> Query -> Query
-add key value (Query query) =
-    Query <|
+add : String -> String -> URLQuery -> URLQuery
+add key value (URLQuery query) =
+    URLQuery <|
         Dict.update key
             (Maybe.withDefault []
                 >> (::) value
@@ -24,8 +24,8 @@ add key value (Query query) =
             query
 
 
-render : Query -> String
-render (Query query) =
+render : URLQuery -> String
+render (URLQuery query) =
     let
         encode key value =
             encodeUri key ++ "=" ++ encodeUri value
