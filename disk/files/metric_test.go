@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/zeebo/errs"
 )
 
 // newTestMetric constructs a temporary metric.
@@ -75,6 +76,17 @@ func TestMetric(t *testing.T) {
 	})
 
 	t.Run("Read", func(t *testing.T) {
+		t.Run("Read Only", func(t *testing.T) {
+			dir, err := ioutil.TempDir("", "metric-")
+			assert.NoError(t, err)
+			defer os.RemoveAll(dir)
+
+			_, err = newMetric(ctx, metricOptions{
+				ro: true,
+			})
+			assert.That(t, os.IsNotExist(errs.Unwrap(err)))
+		})
+
 		test := func(t *testing.T, buf_size int) {
 			m, cleanup := newTestMetric(t)
 			defer cleanup()

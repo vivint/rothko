@@ -36,6 +36,7 @@ type metricOptions struct {
 	name string
 	max  int
 	ext  external.Resources
+	ro   bool // read only
 }
 
 // filenameBuf is a cache around constructing paths, as it is a significant
@@ -87,7 +88,7 @@ func newMetric(ctx context.Context, opts metricOptions) (*metric, error) {
 
 	// open it up and read all of the names in it
 	dh, err := os.Open(dir)
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) && !opts.ro {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, Error.Wrap(err)
 		}

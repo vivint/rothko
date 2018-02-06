@@ -79,7 +79,7 @@ func (db *DB) write(ctx context.Context, num int, value queuedValue) (
 	defer db.locks.Unlock(value.metric)
 
 	// acquire the datastructure encapsulating metric write logic
-	met, err := db.newMetric(ctx, value.metric)
+	met, err := db.newMetric(ctx, value.metric, false)
 	if err != nil {
 		return false, err
 	}

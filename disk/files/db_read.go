@@ -23,7 +23,7 @@ func (db *DB) Query(ctx context.Context, metric string, end int64,
 	defer db.locks.Unlock(metric)
 
 	// acquire the datastructure encapsulating metric read logic
-	met, err := db.newMetric(ctx, metric)
+	met, err := db.newMetric(ctx, metric, true)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (db *DB) QueryLatest(ctx context.Context, metric string, buf []byte) (
 	defer db.locks.Unlock(metric)
 
 	// acquire the datastructure encapsulating metric read logic
-	met, err := db.newMetric(ctx, metric)
+	met, err := db.newMetric(ctx, metric, true)
 	if err != nil {
 		return 0, 0, nil, err
 	}

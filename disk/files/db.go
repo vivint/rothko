@@ -158,13 +158,16 @@ func New(dir string, opts Options) *DB {
 }
 
 // newMetric constructs a *metric value for the database.
-func (db *DB) newMetric(ctx context.Context, name string) (*metric, error) {
+func (db *DB) newMetric(ctx context.Context, name string, read_only bool) (
+	*metric, error) {
+
 	return newMetric(ctx, metricOptions{
 		fch:  db.fch,
 		dir:  db.dir,
 		name: name,
 		max:  db.opts.Files,
 		ext:  db.opts.Resources,
+		ro:   read_only,
 	})
 }
 
