@@ -17,8 +17,3 @@ ignored = [
 [[constraint]]
   branch = "master"
   name = "github.com/zeebo/tdigest"
-
-[[constraint]]
-  branch = "v1"
-  name = "gopkg.in/spacemonkeygo/random.v1"
-
