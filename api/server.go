@@ -162,6 +162,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 		w.Header().Set("Content-Type", "application/json")
 		type D = map[string]interface{}
 		return errs.Wrap(json.NewEncoder(w).Encode(D{
+			"metric":   metric,
 			"columns":  cols,
 			"earliest": earliest,
 			"now":      now,

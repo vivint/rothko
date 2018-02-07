@@ -158,8 +158,8 @@ doUpdate config (Model model) msg =
             )
 
         KeyDown keyCode ->
-            case model.query of
-                Got highlight completions ->
+            case ( keyCode, model.query ) of
+                ( _, Got highlight completions ) ->
                     let
                         ( newHighlight, cmd ) =
                             updateKeyCode highlight completions keyCode
@@ -169,7 +169,14 @@ doUpdate config (Model model) msg =
                         , Cmd.none
                         )
 
-                None ->
+                -- Enter with no completions triggers a redraw
+                ( 13, _ ) ->
+                    ( Model model
+                    , Cmd.none
+                    , sendMessage (config.select model.value)
+                    )
+
+                _ ->
                     ( Model model
                     , Cmd.none
                     , Cmd.none
@@ -242,8 +249,8 @@ updateKeyCode highlight completions keyCode =
                     (List.drop index >> List.head) completions
             in
                 case highlight |> Maybe.andThen (select completions) of
-                    Just value ->
-                        ( highlight, sendMessage <| Select value )
+                    Just selected ->
+                        ( highlight, sendMessage <| Select selected )
 
                     Nothing ->
                         ( highlight, Cmd.none )

@@ -6,6 +6,10 @@ import QueryBar
 import Html exposing (Html, text)
 import Html.Attributes as Attr
 import Http
+import Task
+import Process
+import Time
+import Window
 
 
 -- MAIN
@@ -30,11 +34,13 @@ type alias Flags =
 
 type Msg
     = NoOp
-    | DrawStarting
+    | Resize Window.Size
+    | ResizeTimer Window.Size
+    | DrawStarting String
     | DrawDone Graph.Result
+    | Render String
     | RenderResponse (Result Http.Error String)
     | QueryBarMsg QueryBar.Msg
-    | Select String
 
 
 
@@ -43,14 +49,25 @@ type Msg
 
 type GraphState
     = Stale
-    | Drawing
-    | Fresh
+    | Drawing String
+    | Fresh String
     | Failed String
+
+
+isFresh : GraphState -> Bool
+isFresh graphState =
+    case graphState of
+        Fresh _ ->
+            True
+
+        _ ->
+            False
 
 
 type alias Model =
     { graphState : GraphState
     , queryBar : QueryBar.Model
+    , size : Maybe Window.Size
     }
 
 
@@ -59,7 +76,7 @@ queryBarConfig =
     { get = .queryBar
     , set = \model queryBar -> { model | queryBar = queryBar }
     , wrap = QueryBarMsg
-    , select = Select
+    , select = Render
     }
 
 
@@ -71,8 +88,9 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     ( { graphState = Stale
       , queryBar = QueryBar.new
+      , size = Nothing
       }
-    , Cmd.none
+    , Task.perform Resize Window.size
     )
 
 
@@ -91,12 +109,33 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        DrawStarting ->
-            ( { model | graphState = Drawing }, Cmd.none )
+        Resize size ->
+            ( { model | size = Just size }
+            , Process.sleep (250 * Time.millisecond)
+                |> Task.perform (always <| ResizeTimer size)
+                |> when (isJust model.size && isFresh model.graphState)
+                |> Maybe.withDefault Cmd.none
+            )
+
+        ResizeTimer size ->
+            ( model
+            , case model.graphState of
+                Fresh metric ->
+                    if model.size == Just size then
+                        sendMessage <| Render metric
+                    else
+                        Cmd.none
+
+                _ ->
+                    Cmd.none
+            )
+
+        DrawStarting metric ->
+            ( { model | graphState = Drawing metric }, Cmd.none )
 
         DrawDone result ->
             ( if result.ok then
-                { model | graphState = Fresh }
+                { model | graphState = Fresh result.metric }
               else
                 { model | graphState = Failed result.error }
             , Cmd.none
@@ -110,12 +149,22 @@ update msg model =
                 Err error ->
                     Debug.log (toString error) ( model, Cmd.none )
 
-        Select value ->
-            ( model
-            , Api.renderRequest value
-                |> Api.render
-                |> Http.send RenderResponse
-            )
+        Render metric ->
+            let
+                width =
+                    model.size
+                        |> Maybe.map .width
+                        -- container padding is 15px :(
+                        -- just have to keep this in sync because determining
+                        -- dom sizes/offsets is really hard
+                        |> Maybe.map (flip (-) 30)
+            in
+                ( model
+                , Api.renderRequest metric
+                    |> (\request -> { request | width = width })
+                    |> Api.render
+                    |> Http.send RenderResponse
+                )
 
         QueryBarMsg msg ->
             QueryBar.update queryBarConfig model msg
@@ -131,6 +180,7 @@ subscriptions model =
         [ Graph.starting DrawStarting
         , Graph.done DrawDone
         , QueryBar.subscriptions queryBarConfig model
+        , Window.resizes Resize
         ]
 
 
@@ -142,29 +192,24 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ view_header
-        , Html.br [] []
         , Html.div [ Attr.class "container" ]
-            [ view_fullRow
-                [ view_canvas
-                ]
-            , view_fullRow
-                [ view_query model
-                , view_errorText model
-                ]
+            [ view_fullRow [ view_query model ]
+            , view_fullRow [ view_canvas ]
+            , view_fullRow [ view_errorText model ]
             ]
         ]
 
 
 view_fullRow : List (Html msg) -> Html msg
 view_fullRow children =
-    Html.div [ Attr.class "row" ]
+    Html.div [ Attr.class "row", Attr.style [ ( "padding-top", "10px" ) ] ]
         [ Html.div [ Attr.class "col-sm-12" ] children
         ]
 
 
 view_centeredRow : List (Html msg) -> Html msg
 view_centeredRow children =
-    Html.div [ Attr.class "row" ]
+    Html.div [ Attr.class "row", Attr.style [ ( "padding-top", "10px" ) ] ]
         [ Html.div [ Attr.class "col-sm-8 col-sm-offset-2" ] children
         ]
 
@@ -195,3 +240,30 @@ view_header =
 view_query : Model -> Html Msg
 view_query model =
     view_fullRow [ QueryBar.view queryBarConfig model.queryBar ]
+
+
+
+-- UTILS
+
+
+when : Bool -> a -> Maybe a
+when cond val =
+    if cond then
+        Just val
+    else
+        Nothing
+
+
+isJust : Maybe a -> Bool
+isJust val =
+    case val of
+        Nothing ->
+            False
+
+        Just _ ->
+            True
+
+
+sendMessage : msg -> Cmd msg
+sendMessage msg =
+    Task.perform (always msg) (Task.succeed ())

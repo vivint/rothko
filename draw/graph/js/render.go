@@ -17,14 +17,23 @@ import (
 )
 
 func render(obj *js.Object) {
-	self := js.Global.Get("self")
-	self.Call("postMessage", js.Undefined)
+	data := obj.Get("data")
+	metric := data.Get("metric").String()
 
-	out, err := runRender(context.Background(), obj.Get("data"))
+	self := js.Global.Get("self")
 
 	self.Call("postMessage", D{
-		"error": errorString(err),
-		"out":   out,
+		"kind":   "starting",
+		"metric": metric,
+	})
+
+	out, err := runRender(context.Background(), data)
+
+	self.Call("postMessage", D{
+		"kind":   "done",
+		"metric": metric,
+		"error":  errorString(err),
+		"out":    out,
 	})
 }
 
