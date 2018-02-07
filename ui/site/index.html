@@ -16,24 +16,18 @@
       let main = document.getElementById('main');
       let app = Elm.Main.embed(main, flags);
 
-      app.ports.draw.subscribe(function(data) {
+      app.ports.draw.subscribe(function(request) {
         let ctx2d = document.querySelector("#canvas").getContext("2d");
         ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-        graph.postMessage(JSON.parse(data));
+        graph.postMessage(JSON.parse(request.data));
       });
 
       graph.addEventListener("message", function(result) {
         let ctx2d = document.querySelector("#canvas").getContext("2d");
 
-        if (result.data.kind === "starting") {
-          app.ports.starting.send(result.data.metric);
-          return;
-        }
-
         if (result.data.error !== "") {
           app.ports.done.send({
             "ok": false,
-            "metric": result.data.metric,
             "error": result.data.error,
           });
           return;
@@ -48,7 +42,6 @@
 
         app.ports.done.send({
           "ok": true,
-          "metric": result.data.metric,
           "error": "",
         });
     });

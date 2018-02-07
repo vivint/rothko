@@ -280,6 +280,8 @@ doView (Model model) =
             [ Html.input
                 [ Attr.value model.value
                 , Attr.style [ ( "width", "100%" ) ]
+                , Attr.type_ "text"
+                , Attr.spellcheck False
                 , Ev.onInput SetValue
                 ]
                 []

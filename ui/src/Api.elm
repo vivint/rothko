@@ -6,8 +6,26 @@ import Dict exposing (Dict)
 import Json.Decode exposing (list, string)
 
 
+-- HELPERS
+
+
+makeUrl : String -> URLQuery -> String
 makeUrl path query =
     "http://localhost:9998/" ++ path ++ URLQuery.render query
+
+
+maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
+maybeAdd key val query =
+    case val of
+        Nothing ->
+            query
+
+        Just val ->
+            URLQuery.add key val query
+
+
+
+-- RENDER
 
 
 type alias RenderRequest =
@@ -46,16 +64,6 @@ render req =
         }
 
 
-maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
-maybeAdd key val query =
-    case val of
-        Nothing ->
-            query
-
-        Just val ->
-            URLQuery.add key val query
-
-
 renderRequestURLQuery : RenderRequest -> URLQuery
 renderRequestURLQuery req =
     let
@@ -76,6 +84,10 @@ type alias URLQueryRequest =
     { query : String
     , results : Maybe Int
     }
+
+
+
+-- QUERY
 
 
 queryRequest : String -> URLQueryRequest

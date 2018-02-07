@@ -18,22 +18,13 @@ import (
 
 func render(obj *js.Object) {
 	data := obj.Get("data")
-	metric := data.Get("metric").String()
-
 	self := js.Global.Get("self")
-
-	self.Call("postMessage", D{
-		"kind":   "starting",
-		"metric": metric,
-	})
 
 	out, err := runRender(context.Background(), data)
 
 	self.Call("postMessage", D{
-		"kind":   "done",
-		"metric": metric,
-		"error":  errorString(err),
-		"out":    out,
+		"error": errorString(err),
+		"out":   out,
 	})
 }
 
