@@ -42,7 +42,8 @@ type alias Info =
 
 
 type State
-    = Requesting Info -- requesting data from api
+    = Delay String -- no size yet
+    | Requesting Info -- requesting data from api
     | Drawing Info -- drawing the data
     | Finished Info (Result String DrawResult) -- done
 
@@ -156,6 +157,14 @@ doUpdate config (Model model) msg =
                     ( Just { width }, Just (Finished _ _) ) ->
                         do width
 
+                    ( Just { width }, Just (Delay _) ) ->
+                        do width
+
+                    ( Nothing, _ ) ->
+                        ( Model { model | state = Just <| Delay metric }
+                        , Cmd.none
+                        )
+
                     _ ->
                         ( Model model
                         , Cmd.none
@@ -205,6 +214,9 @@ doUpdate config (Model model) msg =
             in
                 ( Model { model | size = Just size, counter = newCounter }
                 , case ( model.size, model.state ) of
+                    ( _, Just (Delay metric) ) ->
+                        sendMessage (Draw metric)
+
                     ( Just { width }, Just (Finished _ _) ) ->
                         if width /= size.width then
                             sendMessageAfter delay (ResizeTimer newCounter)

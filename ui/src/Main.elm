@@ -12,13 +12,16 @@ import Time exposing (Time)
 import Window
 import Json.Encode as Encode exposing (Value)
 import Json.Decode as Decode
+import Navigation
+import UrlParser exposing (parsePath, map, top, stringParam, (<?>))
+import URLQuery exposing (URLQuery)
 
 
 -- MAIN
 
 
 main =
-    Html.programWithFlags
+    Navigation.programWithFlags Location
         { init = init
         , update = update
         , subscriptions = subscriptions
@@ -35,9 +38,49 @@ type alias Flags =
 
 
 type Msg
-    = Draw String
+    = Location Navigation.Location
+    | Draw String
     | GraphMsg Graph.Msg
     | QueryBarMsg QueryBar.Msg
+
+
+
+-- PATH
+
+
+type alias Path =
+    { metric : Maybe String
+    }
+
+
+parse : Navigation.Location -> Path
+parse loc =
+    let
+        parser =
+            top
+                <?> stringParam "metric"
+    in
+        parsePath (map Path parser) loc
+            |> Maybe.withDefault
+                { metric = Nothing
+                }
+
+
+render : Path -> String
+render { metric } =
+    let
+        maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
+        maybeAdd key val query =
+            case val of
+                Nothing ->
+                    query
+
+                Just val ->
+                    URLQuery.add key val query
+    in
+        URLQuery.empty
+            |> maybeAdd "metric" metric
+            |> URLQuery.render
 
 
 
@@ -71,16 +114,25 @@ queryBarConfig =
 -- INIT
 
 
-init : Flags -> ( Model, Cmd Msg )
-init flags =
+init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
+init flags loc =
     let
+        metric =
+            parse loc |> .metric |> Maybe.withDefault ""
+
         ( graph, cmd ) =
             Graph.new graphConfig
     in
         ( { graph = graph
-          , queryBar = QueryBar.new
+          , queryBar = QueryBar.new metric
           }
-        , cmd
+        , Cmd.batch
+            [ cmd
+            , if metric /= "" then
+                sendMessage <| Draw metric
+              else
+                Cmd.none
+            ]
         )
 
 
@@ -91,8 +143,16 @@ init flags =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Location loc ->
+            ( model, Cmd.none )
+
         Draw metric ->
-            ( model, sendMessage <| GraphMsg <| Graph.Draw metric )
+            ( model
+            , Cmd.batch
+                [ sendMessage <| GraphMsg <| Graph.Draw metric
+                , Navigation.newUrl (render { metric = Just metric })
+                ]
+            )
 
         GraphMsg msg ->
             Graph.update graphConfig model msg

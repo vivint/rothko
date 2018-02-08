@@ -45,10 +45,10 @@ type Model
         }
 
 
-new : Model
-new =
+new : String -> Model
+new value =
     Model
-        { value = ""
+        { value = value
         , query = None
         }
 
