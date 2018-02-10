@@ -38,6 +38,14 @@ type Options struct {
 	Cap   int // cap of the number of records per file
 	Files int // the number of historical files per metric
 
+	Tuning Tuning // tuning parameters
+
+	// Resources to use during operation.
+	Resources external.Resources `json:"-"`
+}
+
+// Tuning controls some tuning details of the database.
+type Tuning struct {
 	// Buffer controls the number of records that can be queued for writing.
 	Buffer int
 
@@ -58,9 +66,6 @@ type Options struct {
 	// to schedule around goroutines blocked on page faults, which could cause
 	// goroutines to starve.
 	Workers int
-
-	// Resources to use during operation.
-	Resources external.Resources `json:"-"`
 }
 
 // DB is a database implementing disk.Writer and disk.Source using a file
@@ -109,29 +114,29 @@ type queuedValue struct {
 // options.
 func New(dir string, opts Options) *DB {
 	// set up the number of workers
-	if opts.Workers == 0 {
-		opts.Workers = runtime.GOMAXPROCS(-1) - 1
+	if opts.Tuning.Workers == 0 {
+		opts.Tuning.Workers = runtime.GOMAXPROCS(-1) - 1
 
 		// in the worst case, run one worker anyway
-		if opts.Workers <= 0 {
-			opts.Workers = 1
+		if opts.Tuning.Workers <= 0 {
+			opts.Tuning.Workers = 1
 		}
 	}
 
 	// set up the number of handles
-	if opts.Handles == 0 {
+	if opts.Tuning.Handles == 0 {
 		var lim syscall.Rlimit
 		if syscall.Getrlimit(syscall.RLIMIT_NOFILE, &lim) == nil {
 			if int64(int(lim.Cur)) == int64(lim.Cur) {
-				opts.Handles = int(lim.Cur) - 512
+				opts.Tuning.Handles = int(lim.Cur) - 512
 			}
 		}
 	}
-	if opts.Handles < 0 {
-		opts.Handles = 0
+	if opts.Tuning.Handles < 0 {
+		opts.Tuning.Handles = 0
 	}
 
-	names_w := make([]*sset.Set, opts.Workers)
+	names_w := make([]*sset.Set, opts.Tuning.Workers)
 	for i := range names_w {
 		names_w[i] = sset.New(0)
 	}
@@ -140,19 +145,19 @@ func New(dir string, opts Options) *DB {
 		dir:  dir,
 		opts: opts,
 
-		queue: make(chan queuedValue, opts.Buffer),
+		queue: make(chan queuedValue, opts.Tuning.Buffer),
 		bufs: sync.Pool{
 			New: func() interface{} { return make([]byte, opts.Size) },
 		},
 		locks: newLockPool(),
 
 		fch: newFileCache(fileCacheOptions{
-			Handles: opts.Handles,
+			Handles: opts.Tuning.Handles,
 			Size:    opts.Size,
 			Cap:     opts.Cap,
 		}),
 
-		names_w_mu: make([]sync.Mutex, opts.Workers),
+		names_w_mu: make([]sync.Mutex, opts.Tuning.Workers),
 		names_w:    names_w,
 	}
 }
@@ -176,8 +181,8 @@ func (db *DB) newMetric(ctx context.Context, name string, read_only bool) (
 func (db *DB) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 
-	wg.Add(db.opts.Workers)
-	for i := 0; i < db.opts.Workers; i++ {
+	wg.Add(db.opts.Tuning.Workers)
+	for i := 0; i < db.opts.Tuning.Workers; i++ {
 		go func(i int) {
 			db.worker(ctx, i)
 			wg.Done()

@@ -25,7 +25,7 @@ func (db *DB) Queue(ctx context.Context, metric string, start int64,
 		done:   cb,
 	}
 
-	if db.opts.Drop {
+	if db.opts.Tuning.Drop {
 		select {
 		case db.queue <- value:
 		default:

@@ -18,7 +18,6 @@ func TestDBRead(t *testing.T) {
 			Size:  1024,
 			Cap:   10,
 			Files: 10,
-			Drop:  false,
 		})
 		defer cleanup()
 		go db.Run(ctx)
@@ -44,7 +43,6 @@ func BenchmarkDBRead(b *testing.B) {
 			Size:  1024,
 			Cap:   10,
 			Files: 10,
-			Drop:  false,
 		})
 		defer cleanup()
 		go db.Run(ctx)
@@ -73,7 +71,6 @@ func BenchmarkDBRead(b *testing.B) {
 			Size:  1024,
 			Cap:   10,
 			Files: 10,
-			Drop:  false,
 		})
 		defer cleanup()
 		go db.Run(ctx)
@@ -104,7 +101,6 @@ func BenchmarkDBRead(b *testing.B) {
 			Size:  1024,
 			Cap:   10,
 			Files: 10,
-			Drop:  false,
 		})
 		defer cleanup()
 		go db.Run(ctx)

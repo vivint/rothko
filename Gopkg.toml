@@ -11,9 +11,13 @@ ignored = [
   version = "0.5.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/zeebo/errs"
+  branch = "master"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/zeebo/tdigest"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/BurntSushi/toml"
+  version = "0.3.0"

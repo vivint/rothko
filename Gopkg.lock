@@ -2,15 +2,50 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/gogo/protobuf"
-  packages = ["gogoproto","plugin/compare","plugin/defaultcheck","plugin/description","plugin/embedcheck","plugin/enumstringer","plugin/equal","plugin/face","plugin/gostring","plugin/marshalto","plugin/oneofcheck","plugin/populate","plugin/size","plugin/stringer","plugin/testgen","plugin/union","plugin/unmarshal","proto","protoc-gen-gogo","protoc-gen-gogo/descriptor","protoc-gen-gogo/generator","protoc-gen-gogo/grpc","protoc-gen-gogo/plugin","vanity","vanity/command"]
+  packages = [
+    "gogoproto",
+    "plugin/compare",
+    "plugin/defaultcheck",
+    "plugin/description",
+    "plugin/embedcheck",
+    "plugin/enumstringer",
+    "plugin/equal",
+    "plugin/face",
+    "plugin/gostring",
+    "plugin/marshalto",
+    "plugin/oneofcheck",
+    "plugin/populate",
+    "plugin/size",
+    "plugin/stringer",
+    "plugin/testgen",
+    "plugin/union",
+    "plugin/unmarshal",
+    "proto",
+    "protoc-gen-gogo",
+    "protoc-gen-gogo/descriptor",
+    "protoc-gen-gogo/generator",
+    "protoc-gen-gogo/grpc",
+    "protoc-gen-gogo/plugin",
+    "vanity",
+    "vanity/command"
+  ]
   revision = "342cbe0a04158f6dcb03ca0079991a51a4248c02"
   version = "v0.5"
 
 [[projects]]
   branch = "master"
   name = "github.com/zeebo/errs"
-  packages = [".","errdata"]
+  packages = [
+    ".",
+    "errdata"
+  ]
   revision = "08f08a1132e5cbf2c0708b6acdaad6bfbc14aadd"
 
 [[projects]]
@@ -28,12 +63,18 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/image"
-  packages = ["font","font/basicfont","font/inconsolata","font/plan9font","math/fixed"]
+  packages = [
+    "font",
+    "font/basicfont",
+    "font/inconsolata",
+    "font/plan9font",
+    "math/fixed"
+  ]
   revision = "12117c17ca67ffa1ce22e9409f3b0b0a93ac08c7"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f5e3fc196d1b1132e9b8fa6c6f12c8614768c43fe4faaaed6cc76d95e1be15b8"
+  inputs-digest = "d1c9f35b691ce86c9f4a4adc27d7f2324d9db93ab08837307791d392da02d9a2"
   solver-name = "gps-cdcl"
   solver-version = 1
