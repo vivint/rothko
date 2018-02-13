@@ -1,10 +1,3 @@
-// Copyright (C) 2018. See AUTHORS.
-
-package config
-
-import "strings"
-
-var InitialConfig = strings.TrimSpace(`
 #
 # Main configurations control overall behavior of rothko:
 #
@@ -123,4 +116,3 @@ var InitialConfig = strings.TrimSpace(`
 # [api.security]
 # 	username = "admin"
 # 	password = "boogers"
-`)

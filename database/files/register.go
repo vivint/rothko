@@ -16,14 +16,14 @@ func init() {
 			a := typeassert.A(config)
 			dir := a.I("directory").String()
 			opts := Options{
-				Size:  a.I("size").Int(),
-				Cap:   a.I("cap").Int(),
-				Files: a.I("files").Int(),
+				Size:  int(a.I("size").Int64()),
+				Cap:   int(a.I("cap").Int64()),
+				Files: int(a.I("files").Int64()),
 				Tuning: Tuning{
-					Buffer:  a.I("tuning").I("buffer").Int(),
+					Buffer:  int(a.I("tuning").I("buffer").Int64()),
 					Drop:    a.I("tuning").I("drop").Bool(),
-					Handles: a.I("tuning").I("handles").Int(),
-					Workers: a.I("tuning").I("workers").Int(),
+					Handles: int(a.I("tuning").I("handles").Int64()),
+					Workers: int(a.I("tuning").I("workers").Int64()),
 				},
 			}
 			if err := a.Err(); err != nil {

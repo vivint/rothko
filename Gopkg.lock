@@ -40,13 +40,19 @@
   version = "v0.5"
 
 [[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/zeebo/errs"
   packages = [
     ".",
     "errdata"
   ]
-  revision = "08f08a1132e5cbf2c0708b6acdaad6bfbc14aadd"
+  revision = "8e6c1224b6cfb2dee487becdac04b319ae6d295b"
 
 [[projects]]
   branch = "master"
@@ -61,12 +67,36 @@
   revision = "879702e582c98cb9a1f30981d204431445332d71"
 
 [[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "8474b86a5a6f79c443ce4b2992817ff32cf208b8"
+  version = "v1.3.1"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "35aad584952c3e7020db7b839f6b102de6271f89"
+  version = "v1.7.1"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/image"
   packages = [
     "font",
     "font/basicfont",
-    "font/inconsolata",
     "font/plan9font",
     "math/fixed"
   ]
@@ -75,6 +105,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d1c9f35b691ce86c9f4a4adc27d7f2324d9db93ab08837307791d392da02d9a2"
+  inputs-digest = "f46092b3e6fc95dbd4e846127bdb1454bbdf5fff781dfa67ce2b300ba4d56ea1"
   solver-name = "gps-cdcl"
   solver-version = 1

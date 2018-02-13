@@ -13,7 +13,7 @@ import (
 func TestLoad(t *testing.T) {
 	type D = map[string]interface{}
 
-	conf, err := Load([]byte(initialConfig))
+	conf, err := Load([]byte(InitialConfig))
 	assert.NoError(t, err)
 
 	conf.WriteTo(os.Stdout)

@@ -21,3 +21,11 @@ ignored = [
 [[constraint]]
   name = "github.com/BurntSushi/toml"
   version = "0.3.0"
+
+[[constraint]]
+  name = "github.com/urfave/cli"
+  version = "1.20.0"
+
+[[constraint]]
+  name = "go.uber.org/zap"
+  version = "1.7.1"
