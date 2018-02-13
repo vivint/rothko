@@ -1,6 +1,6 @@
-# merge
---
-    import "github.com/spacemonkeygo/rothko/merge"
+# package merge
+
+`import "github.com/spacemonkeygo/rothko/merge"`
 
 package merge provides a merger for rothko data.
 

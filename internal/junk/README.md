@@ -1,6 +1,6 @@
-# junk
---
-    import "github.com/spacemonkeygo/rothko/internal/junk"
+# package junk
+
+`import "github.com/spacemonkeygo/rothko/internal/junk"`
 
 package junk is a drop spot for things with no home.
 

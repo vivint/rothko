@@ -1,6 +1,6 @@
-# graphite
---
-    import "github.com/spacemonkeygo/rothko/listener/graphite"
+# package graphite
+
+`import "github.com/spacemonkeygo/rothko/listener/graphite"`
 
 package graphite provides a listener for the graphite wire protocol.
 

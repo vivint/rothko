@@ -1,6 +1,6 @@
-# api
---
-    import "github.com/spacemonkeygo/rothko/api"
+# package api
+
+`import "github.com/spacemonkeygo/rothko/api"`
 
 package api provides apis for interacting with a rothko server
 

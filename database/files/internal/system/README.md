@@ -1,6 +1,6 @@
-# system
---
-    import "github.com/spacemonkeygo/rothko/database/files/internal/system"
+# package system
+
+`import "github.com/spacemonkeygo/rothko/database/files/internal/system"`
 
 package system provides optimized and dangerous functions for system calls.
 

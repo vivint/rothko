@@ -1,6 +1,6 @@
-# dump
---
-    import "github.com/spacemonkeygo/rothko/dump"
+# package dump
+
+`import "github.com/spacemonkeygo/rothko/dump"`
 
 package dump provides periodic dumping from a scribbler to disk.
 

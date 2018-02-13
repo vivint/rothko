@@ -1,6 +1,6 @@
-# files
---
-    import "github.com/spacemonkeygo/rothko/database/files"
+# package files
+
+`import "github.com/spacemonkeygo/rothko/database/files"`
 
 package files implements a disk.Source and disk.Writer
 

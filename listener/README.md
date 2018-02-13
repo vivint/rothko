@@ -1,6 +1,6 @@
-# listener
---
-    import "github.com/spacemonkeygo/rothko/listener"
+# package listener
+
+`import "github.com/spacemonkeygo/rothko/listener"`
 
 package listener provides types for adding data to rothko.
 

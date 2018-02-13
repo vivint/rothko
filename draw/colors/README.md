@@ -1,6 +1,6 @@
-# colors
---
-    import "github.com/spacemonkeygo/rothko/draw/colors"
+# package colors
+
+`import "github.com/spacemonkeygo/rothko/draw/colors"`
 
 package colors provides some color maps for drawing.
 

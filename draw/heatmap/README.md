@@ -1,6 +1,6 @@
-# heatmap
---
-    import "github.com/spacemonkeygo/rothko/draw/heatmap"
+# package heatmap
+
+`import "github.com/spacemonkeygo/rothko/draw/heatmap"`
 
 package heatmap provides implementations of drawing rothko heatmaps.
 

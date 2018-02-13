@@ -1,6 +1,6 @@
-# tdigest
---
-    import "github.com/spacemonkeygo/rothko/dist/tdigest"
+# package tdigest
+
+`import "github.com/spacemonkeygo/rothko/dist/tdigest"`
 
 package tdigest provides a wrapper around github.com/zeebo/tdigest.
 

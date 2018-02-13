@@ -1,6 +1,6 @@
-# external
---
-    import "github.com/spacemonkeygo/rothko/external"
+# package external
+
+`import "github.com/spacemonkeygo/rothko/external"`
 
 package external defines some interfaces for external resources.
 

@@ -1,6 +1,6 @@
-# meta
---
-    import "github.com/spacemonkeygo/rothko/database/files/internal/meta"
+# package meta
+
+`import "github.com/spacemonkeygo/rothko/database/files/internal/meta"`
 
 Package meta is a generated protocol buffer package.
 

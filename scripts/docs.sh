@@ -5,6 +5,7 @@
 # 	github.com/robertkrimen/godocdown/godocdown has err (*pkgtree.LocalImportsError); required by (root).
 # oh well.
 
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PACKAGES=$(go list github.com/spacemonkeygo/rothko/...)
 
 for PACKAGE in $PACKAGES; do
@@ -12,5 +13,5 @@ for PACKAGE in $PACKAGES; do
 		continue
 	fi
 	DIR=$(go list -f '{{.Dir}}' "$PACKAGE")
-	godocdown "$PACKAGE" > "$DIR/README.md"
+	godocdown -template "$SCRIPTDIR/godocdown.template" "$PACKAGE" > "$DIR/README.md"
 done

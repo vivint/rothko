@@ -1,6 +1,6 @@
-# dist
---
-    import "github.com/spacemonkeygo/rothko/dist"
+# package dist
+
+`import "github.com/spacemonkeygo/rothko/dist"`
 
 package dist provides interfaces for distribution sketches.
 

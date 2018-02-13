@@ -1,6 +1,6 @@
-# registry
---
-    import "github.com/spacemonkeygo/rothko/registry"
+# package registry
+
+`import "github.com/spacemonkeygo/rothko/registry"`
 
 package registry provides ways for plugins to add rothko entities.
 

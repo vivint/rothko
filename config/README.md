@@ -1,6 +1,6 @@
-# config
---
-    import "github.com/spacemonkeygo/rothko/config"
+# package config
+
+`import "github.com/spacemonkeygo/rothko/config"`
 
 package config provides methods to load/create the configs.
 

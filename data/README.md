@@ -1,6 +1,6 @@
-# data
---
-    import "github.com/spacemonkeygo/rothko/data"
+# package data
+
+`import "github.com/spacemonkeygo/rothko/data"`
 
 package data provides types for handling rothko data.
 

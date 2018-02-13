@@ -1,6 +1,6 @@
-# database
---
-    import "github.com/spacemonkeygo/rothko/database"
+# package database
+
+`import "github.com/spacemonkeygo/rothko/database"`
 
 package database provides interfaces to storage of records.
 

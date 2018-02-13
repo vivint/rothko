@@ -1,6 +1,6 @@
-# axis
---
-    import "github.com/spacemonkeygo/rothko/draw/axis"
+# package axis
+
+`import "github.com/spacemonkeygo/rothko/draw/axis"`
 
 package axis provides implementations of drawing rothko axes.
 

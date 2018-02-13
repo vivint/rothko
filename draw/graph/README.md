@@ -1,6 +1,6 @@
-# graph
---
-    import "github.com/spacemonkeygo/rothko/draw/graph"
+# package graph
+
+`import "github.com/spacemonkeygo/rothko/draw/graph"`
 
 package graph provides implementations of drawing rothko graphs.
 

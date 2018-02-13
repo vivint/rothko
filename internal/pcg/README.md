@@ -1,6 +1,6 @@
-# pcg
---
-    import "github.com/spacemonkeygo/rothko/internal/pcg"
+# package pcg
+
+`import "github.com/spacemonkeygo/rothko/internal/pcg"`
 
 package pcg provides the pcg random number generator
 
