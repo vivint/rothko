@@ -6,8 +6,8 @@ import "github.com/spacemonkeygo/rothko/dist"
 
 type fakeParams struct{ dist.Params }
 
-func (f fakeParams) New() dist.Dist { return fakeDist{} }
-func (f fakeParams) Kind() string   { return "fake" }
+func (f fakeParams) New() (dist.Dist, error) { return fakeDist{}, nil }
+func (f fakeParams) Kind() string            { return "fake" }
 
 type fakeDist struct{ dist.Dist }
 

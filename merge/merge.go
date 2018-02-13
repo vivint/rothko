@@ -49,7 +49,15 @@ func Merge(ctx context.Context, opts MergeOptions) (
 	}
 
 	// merge the distributions
-	res := newResampler(opts.Params.NewUnwrapped())
+	dist, err := opts.Params.New()
+	if err != nil {
+		return out, err
+	}
+	unwrapped, ok := dist.(*tdigest.Wrapper)
+	if !ok {
+		return out, Error.New("programmer error: params did not make t-digest")
+	}
+	res := newResampler(unwrapped.Underlying())
 	for _, r := range opts.Records {
 		err := res.Sample(ctx, r)
 		if err != nil {

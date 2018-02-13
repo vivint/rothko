@@ -36,7 +36,12 @@ func (a *agg) Observe(val float64, id []byte) {
 
 	// add the value into the digest, initializing it if necessary
 	if a.dist == nil {
-		a.dist = a.params.New()
+		dist, err := a.params.New()
+		if err == nil {
+			a.dist = dist
+		} else {
+			return
+		}
 	}
 	a.dist.Observe(val)
 

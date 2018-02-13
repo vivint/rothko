@@ -25,13 +25,15 @@ type Dist interface {
 	Marshal(buf []byte) []byte
 }
 
-// Params represents a way to create Dists.
+// Params represents a way to create Dists. An implementation must cope with
+// being created with possibly no configuration if coming from the registry.
+// New is allowed to error in this case, but Unmarshal and Kind should not.
 type Params interface {
 	// Kind returns the kind of the distribution.
 	Kind() string
 
 	// New creates a new Dist value.
-	New() Dist
+	New() (Dist, error)
 
 	// Unmarshal should load the Dist from the provided data slice.
 	Unmarshal(data []byte) (Dist, error)

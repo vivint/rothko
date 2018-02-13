@@ -64,7 +64,7 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 			}
 
 			if measure_opts.Earliest == nil {
-				dist, err := load.Load(rec)
+				dist, err := load.Load(ctx, rec)
 				if err != nil {
 					return false, errs.Wrap(err)
 				}

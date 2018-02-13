@@ -20,13 +20,11 @@ func (p Params) Kind() string {
 }
 
 // New returns a new TDigest as a dist.Dist.
-func (p Params) New() dist.Dist {
-	return Wrap(p.NewUnwrapped())
-}
-
-// NewUnwrapped returns a new TDigest.
-func (p Params) NewUnwrapped() *tdigest.TDigest {
-	return tdigest.New(p.Compression)
+func (p Params) New() (dist.Dist, error) {
+	if p.Compression == 0 {
+		return nil, errs.New("New called on zero value Params")
+	}
+	return Wrap(tdigest.New(p.Compression)), nil
 }
 
 // Unmarshal loads a dist.Dist out of some bytes.
@@ -51,6 +49,11 @@ type Wrapper struct {
 // Wrap wraps the given t-digest.
 func Wrap(td *tdigest.TDigest) *Wrapper {
 	return &Wrapper{td: td}
+}
+
+// Underlying returns the underlying t-digest.
+func (w Wrapper) Underlying() *tdigest.TDigest {
+	return w.td
 }
 
 // Kind returns the string "tdigest".

@@ -128,7 +128,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 
 			// if we don't have an earliest yet, keep it around and set it up
 			if measure_opts.Earliest == nil {
-				dist, err := load.Load(rec)
+				dist, err := load.Load(ctx, rec)
 				if err != nil {
 					return false, errs.Wrap(err)
 				}

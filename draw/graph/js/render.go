@@ -61,7 +61,7 @@ func runRender(ctx context.Context, obj *js.Object) (
 	if err := rec.Unmarshal(earliest_buf); err != nil {
 		return nil, errs.Wrap(err)
 	}
-	earliest, err := load.Load(rec)
+	earliest, err := load.Load(ctx, rec)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}

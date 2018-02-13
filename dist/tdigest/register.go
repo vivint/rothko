@@ -13,6 +13,10 @@ import (
 func init() {
 	registry.RegisterDistribution("tdigest", registry.DistributionMakerFunc(
 		func(ctx context.Context, config interface{}) (dist.Params, error) {
+			if config == nil {
+				return Params{}, nil
+			}
+
 			a := typeassert.A(config)
 			params := Params{
 				Compression: a.I("compression").Float64(),

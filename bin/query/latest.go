@@ -20,15 +20,15 @@ func runLatest(ctx context.Context, di *files.DB, metric string) error {
 	if err != nil {
 		return err
 	}
-	return printData(start, end, data)
+	return printData(ctx, start, end, data)
 }
 
-func printData(start, end int64, buf []byte) error {
+func printData(ctx context.Context, start, end int64, buf []byte) error {
 	var rec data.Record
 	if err := rec.Unmarshal(buf); err != nil {
 		return errs.Wrap(err)
 	}
-	dist, err := load.Load(rec)
+	dist, err := load.Load(ctx, rec)
 	if err != nil {
 		return errs.Wrap(err)
 	}

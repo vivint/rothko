@@ -196,7 +196,7 @@ func (m *Merger) emit(ctx context.Context, start, end int64,
 	if err != nil {
 		return errs.Wrap(err)
 	}
-	dist, err := load.Load(out)
+	dist, err := load.Load(ctx, out)
 	if err != nil {
 		return errs.Wrap(err)
 	}
