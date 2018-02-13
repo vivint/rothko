@@ -9,7 +9,7 @@ import (
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/dists"
+	"github.com/spacemonkeygo/rothko/data/load"
 	"github.com/spacemonkeygo/rothko/draw"
 	"github.com/spacemonkeygo/rothko/draw/colors"
 	"github.com/spacemonkeygo/rothko/draw/graph"
@@ -61,7 +61,7 @@ func runRender(ctx context.Context, obj *js.Object) (
 	if err := rec.Unmarshal(earliest_buf); err != nil {
 		return nil, errs.Wrap(err)
 	}
-	earliest, err := dists.Load(rec)
+	earliest, err := load.Load(rec)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}

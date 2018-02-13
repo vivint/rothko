@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/rothko/api"
-	"github.com/spacemonkeygo/rothko/disk/files"
+	"github.com/spacemonkeygo/rothko/database/files"
 	"github.com/zeebo/errs"
 )
 

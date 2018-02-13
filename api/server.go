@@ -14,24 +14,24 @@ import (
 
 	"github.com/spacemonkeygo/rothko/api/query"
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/dists"
-	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
-	"github.com/spacemonkeygo/rothko/disk"
+	"github.com/spacemonkeygo/rothko/data/load"
+	"github.com/spacemonkeygo/rothko/database"
+	"github.com/spacemonkeygo/rothko/dist/tdigest"
 	"github.com/spacemonkeygo/rothko/draw/colors"
 	"github.com/spacemonkeygo/rothko/draw/graph"
-	"github.com/spacemonkeygo/rothko/draw/merge"
+	"github.com/spacemonkeygo/rothko/merge"
 	"github.com/zeebo/errs"
 )
 
 // Server is an http.Handler that can serve responses for a frontend.
 type Server struct {
-	di disk.Disk
+	db database.DB
 }
 
 // New returns a new Server.
-func New(di disk.Disk) *Server {
+func New(db database.DB) *Server {
 	return &Server{
-		di: di,
+		db: db,
 	}
 }
 
@@ -108,7 +108,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 		Height:   height,
 	}
 
-	merger := merge.New(merge.Options{
+	merger := merge.NewMerger(merge.MergerOptions{
 		Samples:  samples,
 		Now:      now,
 		Duration: dur,
@@ -116,7 +116,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 	})
 
 	// run the query
-	err = s.di.Query(ctx, metric, now, nil,
+	err = s.db.Query(ctx, metric, now, nil,
 		func(ctx context.Context, start, end int64, buf []byte) (
 			bool, error) {
 
@@ -128,7 +128,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 
 			// if we don't have an earliest yet, keep it around and set it up
 			if measure_opts.Earliest == nil {
-				dist, err := dists.Load(rec)
+				dist, err := load.Load(rec)
 				if err != nil {
 					return false, errs.Wrap(err)
 				}
@@ -145,7 +145,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 			}
 
 			// keep going until we need to stop based on the duration
-			return end < stop_before, nil
+			return end >= stop_before, nil
 		})
 	if err != nil {
 		return errs.Wrap(err)
@@ -206,7 +206,7 @@ func (s *Server) serveQuery(ctx context.Context, w http.ResponseWriter,
 	results := getInt(req.FormValue("results"), 10)
 
 	search := query.New(_query, results)
-	if err := s.di.Metrics(ctx, search.Add); err != nil {
+	if err := s.db.Metrics(ctx, search.Add); err != nil {
 		return errs.Wrap(err)
 	}
 

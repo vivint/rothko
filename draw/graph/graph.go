@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spacemonkeygo/rothko/data/dists"
+	"github.com/spacemonkeygo/rothko/dist"
 	"github.com/spacemonkeygo/rothko/draw"
 	"github.com/spacemonkeygo/rothko/draw/axis"
 	"github.com/spacemonkeygo/rothko/draw/heatmap"
@@ -36,7 +36,7 @@ type Measured struct {
 
 type MeasureOptions struct {
 	// Earliest is the distribution for the earliest (closest to Now) column.
-	Earliest dists.Dist
+	Earliest dist.Dist
 
 	// What time the far right of the graph represents.
 	Now int64

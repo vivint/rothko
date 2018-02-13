@@ -1,13 +1,9 @@
-// Copyright (C) 2017 Space Monkey, Inc.
+// Copyright (C) 2018 Space Monkey, Inc.
 
 package external
 
-// Resources is a collection of all the external resources. It implements all
-// of the methods of the fields but in a nil-safe way.
-type Resources struct {
-	Logger  Logger
-	Monitor Monitor
-}
+// Default is the default set of resources. Can be overridden by plugins.
+var Default Resources
 
 // Logger is used when logging is required. It is built to match the uber/zap
 // SugaredLogger type.
@@ -22,26 +18,20 @@ type Monitor interface {
 }
 
 //
-// implementations
+// package level implementations
 //
 
-// Infow calls Logger.Infow if Logger is not nil.
-func (r Resources) Infow(msg string, keyvals ...interface{}) {
-	if r.Logger != nil {
-		r.Logger.Infow(msg, keyvals...)
-	}
+// Infow calls Infow on the default resources.
+func Infow(msg string, keyvals ...interface{}) {
+	Default.Infow(msg, keyvals...)
 }
 
-// Errorw calls Logger.Errorw if Logger is not nil.
-func (r Resources) Errorw(msg string, keyvals ...interface{}) {
-	if r.Logger != nil {
-		r.Logger.Errorw(msg, keyvals...)
-	}
+// Errorw calls Errorw on the default Resources.
+func Errorw(msg string, keyvals ...interface{}) {
+	Default.Errorw(msg, keyvals...)
 }
 
-// Observe calls Monitor.Observe if Logger is not nil.
-func (r Resources) Observe(name string, value float64) {
-	if r.Monitor != nil {
-		r.Monitor.Observe(name, value)
-	}
+// Observe calls Observe on the default Resources.
+func Observe(name string, value float64) {
+	Default.Observe(name, value)
 }

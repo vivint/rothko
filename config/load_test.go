@@ -3,6 +3,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -12,9 +13,13 @@ import (
 func TestLoad(t *testing.T) {
 	type D = map[string]interface{}
 
-	config, err := Load([]byte(initialConfig))
+	conf, err := Load([]byte(initialConfig))
 	assert.NoError(t, err)
-	assert.DeepEqual(t, config, &Config{
+
+	conf.WriteTo(os.Stdout)
+	conf.from = nil
+
+	assert.DeepEqual(t, conf, &Config{
 		Main: MainConfig{
 			Duration: 10 * time.Minute,
 			Plugins:  []string{},
@@ -32,6 +37,12 @@ func TestLoad(t *testing.T) {
 				"size":      int64(256),
 				"cap":       int64(400),
 				"files":     int64(2),
+			},
+		},
+		Dist: Entity{
+			Kind: "tdigest",
+			Config: D{
+				"compression": float64(5.0),
 			},
 		},
 		API: APIConfig{

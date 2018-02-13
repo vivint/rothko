@@ -20,3 +20,7 @@ func (d *textDuration) UnmarshalText(text []byte) (err error) {
 	d.Duration, err = time.ParseDuration(string(text))
 	return err
 }
+
+func (d textDuration) MarshalText() ([]byte, error) {
+	return []byte(d.String()), nil
+}

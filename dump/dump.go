@@ -9,16 +9,14 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/scribble"
-	"github.com/spacemonkeygo/rothko/disk"
+	"github.com/spacemonkeygo/rothko/database"
 	"github.com/spacemonkeygo/rothko/external"
 )
 
 type Options struct {
-	Disk      disk.Disk
-	Period    time.Duration
-	Resources external.Resources
-	Bufsize   int
+	DB      database.DB
+	Period  time.Duration
+	Bufsize int
 }
 
 type Dumper struct {
@@ -41,10 +39,7 @@ func New(opts Options) *Dumper {
 	}
 }
 
-func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
-	err error) {
-
-	ext := d.opts.Resources
+func (d *Dumper) Run(ctx context.Context, w *data.Writer) (err error) {
 	done := ctx.Done()
 	ticker := time.NewTicker(d.opts.Period)
 	defer ticker.Stop()
@@ -60,7 +55,7 @@ func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 			metrics := int64(0)
 			now := time.Now()
 
-			scr.Capture(ctx, func(metric string, rec data.Record) bool {
+			w.Capture(ctx, func(metric string, rec data.Record) bool {
 				// check if we're cancelled
 				select {
 				case <-done:
@@ -83,11 +78,11 @@ func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 
 				wg.Add(1)
 
-				err = d.opts.Disk.Queue(ctx,
+				err = d.opts.DB.Queue(ctx,
 					metric, rec.StartTime, rec.EndTime, data,
 					func(written bool, err error) {
 						if !written || err != nil {
-							ext.Errorw("metric write problem",
+							external.Errorw("metric write problem",
 								"written", written,
 								"err", err,
 							)
@@ -98,7 +93,9 @@ func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 						atomic.AddInt64(&metrics, 1)
 					})
 				if err != nil {
-					ext.Errorw("error queuing metric", "err", err)
+					external.Errorw("error queuing metric",
+						"err", err,
+					)
 				}
 
 				return true
@@ -110,8 +107,8 @@ func (d *Dumper) Run(ctx context.Context, scr *scribble.Scribbler) (
 			}
 
 			wg.Wait()
-			ext.Observe("dumped_metrics_time", time.Since(now).Seconds())
-			ext.Observe("dumped_metrics", float64(metrics))
+			external.Observe("dumped_metrics_time", time.Since(now).Seconds())
+			external.Observe("dumped_metrics", float64(metrics))
 		}
 	}
 }

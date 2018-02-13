@@ -2,14 +2,31 @@
 
 package config
 
-import "time"
+import (
+	"io"
+	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/zeebo/errs"
+)
 
 // Config holds all of the configuration specified inside of a config toml.
 type Config struct {
 	Main      MainConfig
 	Listeners []Entity
 	Database  Entity
+	Dist      Entity
 	API       APIConfig
+
+	// keeps track of where the config came from
+	from interface{}
+}
+
+func (c *Config) WriteTo(w io.Writer) error {
+	if c.from == nil {
+		return errs.New("config not loaded from Load")
+	}
+	return errs.Wrap(toml.NewEncoder(w).Encode(c.from))
 }
 
 // MainConfig holds configuration for the main config section.

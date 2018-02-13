@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/dists"
-	"github.com/spacemonkeygo/rothko/disk/files"
+	"github.com/spacemonkeygo/rothko/data/load"
+	"github.com/spacemonkeygo/rothko/database/files"
 	"github.com/spacemonkeygo/rothko/internal/junk"
 	"github.com/zeebo/errs"
 )
@@ -28,7 +28,7 @@ func printData(start, end int64, buf []byte) error {
 	if err := rec.Unmarshal(buf); err != nil {
 		return errs.Wrap(err)
 	}
-	dist, err := dists.Load(rec)
+	dist, err := load.Load(rec)
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -37,7 +37,7 @@ func printData(start, end int64, buf []byte) error {
 	tw.Write("start:", time.Unix(0, start).Format(time.RFC1123), fmt.Sprintf("(%d)", start))
 	tw.Write("end:", time.Unix(0, end).Format(time.RFC1123), fmt.Sprintf("(%d)", end))
 	tw.Write("obs:", fmt.Sprint(rec.Observations))
-	tw.Write("kind:", rec.Kind.String())
+	tw.Write("kind:", rec.Kind)
 	tw.Write("data:", fmt.Sprintf("%x", rec.Distribution))
 	tw.Write("min:", fmt.Sprint(rec.Min), fmt.Sprintf("%x", rec.MinId))
 	tw.Write("max:", fmt.Sprint(rec.Max), fmt.Sprintf("%x", rec.MaxId))

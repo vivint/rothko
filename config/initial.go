@@ -8,7 +8,7 @@ const initialConfig = `
 #
 #	duration: how often the aggregated distributions are flushed to the
 #	          database.
-#	
+#
 #	plugins: these files will be loaded at process start and can be used to
 #	         add new kinds of databases or listeners. See the top rothko
 #	         package documentation for how to create a plugin to add more kinds
@@ -86,6 +86,14 @@ const initialConfig = `
 # 	handles = 0
 
 #
+# The distribution sketch that the metrics will be stored with. A T-Digest
+# implementation is provided, but more can be added with plugins.
+#
+
+[dist.tdigest]
+	compression = 5.0
+
+#
 # The server runs an API for querying the metrics, as well as a web interface
 # for rendering and interacting. The address is the port that the server will
 # listen on, and the domain is used to handle CORS.
@@ -107,7 +115,7 @@ const initialConfig = `
 #
 # If the api.security section is specified, the resources will all be protected
 # by http basic auth. Consider using the api.tls section if you use this as
-# basic auth sends the credentials in the clear.
+# http basic auth sends the credentials in the clear.
 #
 
 # [api.security]

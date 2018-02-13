@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/dists"
-	"github.com/spacemonkeygo/rothko/data/dists/tdigest"
-	"github.com/spacemonkeygo/rothko/disk/files"
+	"github.com/spacemonkeygo/rothko/data/load"
+	"github.com/spacemonkeygo/rothko/database/files"
+	"github.com/spacemonkeygo/rothko/dist/tdigest"
 	"github.com/spacemonkeygo/rothko/draw"
 	"github.com/spacemonkeygo/rothko/draw/colors"
 	"github.com/spacemonkeygo/rothko/draw/graph"
-	"github.com/spacemonkeygo/rothko/draw/merge"
+	"github.com/spacemonkeygo/rothko/merge"
 	"github.com/zeebo/errs"
 )
 
@@ -47,7 +47,7 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 		Height:   height,
 	}
 
-	merger := merge.New(merge.Options{
+	merger := merge.NewMerger(merge.MergerOptions{
 		Samples:  samples,
 		Now:      now,
 		Duration: dur,
@@ -64,7 +64,7 @@ func runRender(ctx context.Context, di *files.DB, metric string,
 			}
 
 			if measure_opts.Earliest == nil {
-				dist, err := dists.Load(rec)
+				dist, err := load.Load(rec)
 				if err != nil {
 					return false, errs.Wrap(err)
 				}
