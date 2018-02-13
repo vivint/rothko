@@ -58,6 +58,13 @@ func (a *Asserter) Int() int
 ```
 Int asserts the value as an int.
 
+#### func (*Asserter) Int64
+
+```go
+func (a *Asserter) Int64() int64
+```
+Int64 asserts the value as an int64.
+
 #### func (*Asserter) N
 
 ```go
