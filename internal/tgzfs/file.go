@@ -35,16 +35,21 @@ func (f *file) setData(data []byte) {
 // open allocates a file handle for the data, and keeps track of a directory
 // listing as well as file info about the file.
 func (f *file) open() *fileHandle {
-	return &fileHandle{
-		f:    f,
+	h := &fileHandle{
+		fi:   f.fi,
 		data: bytes.NewReader(f.data),
 	}
+	for _, v := range f.children {
+		h.listing = append(h.listing, v.fi)
+	}
+	return h
 }
 
 // fileHandle represents an open file handle.
 type fileHandle struct {
-	f    *file
-	data *bytes.Reader
+	fi      os.FileInfo
+	listing []os.FileInfo
+	data    *bytes.Reader
 }
 
 // Close closes the fileHandle.

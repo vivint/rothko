@@ -38,7 +38,7 @@ type FS struct {
 
 // New constructs a FS from a gzip encoded tar ball in the data.
 func New(data []byte) (*FS, error) {
-	tardata, err := tar.NewReader(gzip.NewReader(bytes.NewReader(data)))
+	gzdata, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -48,19 +48,20 @@ func New(data []byte) (*FS, error) {
 	}
 	fs.root.setFileInfo(rootFileInfo{})
 
+	tardata := tar.NewReader(gzdata)
 	for {
 		h, err := tardata.Next()
 		if err == io.EOF {
 			return fs, nil
 		}
 		if err != nil {
-			return nil, err.Wrap(err)
+			return nil, errs.Wrap(err)
 		}
 
-		file := fs.getFile(h.Name)
+		file := fs.getFile(h.Name, true)
 		file.setFileInfo(h.FileInfo())
 
-		data, err := ioutil.ReadAll(r)
+		data, err := ioutil.ReadAll(tardata)
 		if err != nil {
 			return nil, errs.Wrap(err)
 		}
@@ -70,7 +71,6 @@ func New(data []byte) (*FS, error) {
 		case "index.html", "./index.html":
 			fs.def = file
 		}
-		return nil
 	}
 }
 
@@ -104,7 +104,7 @@ func (fs *FS) getFile(path string, alloc bool) *file {
 
 // Open returns an http.File for the given path.
 func (fs *FS) Open(name string) (http.File, error) {
-	file := fs.lookupFile(name)
+	file := fs.getFile(name, false)
 	if file == nil {
 		return nil, os.ErrNotExist
 	}
