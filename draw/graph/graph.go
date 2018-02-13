@@ -90,7 +90,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 	}
 
 	bottom := axis.Measure(ctx, axis.Options{
-		Face:      &iosevka.Iosevka,
+		Face:      iosevka.Iosevka,
 		Labels:    labels,
 		Vertical:  false,
 		Length:    opts.Width,
@@ -115,7 +115,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 	})
 
 	left := axis.Measure(ctx, axis.Options{
-		Face:     &iosevka.Iosevka,
+		Face:     iosevka.Iosevka,
 		Labels:   labels,
 		Vertical: true,
 		Length:   height,
@@ -149,7 +149,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 		})
 
 		right = axis.Measure(ctx, axis.Options{
-			Face:     &iosevka.Iosevka,
+			Face:     iosevka.Iosevka,
 			Labels:   labels,
 			Vertical: true,
 			Length:   height,

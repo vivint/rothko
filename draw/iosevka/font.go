@@ -11,8 +11,11 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
-// Iosevka contains 96 6×14 glyphs in 8064 Pix bytes.
-var Iosevka = basicfont.Face{
+// Iosevka is a basicfont.Face.
+var Iosevka = &iosevka
+
+// iosevka contains 96 6×14 glyphs in 8064 Pix bytes.
+var iosevka = basicfont.Face{
 	Advance: 6,
 	Width:   6,
 	Height:  12,

@@ -17,7 +17,7 @@ var (
 	ctx = context.Background()
 
 	vopts = Options{
-		Face: &iosevka.Iosevka,
+		Face: iosevka.Iosevka,
 		Labels: []Label{
 			{0.0, "0.0"},
 			{0.1, "0.1"},
@@ -36,7 +36,7 @@ var (
 	}
 
 	hopts = Options{
-		Face: &iosevka.Iosevka,
+		Face: iosevka.Iosevka,
 		Labels: []Label{
 			{0.0, "1/16 @ 00:00"},
 			{0.1, "1/16 @ 01:00"},
