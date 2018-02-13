@@ -11,6 +11,7 @@ import (
 	"github.com/spacemonkeygo/rothko/draw"
 	"github.com/spacemonkeygo/rothko/draw/axis"
 	"github.com/spacemonkeygo/rothko/draw/heatmap"
+	"github.com/spacemonkeygo/rothko/draw/iosevka"
 	"github.com/zeebo/float16"
 )
 
@@ -89,7 +90,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 	}
 
 	bottom := axis.Measure(ctx, axis.Options{
-		Face:      &iosevka,
+		Face:      &iosevka.Iosevka,
 		Labels:    labels,
 		Vertical:  false,
 		Length:    opts.Width,
@@ -114,7 +115,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 	})
 
 	left := axis.Measure(ctx, axis.Options{
-		Face:     &iosevka,
+		Face:     &iosevka.Iosevka,
 		Labels:   labels,
 		Vertical: true,
 		Length:   height,
@@ -148,7 +149,7 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 		})
 
 		right = axis.Measure(ctx, axis.Options{
-			Face:     &iosevka,
+			Face:     &iosevka.Iosevka,
 			Labels:   labels,
 			Vertical: true,
 			Length:   height,

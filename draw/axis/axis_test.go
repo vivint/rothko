@@ -9,15 +9,15 @@ import (
 	"testing"
 
 	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/spacemonkeygo/rothko/draw/iosevka"
 	"github.com/spacemonkeygo/rothko/internal/assert"
-	"golang.org/x/image/font/inconsolata"
 )
 
 var (
 	ctx = context.Background()
 
 	vopts = Options{
-		Face: inconsolata.Regular8x16,
+		Face: &iosevka.Iosevka,
 		Labels: []Label{
 			{0.0, "0.0"},
 			{0.1, "0.1"},
@@ -36,7 +36,7 @@ var (
 	}
 
 	hopts = Options{
-		Face: inconsolata.Regular8x16,
+		Face: &iosevka.Iosevka,
 		Labels: []Label{
 			{0.0, "1/16 @ 00:00"},
 			{0.1, "1/16 @ 01:00"},
