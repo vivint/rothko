@@ -1,6 +1,6 @@
-# rothko
---
-    import "github.com/spacemonkeygo/rothko"
+# package rothko
+
+`import "github.com/spacemonkeygo/rothko"`
 
 package rothko is a time-distribution system.
 
