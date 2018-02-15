@@ -38,11 +38,9 @@ package ui
 var Tarball = []byte{
 EOF
 
-xxd -g 1 ui.tgz \
-	| cut -b 11-57 \
-	| sed -e 's/^/	0x/g' \
-	| sed -e 's/ /, 0x/g' \
-	| sed -e 's/$/,/g' \
+xxd -ps ui.tgz \
+	| sed -e 's/\(..\)/0x\1, /g' \
+	| sed -e 's/^\(.*\) $/	\1/g' \
 	>> ui.go
 
 cat << EOF >> ui.go

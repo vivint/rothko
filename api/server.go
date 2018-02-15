@@ -19,19 +19,22 @@ import (
 	"github.com/spacemonkeygo/rothko/dist/tdigest"
 	"github.com/spacemonkeygo/rothko/draw/colors"
 	"github.com/spacemonkeygo/rothko/draw/graph"
+	"github.com/spacemonkeygo/rothko/external"
 	"github.com/spacemonkeygo/rothko/merge"
 	"github.com/zeebo/errs"
 )
 
 // Server is an http.Handler that can serve responses for a frontend.
 type Server struct {
-	db database.DB
+	db     database.DB
+	static http.Handler
 }
 
 // New returns a new Server.
-func New(db database.DB) *Server {
+func New(db database.DB, static http.Handler) *Server {
 	return &Server{
-		db: db,
+		db:     db,
+		static: static,
 	}
 }
 
@@ -51,11 +54,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	fmt.Printf("% 5v %4d % 5s %v\n",
-		time.Since(now).Round(time.Millisecond),
-		tracker.code,
-		req.Method,
-		req.URL.Path,
+	external.Infow("http request",
+		"status", tracker.code,
+		"method", req.Method,
+		"duration", time.Since(now).Round(time.Millisecond),
+		"path", req.URL.Path,
 	)
 }
 
@@ -75,6 +78,10 @@ func (s *Server) serveHTTP(ctx context.Context, w http.ResponseWriter,
 		return s.serveQuery(ctx, w, req)
 
 	default:
+		if s.static != nil {
+			s.static.ServeHTTP(w, req)
+			return nil
+		}
 		return errNotFound.New("path: %q", last)
 	}
 }

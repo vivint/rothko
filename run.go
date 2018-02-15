@@ -15,7 +15,9 @@ import (
 	"github.com/spacemonkeygo/rothko/dump"
 	"github.com/spacemonkeygo/rothko/external"
 	"github.com/spacemonkeygo/rothko/internal/junk"
+	"github.com/spacemonkeygo/rothko/internal/tgzfs"
 	"github.com/spacemonkeygo/rothko/registry"
+	"github.com/spacemonkeygo/rothko/ui"
 	"github.com/urfave/cli"
 	"github.com/zeebo/errs"
 )
@@ -61,7 +63,7 @@ The run command starts up the rothko system
 func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	// load the plugins
 	for _, path := range conf.Main.Plugins {
-		external.Infow("loading plugin...",
+		external.Infow("loading plugin",
 			"plugin", path,
 		)
 
@@ -71,11 +73,18 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		}
 	}
 
+	external.Infow("loading static site")
+	fs, err := tgzfs.New(ui.Tarball)
+	if err != nil {
+		return false, errs.Wrap(err)
+	}
+	static := http.FileServer(fs)
+
 	// create a launcher to keep track of all the tasks
 	var launcher junk.Launcher
 
 	// create the database
-	external.Infow("creating database...",
+	external.Infow("creating database",
 		"kind", conf.Database.Kind,
 		"config", conf.Database.Config,
 	)
@@ -86,7 +95,7 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	}
 
 	// create the distribution params from the registry
-	external.Infow("creating distribution...",
+	external.Infow("creating distribution",
 		"kind", conf.Dist.Kind,
 		"config", conf.Dist.Config,
 	)
@@ -103,7 +112,7 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	for _, entity := range conf.Listeners {
 		entity := entity
 
-		external.Infow("creating listener...",
+		external.Infow("creating listener",
 			"kind", entity.Kind,
 			"config", entity.Config,
 		)
@@ -113,7 +122,7 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		}
 
 		launcher.Queue(func(ctx context.Context, errch chan error) {
-			external.Infow("starting listener...",
+			external.Infow("starting listener",
 				"kind", entity.Kind,
 				"config", entity.Config,
 			)
@@ -129,13 +138,13 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 
 	// launch the worker that periodically dumps in to the database
 	launcher.Queue(func(ctx context.Context, errch chan error) {
-		external.Infow("starting dumper...")
+		external.Infow("starting dumper")
 		errch <- dumper.Run(ctx, w)
 	})
 
 	// launch the database worker
 	launcher.Queue(func(ctx context.Context, errch chan error) {
-		external.Infow("starting database...")
+		external.Infow("starting database")
 		errch <- db.Run(ctx)
 	})
 
@@ -144,10 +153,10 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		// TODO(jeff): basic auth
 		// TODO(jeff): tls
 		// TODO(jeff): proper CORS
-		external.Infow("starting api...",
+		external.Infow("starting api",
 			"address", conf.API.Address,
 		)
-		errch <- http.ListenAndServe(conf.API.Address, api.New(db))
+		errch <- http.ListenAndServe(conf.API.Address, api.New(db, static))
 	})
 
 	// wait for an error

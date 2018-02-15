@@ -11,7 +11,7 @@ import Json.Decode exposing (list, string)
 
 makeUrl : String -> URLQuery -> String
 makeUrl path query =
-    "http://localhost:9998/" ++ path ++ URLQuery.render query
+    "/" ++ path ++ URLQuery.render query
 
 
 maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
