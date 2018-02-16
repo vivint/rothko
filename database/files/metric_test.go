@@ -23,12 +23,14 @@ func newTestMetric(t testing.TB) (m *metric, cleanup func()) {
 
 	// t.Log("temp dir:", dir)
 
+	fch := newFileCache(fileCacheOptions{
+		Handles: 100,
+		Size:    1024,
+		Cap:     10,
+	})
+
 	opts := metricOptions{
-		fch: newFileCache(fileCacheOptions{
-			Handles: 100,
-			Size:    1024,
-			Cap:     10,
-		}),
+		fch:  fch,
 		dir:  dir,
 		name: "test.metric",
 		max:  10,
@@ -38,6 +40,7 @@ func newTestMetric(t testing.TB) (m *metric, cleanup func()) {
 	assert.NoError(t, err)
 
 	return m, func() {
+		fch.Close()
 		os.RemoveAll(dir)
 	}
 }

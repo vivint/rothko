@@ -11,7 +11,7 @@ import Json.Decode exposing (list, string)
 
 makeUrl : String -> URLQuery -> String
 makeUrl path query =
-    "/" ++ path ++ URLQuery.render query
+    path ++ URLQuery.render query
 
 
 maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
@@ -56,7 +56,7 @@ render req =
     Http.request
         { method = "GET"
         , headers = [ Http.header "Accept" "application/json" ]
-        , url = makeUrl "render" (renderRequestURLQuery req)
+        , url = makeUrl "/api/render" (renderRequestURLQuery req)
         , body = Http.emptyBody
         , expect = Http.expectString
         , timeout = Nothing
@@ -99,7 +99,7 @@ queryRequest query =
 
 query : URLQueryRequest -> Http.Request (List String)
 query req =
-    Http.get (makeUrl "query" (queryRequestURLQuery req)) (list string)
+    Http.get (makeUrl "/api/query" (queryRequestURLQuery req)) (list string)
 
 
 queryRequestURLQuery : URLQueryRequest -> URLQuery

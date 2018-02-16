@@ -23,6 +23,7 @@ type file struct {
 	len  int     // length of mmap'd data
 	cap  int     // capacity (in records) of the data excluding metadata
 	size int     // alignment size of each record
+	ref  ref     // for debugging leaks
 }
 
 // createFile creates a file at the given path with the given record size.
@@ -36,6 +37,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 		return file{}, Error.Wrap(err)
 	}
 	defer fh.Close()
+	fd := int(fh.Fd())
 
 	// these overflow checks might be too restrictive, but i think it will
 	// go up to 1GB at least, so meh that's probably good enough. we can
@@ -50,12 +52,13 @@ func createFile(ctx context.Context, path string, size, cap int) (
 	}
 
 	len := size * (cap + 1)
-	if err := system.Allocate(int(fh.Fd()), int64(len)); err != nil {
+	if err := system.Allocate(fd, int64(len)); err != nil {
 		return file{}, err
 	}
 
-	data, err := system.Mmap(int(fh.Fd()), len,
-		system.PROT_READ|system.PROT_WRITE, system.MAP_SHARED)
+	data, err := system.Mmap(fd, len,
+		system.PROT_READ|system.PROT_WRITE,
+		system.MAP_SHARED)
 	if err != nil {
 		return file{}, Error.Wrap(err)
 	}
@@ -73,6 +76,7 @@ func createFile(ctx context.Context, path string, size, cap int) (
 		len:  len,
 		cap:  cap,
 		size: size,
+		ref:  newRef(path),
 	}, nil
 }
 
@@ -83,6 +87,7 @@ func openFile(ctx context.Context, path string) (f file, err error) {
 		return f, Error.Wrap(err)
 	}
 	defer fh.Close()
+	fd := int(fh.Fd())
 
 	fi, err := fh.Stat()
 	if err != nil {
@@ -94,8 +99,9 @@ func openFile(ctx context.Context, path string) (f file, err error) {
 		return f, Error.New("file is too small to contain metadata")
 	}
 
-	data, err := system.Mmap(int(fh.Fd()), len,
-		system.PROT_READ|system.PROT_WRITE, system.MAP_SHARED)
+	data, err := system.Mmap(fd, len,
+		system.PROT_READ|system.PROT_WRITE,
+		system.MAP_SHARED)
 	if err != nil {
 		return f, Error.Wrap(err)
 	}
@@ -116,6 +122,7 @@ func openFile(ctx context.Context, path string) (f file, err error) {
 		len:  len,
 		cap:  len/meta.Size_ - 1,
 		size: meta.Size_,
+		ref:  newRef(path),
 	}, nil
 }
 
@@ -139,6 +146,7 @@ func (f file) Capacity() int { return f.cap }
 // Close releases all the of resources for the file.
 func (f file) Close() error {
 	if f.data != 0 {
+		f.ref.Close()
 		return system.Munmap(f.data, f.len)
 	}
 	return nil

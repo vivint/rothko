@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/png"
 	"net/http"
-	"path"
 	"time"
 
 	"github.com/spacemonkeygo/rothko/api/query"
@@ -70,11 +69,11 @@ func (s *Server) serveHTTP(ctx context.Context, w http.ResponseWriter,
 		return errMethodNotAllowed.New("%s", req.Method)
 	}
 
-	switch _, last := path.Split(req.URL.Path); last {
-	case "render":
+	switch req.URL.Path {
+	case "/api/render":
 		return s.serveRender(ctx, w, req)
 
-	case "query":
+	case "/api/query":
 		return s.serveQuery(ctx, w, req)
 
 	default:
@@ -82,7 +81,7 @@ func (s *Server) serveHTTP(ctx context.Context, w http.ResponseWriter,
 			s.static.ServeHTTP(w, req)
 			return nil
 		}
-		return errNotFound.New("path: %q", last)
+		return errNotFound.New("path: %q", req.URL.Path)
 	}
 }
 

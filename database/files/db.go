@@ -187,5 +187,8 @@ func (db *DB) Run(ctx context.Context) error {
 	// wait for the workers who will exit when the context is done.
 	wg.Wait()
 
+	// clear out any cached files
+	db.fch.Close()
+
 	return ctx.Err()
 }

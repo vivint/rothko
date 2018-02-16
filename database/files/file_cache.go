@@ -39,6 +39,18 @@ func newFileCache(opts fileCacheOptions) *fileCache {
 	}
 }
 
+// Close removes all of the files from the file cache.
+func (fch *fileCache) Close() {
+	fch.mu.Lock()
+	fch.ch.TakeAll(func(f file) bool {
+		// TODO(jeff): do we want to call sync or anything?
+		f.Close()
+		return true
+	})
+	fch.toks = make(map[string]cacheToken)
+	fch.mu.Unlock()
+}
+
 // releaseFile puts the file back into the cache, closing any evicted file.
 func (fch *fileCache) releaseFile(path string, f file) {
 	fch.mu.Lock()
@@ -46,8 +58,8 @@ func (fch *fileCache) releaseFile(path string, f file) {
 	fch.toks[path] = tok
 	fch.mu.Unlock()
 
-	// TODO(jeff): do we want to call sync or anything?
 	if ok {
+		// TODO(jeff): do we want to call sync or anything?
 		ev.Close()
 	}
 }

@@ -30,7 +30,7 @@ type cacheEntry struct {
 type cache struct {
 	tok     cacheToken
 	cap     int
-	order   []cacheToken // evict order is last element first
+	order   []cacheToken
 	handles map[cacheToken]cacheEntry
 	pcg     pcg.PCG
 }
@@ -42,6 +42,23 @@ func newCache(cap int) *cache {
 		order:   make([]cacheToken, 0, cap),
 		handles: make(map[cacheToken]cacheEntry, cap),
 		pcg:     pcg.New(0, 0), // we could introduce entropy here
+	}
+}
+
+// TakeAll iterates over all of the files in the cache.
+func (c *cache) TakeAll(cb func(f file) bool) {
+	for len(c.order) > 0 {
+		last := len(c.order) - 1
+
+		tok := c.order[last]
+		c.order = c.order[:last]
+
+		entry := c.handles[tok]
+		delete(c.handles, tok)
+
+		if !cb(entry.f) {
+			return
+		}
 	}
 }
 
