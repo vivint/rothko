@@ -32,6 +32,7 @@ type alias RenderRequest =
     { metric : String
     , width : Maybe Int
     , height : Maybe Int
+    , padding : Maybe Int
     , now : Maybe Int
     , duration : Maybe String
     , samples : Maybe Int
@@ -44,6 +45,7 @@ renderRequest metric =
     { metric = metric
     , width = Nothing
     , height = Nothing
+    , padding = Nothing
     , now = Nothing
     , duration = Nothing
     , samples = Nothing
@@ -74,6 +76,7 @@ renderRequestURLQuery req =
             |> URLQuery.add "metric" req.metric
             |> maybeAdd "width" (ts req.width)
             |> maybeAdd "height" (ts req.height)
+            |> maybeAdd "padding" (ts req.padding)
             |> maybeAdd "now" (ts req.now)
             |> maybeAdd "duration" req.duration
             |> maybeAdd "samples" (ts req.samples)

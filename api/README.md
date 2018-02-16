@@ -18,7 +18,7 @@ Server is an http.Handler that can serve responses for a frontend.
 #### func  New
 
 ```go
-func New(db database.DB) *Server
+func New(db database.DB, static http.Handler) *Server
 ```
 New returns a new Server.
 

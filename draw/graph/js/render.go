@@ -72,6 +72,7 @@ func runRender(ctx context.Context, obj *js.Object) (
 		Duration: time.Duration(obj.Get("duration").Int64()),
 		Width:    obj.Get("width").Int(),
 		Height:   obj.Get("height").Int(),
+		Padding:  obj.Get("padding").Int(),
 	}).Draw(ctx, graph.DrawOptions{
 		Canvas:  nil,
 		Columns: columns,

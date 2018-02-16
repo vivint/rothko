@@ -98,6 +98,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 
 	width := getInt(req.FormValue("width"), 1000)
 	height := getInt(req.FormValue("height"), 360)
+	padding := getInt(req.FormValue("padding"), 0)
 	now := getInt64(req.FormValue("now"), time.Now().UnixNano())
 	dur := getDuration(req.FormValue("duration"), 24*time.Hour)
 	samples := getInt(req.FormValue("samples"), 30)
@@ -112,6 +113,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 		Duration: dur,
 		Width:    width,
 		Height:   height,
+		Padding:  padding,
 	}
 
 	merger := merge.NewMerger(merge.MergerOptions{
@@ -175,6 +177,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 			"duration": dur.Nanoseconds(),
 			"width":    width,
 			"height":   height,
+			"padding":  padding,
 		}))
 	}
 

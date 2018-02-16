@@ -50,6 +50,9 @@ type MeasureOptions struct {
 
 	// The height of the graph
 	Height int
+
+	// Padding around the graph
+	Padding int
 }
 
 // Measure determines the sizes of the graph for the given parameters.
@@ -182,19 +185,24 @@ type DrawOptions struct {
 }
 
 func (m Measured) Draw(ctx context.Context, opts DrawOptions) *draw.RGB {
+	cw, ch := m.opts.Width+2*m.opts.Padding, m.opts.Height+2*m.opts.Padding
 	w, h := 0, 0
 	if opts.Canvas != nil {
 		w, h = opts.Canvas.Size()
 	}
-	if w < m.opts.Width || h < m.opts.Height {
-		opts.Canvas = draw.NewRGB(m.opts.Width, m.opts.Height)
+	if w < cw || h < ch {
+		opts.Canvas = draw.NewRGB(cw, ch)
 	}
 
-	m.Left.Draw(ctx, opts.Canvas.View(0, 0, m.Left.Width, m.Left.Height))
+	m.Left.Draw(ctx, opts.Canvas.View(
+		m.opts.Padding, m.opts.Padding,
+		m.Left.Width, m.Left.Height))
 
 	if m.opts.Earliest != nil {
 		hm := heatmap.New(heatmap.Options{
-			Canvas: opts.Canvas.View(m.Left.Width, 0, m.Width, m.Height),
+			Canvas: opts.Canvas.View(
+				m.Left.Width+m.opts.Padding, m.opts.Padding,
+				m.Width, m.Height),
 			Colors: opts.Colors,
 			Map:    m.opts.Earliest.CDF,
 		})
@@ -203,11 +211,13 @@ func (m Measured) Draw(ctx context.Context, opts DrawOptions) *draw.RGB {
 		}
 
 		m.Right.Draw(ctx, opts.Canvas.View(
-			m.Left.Width+m.Width, 0, m.Right.Width, m.Right.Height))
+			m.Left.Width+m.Width+m.opts.Padding, m.opts.Padding,
+			m.Right.Width, m.Right.Height))
 	}
 
 	m.Bottom.Draw(ctx, opts.Canvas.View(
-		0, m.Height+labelGap, m.Bottom.Width, m.Bottom.Height))
+		m.opts.Padding, m.Height+labelGap+m.opts.Padding,
+		m.Bottom.Width, m.Bottom.Height))
 
 	return opts.Canvas
 }

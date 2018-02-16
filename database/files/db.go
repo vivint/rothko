@@ -8,9 +8,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/spacemonkeygo/rothko/database"
 	"github.com/spacemonkeygo/rothko/database/files/internal/sset"
+	"github.com/spacemonkeygo/rothko/external"
 )
 
 // Options is a set of options to configure a database.
@@ -176,6 +178,7 @@ func (db *DB) newMetric(ctx context.Context, name string, read_only bool) (
 func (db *DB) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 
+	// start the workers
 	wg.Add(db.opts.Tuning.Workers)
 	for i := 0; i < db.opts.Tuning.Workers; i++ {
 		go func(i int) {
@@ -183,6 +186,20 @@ func (db *DB) Run(ctx context.Context) error {
 			wg.Done()
 		}(i)
 	}
+
+	// populate the metric names off disk
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		n := time.Now()
+		external.Infow("caching metric names")
+		err := db.PopulateMetrics(ctx)
+		external.Infow("cached metrics",
+			"duration", time.Since(n),
+			"error", err != nil,
+		)
+	}()
 
 	// wait for the workers who will exit when the context is done.
 	wg.Wait()

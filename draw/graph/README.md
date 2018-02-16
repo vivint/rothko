@@ -43,6 +43,9 @@ type MeasureOptions struct {
 
 	// The height of the graph
 	Height int
+
+	// Padding around the graph
+	Padding int
 }
 ```
 

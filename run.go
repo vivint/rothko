@@ -10,6 +10,7 @@ import (
 	"plugin"
 
 	"github.com/spacemonkeygo/rothko/api"
+	"github.com/spacemonkeygo/rothko/api/static"
 	"github.com/spacemonkeygo/rothko/config"
 	"github.com/spacemonkeygo/rothko/data"
 	"github.com/spacemonkeygo/rothko/dump"
@@ -78,7 +79,6 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	if err != nil {
 		return false, errs.Wrap(err)
 	}
-	static := http.FileServer(fs)
 
 	// create a launcher to keep track of all the tasks
 	var launcher junk.Launcher
@@ -156,7 +156,8 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		external.Infow("starting api",
 			"address", conf.API.Address,
 		)
-		errch <- http.ListenAndServe(conf.API.Address, api.New(db, static))
+		errch <- http.ListenAndServe(conf.API.Address,
+			api.New(db, static.New(fs)))
 	})
 
 	// wait for an error
