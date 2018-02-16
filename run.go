@@ -121,12 +121,12 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 			return false, errs.Wrap(err)
 		}
 
-		launcher.Queue(func(ctx context.Context, errch chan error) {
+		launcher.Queue(func(ctx context.Context) error {
 			external.Infow("starting listener",
 				"kind", entity.Kind,
 				"config", entity.Config,
 			)
-			errch <- listener.Run(ctx, w)
+			return listener.Run(ctx, w)
 		})
 	}
 
@@ -137,26 +137,26 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	})
 
 	// launch the worker that periodically dumps in to the database
-	launcher.Queue(func(ctx context.Context, errch chan error) {
+	launcher.Queue(func(ctx context.Context) error {
 		external.Infow("starting dumper")
-		errch <- dumper.Run(ctx, w)
+		return dumper.Run(ctx, w)
 	})
 
 	// launch the database worker
-	launcher.Queue(func(ctx context.Context, errch chan error) {
+	launcher.Queue(func(ctx context.Context) error {
 		external.Infow("starting database")
-		errch <- db.Run(ctx)
+		return db.Run(ctx)
 	})
 
 	// launch the api server
-	launcher.Queue(func(ctx context.Context, errch chan error) {
+	launcher.Queue(func(ctx context.Context) error {
 		// TODO(jeff): basic auth
 		// TODO(jeff): tls
 		// TODO(jeff): proper CORS
 		external.Infow("starting api",
 			"address", conf.API.Address,
 		)
-		errch <- http.ListenAndServe(conf.API.Address,
+		return http.ListenAndServe(conf.API.Address,
 			api.New(db, static.New(fs)))
 	})
 

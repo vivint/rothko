@@ -9,43 +9,46 @@ import (
 
 type Launcher struct {
 	mu    sync.Mutex
-	queue []func(ctx context.Context, errch chan error)
+	queue []func(ctx context.Context) error
 }
 
-func (l *Launcher) Queue(fn func(ctx context.Context, errch chan error)) {
+func (l *Launcher) Queue(fn func(ctx context.Context) error) {
 	l.mu.Lock()
 	l.queue = append(l.queue, fn)
 	l.mu.Unlock()
 }
 
 func (l *Launcher) Run(ctx context.Context) error {
-	// steal the queue
 	l.mu.Lock()
 	queue := l.queue
 	l.queue = nil
 	l.mu.Unlock()
 
-	// set it up so we wait for all the workers to exit
+	return Launch(ctx, queue...)
+}
+
+func Launch(ctx context.Context, tasks ...func(context.Context) error) error {
 	var wg sync.WaitGroup
-	wg.Add(len(queue))
+	wg.Add(len(tasks))
 	defer wg.Wait()
 
-	// set up to cancel the workers when we get any error
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// make an error channel big enough for every worker to send in an error
-	errch := make(chan error, len(queue))
+	errch := make(chan error, len(tasks))
 
-	// off to the races!
-	for _, fn := range queue {
+	for _, fn := range tasks {
 		fn := fn
 		go func() {
-			defer wg.Done()
-			fn(ctx, errch)
+			errch <- fn(ctx)
+			wg.Done()
 		}()
 	}
 
-	// wait for and return the first error
-	return <-errch
+	for range tasks {
+		if err := <-errch; err != nil {
+			return err
+		}
+	}
+	return nil
 }

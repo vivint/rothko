@@ -57,51 +57,23 @@ type MeasureOptions struct {
 
 // Measure determines the sizes of the graph for the given parameters.
 func Measure(ctx context.Context, opts MeasureOptions) Measured {
+	const initialHeightGuess = 29
+
+	measured := tryMeasure(ctx, opts, initialHeightGuess)
+	if measured.Bottom.Height != initialHeightGuess {
+		measured = tryMeasure(ctx, opts, measured.Bottom.Height)
+	}
+	return measured
+}
+
+// tryMeasure attempts to measure with a guess for the height of the bottom
+// axis.
+func tryMeasure(ctx context.Context, opts MeasureOptions,
+	height_guess int) Measured {
 	var labels []axis.Label
 
-	// measure the bottom axis. this will help us determine the height for the
-	// left and right axis.
-	labels = labels[:0]
-
-	// determine the "natural" duration unit for 100 px. this is going to
-	// be the largest "natural" unit smaller than the chunk.
-	chunk := opts.Duration / time.Duration(opts.Width/100)
-	var natural time.Duration
-	for _, unit := range naturalUnits {
-		if unit < chunk {
-			natural = unit
-		} else {
-			break
-		}
-	}
-
-	// create the labels from the truncated now
-	x := time.Duration(opts.Now).Truncate(natural).Nanoseconds()
-	stop_before := opts.Now - opts.Duration.Nanoseconds()
-	for x > stop_before {
-		labels = append(labels, axis.Label{
-			Position: 1 - float64(opts.Now-x)/float64(opts.Duration),
-			Text:     time.Unix(0, x).Format("1/2 @ 15:04"),
-		})
-		x -= natural.Nanoseconds()
-	}
-
-	// reverse the labels so that they are in increasing order
-	for i := 0; i < len(labels)/2; i++ {
-		si := len(labels) - 1 - i
-		labels[i], labels[si] = labels[si], labels[i]
-	}
-
-	bottom := axis.Measure(ctx, axis.Options{
-		Face:      iosevka.Iosevka,
-		Labels:    labels,
-		Vertical:  false,
-		Length:    opts.Width,
-		DontBleed: true,
-	})
-
 	// calculate the heatmap height and leave a gap for the bottom axis
-	height := opts.Height - bottom.Height - labelGap
+	height := opts.Height - height_guess
 
 	// measure the left axis
 	labels = labels[:0]
@@ -158,6 +130,47 @@ func Measure(ctx context.Context, opts MeasureOptions) Measured {
 			Length:   height,
 		})
 	}
+
+	// measure the bottom axis. this will let us confirm the height we used for
+	// the left and right axis
+	labels = labels[:0]
+
+	// determine the "natural" duration unit for 100 px. this is going to
+	// be the largest "natural" unit smaller than the chunk.
+	chunk := opts.Duration / time.Duration(opts.Width/100)
+	var natural time.Duration
+	for _, unit := range naturalUnits {
+		if unit < chunk {
+			natural = unit
+		} else {
+			break
+		}
+	}
+
+	// create the labels from the truncated now
+	x := time.Duration(opts.Now).Truncate(natural).Nanoseconds()
+	stop_before := opts.Now - opts.Duration.Nanoseconds()
+	for x > stop_before {
+		labels = append(labels, axis.Label{
+			Position: 1 - float64(opts.Now-x)/float64(opts.Duration),
+			Text:     time.Unix(0, x).Format("1/2 @ 15:04"),
+		})
+		x -= natural.Nanoseconds()
+	}
+
+	// reverse the labels so that they are in increasing order
+	for i := 0; i < len(labels)/2; i++ {
+		si := len(labels) - 1 - i
+		labels[i], labels[si] = labels[si], labels[i]
+	}
+
+	bottom := axis.Measure(ctx, axis.Options{
+		Face:      iosevka.Iosevka,
+		Labels:    labels,
+		Vertical:  false,
+		Length:    opts.Width - left.Width - right.Width + 2,
+		DontBleed: true,
+	})
 
 	return Measured{
 		Bottom: bottom,
@@ -216,7 +229,7 @@ func (m Measured) Draw(ctx context.Context, opts DrawOptions) *draw.RGB {
 	}
 
 	m.Bottom.Draw(ctx, opts.Canvas.View(
-		m.opts.Padding, m.Height+labelGap+m.opts.Padding,
+		m.Left.Width-1+m.opts.Padding, m.Height+m.opts.Padding,
 		m.Bottom.Width, m.Bottom.Height))
 
 	return opts.Canvas

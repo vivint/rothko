@@ -97,7 +97,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 	}
 
 	width := getInt(req.FormValue("width"), 1000)
-	height := getInt(req.FormValue("height"), 360)
+	height := getInt(req.FormValue("height"), 329)
 	padding := getInt(req.FormValue("padding"), 0)
 	now := getInt64(req.FormValue("now"), time.Now().UnixNano())
 	dur := getDuration(req.FormValue("duration"), 24*time.Hour)

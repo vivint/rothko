@@ -217,26 +217,14 @@ func (m Measured) drawVertical(ctx context.Context, canvas *draw.RGB) (
 }
 
 func measureHorizontal(ctx context.Context, opts Options) Measured {
-	// TODO(jeff): this assumes all the labels have the same height, or close
-	// to it. we could maybe do better.
-
-	// determine the max height of a label. this breaks it up into slots.
-	// then determine the largest slot we will occupy so we can figure out the
-	// height.
 	max_height := 0
 	max_width := opts.Length
-	max_slot := 0
 	bounds := make([]fixed.Rectangle26_6, 0, len(opts.Labels))
-	occupied := make(map[int]int)
-
-	findSlot := func(x int) (slot int) {
-		for len(occupied) > 0 &&
-			x > horizLabelSpacing &&
-			occupied[slot]+horizLabelSpacing > x {
-
-			slot++
-		}
-		return slot
+	occupied := 0
+	fits := func(x int) bool {
+		return occupied == 0 ||
+			x < horizLabelSpacing ||
+			x > occupied+horizLabelSpacing
 	}
 
 	for _, label := range opts.Labels {
@@ -245,20 +233,15 @@ func measureHorizontal(ctx context.Context, opts Options) Measured {
 
 		x := int(float64(opts.Length-1) * label.Position)
 		label_end := x + (b.Max.X - b.Min.X).Ceil()
-		slot := findSlot(x)
 
 		if opts.DontBleed && label_end > opts.Length {
 			// as a special case, if we can nudge the x back so that it's just
-			// on opts.Length and still have the same slot, draw it.
+			// on opts.Length and fits, draw it
 			label_end = opts.Length
 			x = label_end - (b.Max.X - b.Min.X).Ceil()
-			if findSlot(x) != slot {
-				continue
-			}
 		}
-
-		if slot > max_slot {
-			max_slot = slot
+		if !fits(x) {
+			continue
 		}
 
 		if label_end > max_width {
@@ -270,12 +253,12 @@ func measureHorizontal(ctx context.Context, opts Options) Measured {
 			max_height = label_height
 		}
 
-		occupied[slot] = label_end
+		occupied = label_end
 	}
 
 	return Measured{
 		Width:  max_width,
-		Height: textOffset + (max_slot+1)*max_height,
+		Height: textOffset + max_height,
 
 		opts:      opts.copy(),
 		bounds:    bounds,
@@ -309,16 +292,11 @@ func (m Measured) drawHorizontal(ctx context.Context, canvas *draw.RGB) (
 	}
 
 	// render the ticks and labels
-	occupied := make(map[int]int)
-
-	findSlot := func(x int) (slot int) {
-		for len(occupied) > 0 &&
-			x > horizLabelSpacing &&
-			occupied[slot]+horizLabelSpacing > x {
-
-			slot++
-		}
-		return slot
+	occupied := 0
+	fits := func(x int) bool {
+		return occupied == 0 ||
+			x < horizLabelSpacing ||
+			x > occupied+horizLabelSpacing
 	}
 
 	for i, label := range m.opts.Labels {
@@ -326,29 +304,33 @@ func (m Measured) drawHorizontal(ctx context.Context, canvas *draw.RGB) (
 
 		x := int(float64(m.opts.Length-1) * label.Position)
 		label_end := x + (b.Max.X - b.Min.X).Ceil()
-		slot := findSlot(x)
 
 		for y := 0; y < tickSize; y++ {
 			canvas.Set(x, axisWidth+y, draw.Color{})
 		}
+		tick_x := x
 
 		if m.opts.DontBleed && label_end > m.opts.Length {
 			// as a special case, if we can nudge the x back so that it's just
 			// on ,.opts.Length and still have the same slot, draw it.
 			label_end = m.opts.Length
 			x = label_end - (b.Max.X - b.Min.X).Ceil()
-			if findSlot(x) != slot {
-				continue
-			}
+		}
+		if !fits(x) {
+			continue
+		}
+
+		for y := 0; y < 3; y++ {
+			canvas.Set(tick_x, axisWidth+tickSize+y, draw.Color{})
 		}
 
 		d.Dot = fixed.Point26_6{
 			X: fixed.I(x),
-			Y: fixed.I(textOffset + slot*m.maxHeight - b.Min.Y.Ceil()),
+			Y: fixed.I(textOffset - b.Min.Y.Ceil()),
 		}
-
 		d.DrawString(label.Text)
-		occupied[slot] = d.Dot.X.Ceil()
+
+		occupied = d.Dot.X.Ceil()
 	}
 
 	return canvas
