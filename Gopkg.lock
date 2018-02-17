@@ -52,7 +52,7 @@
     ".",
     "errdata"
   ]
-  revision = "8e6c1224b6cfb2dee487becdac04b319ae6d295b"
+  revision = "1d818e3bad2d25e2c95092c362d29cf44ffc2a4f"
 
 [[projects]]
   branch = "master"

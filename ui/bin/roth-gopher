@@ -23,6 +23,7 @@ do
 	js="${packages[$pkg]}"
 	log "Building $pkg to $js..."
 	gopherjs build -m -o "site/js/$js" "$pkg"
+	rm "site/js/$js.map"
 done
 
 log "Done."

@@ -207,5 +207,5 @@ func (db *DB) Run(ctx context.Context) error {
 	// clear out any cached files
 	db.fch.Close()
 
-	return ctx.Err()
+	return nil
 }

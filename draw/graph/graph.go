@@ -138,8 +138,8 @@ func tryMeasure(ctx context.Context, opts MeasureOptions,
 	// determine the "natural" duration unit for 100 px. this is going to
 	// be the largest "natural" unit smaller than the chunk.
 	chunk := opts.Duration / time.Duration(opts.Width/100)
-	var natural time.Duration
-	for _, unit := range naturalUnits {
+	natural := naturalUnits[0]
+	for _, unit := range naturalUnits[1:] {
 		if unit < chunk {
 			natural = unit
 		} else {

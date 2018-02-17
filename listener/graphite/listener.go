@@ -24,5 +24,5 @@ func New(address string) *Listener {
 func (l *Listener) Run(ctx context.Context, w *data.Writer) (err error) {
 	// TODO(jeff): do the thing
 	<-ctx.Done()
-	return ctx.Err()
+	return nil
 }

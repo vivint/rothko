@@ -1,6 +1,6 @@
 // Copyright (C) 2018. See AUTHORS.
 
-package static
+package tmplfs
 
 import (
 	"bytes"
@@ -12,20 +12,20 @@ import (
 	"time"
 )
 
-// Static wraps a http.FileSystem to add templates to files that end in .html.
-type Static struct {
+// FS wraps a http.FileSystem to add templates to files that end in .html.
+type FS struct {
 	fs http.FileSystem
 }
 
-// New constructs a Static around the http.FileSystem.
-func New(fs http.FileSystem) *Static {
-	return &Static{
+// New constructs a FS around the http.FileSystem. It implements http.Handler.
+func New(fs http.FileSystem) *FS {
+	return &FS{
 		fs: fs,
 	}
 }
 
 // ServeHTTP conforms to the http.Handler interface.
-func (s *Static) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (s *FS) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.FileServer(&wrapper{
 		fs:  s.fs,
 		req: req,
@@ -44,15 +44,19 @@ func (w *wrapper) Open(name string) (f http.File, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if !strings.HasSuffix(name, ".html") {
+		return f, nil
+	}
+
+	// close only if we have any errors
 	defer func() {
 		if err != nil {
 			f.Close()
 		}
 	}()
 
-	if !strings.HasSuffix(name, ".html") {
-		return f, nil
-	}
+	// TODO(jeff): caching of the parsed template?
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {

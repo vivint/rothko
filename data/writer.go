@@ -90,7 +90,7 @@ func (s *Writer) Add(ctx context.Context, metric string,
 // calls the provided function with every record. You must not hold on to
 // any fields of the record after the callback returns.
 func (s *Writer) Capture(ctx context.Context,
-	fn func(metric string, rec Record) bool) {
+	fn func(ctx context.Context, metric string, rec Record) bool) {
 
 	// read the page out. capture clears out the page so we will be setting
 	// it to a new page that we allocate so that the timestamps line up
@@ -115,14 +115,14 @@ func (s *Writer) Capture(ctx context.Context,
 	p.m.Range(func(key, ai interface{}) (ok bool) {
 		var rec Record
 		buf, rec = ai.(*agg).Finish(buf, now)
-		return fn(key.(string), rec)
+		return fn(ctx, key.(string), rec)
 	})
 }
 
 // Iterate calls the provided function with every record. You must not hold on
 // to any fields of the record after the callback returns.
 func (s *Writer) Iterate(ctx context.Context,
-	fn func(metric string, rec Record) bool) {
+	fn func(ctx context.Context, metric string, rec Record) bool) {
 
 	// read the page out. iterate does not clear out the page so we just need
 	// to read and if we have no page, we're done.
@@ -138,6 +138,6 @@ func (s *Writer) Iterate(ctx context.Context,
 	p.m.Range(func(key, ai interface{}) (ok bool) {
 		var rec Record
 		buf, rec = ai.(*agg).Finish(buf, now)
-		return fn(key.(string), rec)
+		return fn(ctx, key.(string), rec)
 	})
 }
