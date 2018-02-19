@@ -48,11 +48,15 @@ func (db *DB) Queue(ctx context.Context, metric string, start int64,
 		select {
 		case queue <- value:
 			handled = true
+		case <-ctx.Done():
 		default:
 		}
 	} else {
-		queue <- value
-		handled = true
+		select {
+		case queue <- value:
+			handled = true
+		case <-ctx.Done():
+		}
 	}
 
 	return nil

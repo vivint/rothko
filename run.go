@@ -64,20 +64,11 @@ The run command starts up the rothko system
 	},
 }
 
+// run creates and starts all of the services defined by the config. It exits
+// when the context is canceled, or when an appropriate signal is sent to the
+// binary. The started return value is true if the services were created and
+// started before returning.
 func run(ctx context.Context, conf *config.Config) (started bool, err error) {
-	// TODO(jeff): the following is terrible and has at least these problems:
-	// 1. if the database Run call errors, calls to Queue can still proceed.
-	//    this can lead at least to deadlocks, but it's still terrible that
-	//    we can call stuff on the DB while it isn't Running.
-	// 2. i have no idea if it's right
-	// 3. the errors can't possibly be propagating right.
-
-	// we have a very complicated shutdown order to allow us to attempt to get
-	// one final dump in before exiting. first, we shut down everything except
-	// the database, and then we call Dump on the Dumper with a context that
-	// cancels in 60 seconds. Then we can shut down the database and wait for
-	// all of the stuff to clean up.
-
 	// load the plugins
 	for _, path := range conf.Main.Plugins {
 		external.Infow("loading plugin",
@@ -118,7 +109,29 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	// create the writer
 	w := data.NewWriter(dist_params)
 
-	// create and launch the listeners
+	// create the dumper
+	dumper := dump.New(dump.Options{
+		DB:     db,
+		Period: conf.Main.Duration,
+	})
+
+	// create the api server
+	// TODO(jeff): basic auth
+	// TODO(jeff): tls
+	// TODO(jeff): proper CORS
+	external.Infow("creating api",
+		"config", conf.API.Redact(),
+	)
+	fs, err := tgzfs.New(ui.Tarball)
+	if err != nil {
+		return false, errs.Wrap(err)
+	}
+	srv := &http.Server{
+		Addr:    conf.API.Address,
+		Handler: api.New(db, tmplfs.New(fs)),
+	}
+
+	// create and queue the listeners
 	for _, entity := range conf.Listeners {
 		entity := entity
 
@@ -140,89 +153,60 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		})
 	}
 
-	// create the dumper
-	dumper := dump.New(dump.Options{
-		DB:     db,
-		Period: conf.Main.Duration,
-	})
-
-	// create the api server
-	//
-	// TODO(jeff): basic auth
-	// TODO(jeff): tls
-	// TODO(jeff): proper CORS
-	external.Infow("creating api")
-	fs, err := tgzfs.New(ui.Tarball)
-	if err != nil {
-		return false, errs.Wrap(err)
-	}
-	srv := &http.Server{
-		Addr:    conf.API.Address,
-		Handler: api.New(db, tmplfs.New(fs)),
-	}
-
-	// launch the worker that periodically dumps in to the database
+	// queue the worker that periodically dumps in to the database
 	launcher.Queue(func(ctx context.Context) error {
 		external.Infow("starting dumper")
 		return dumper.Run(ctx, w)
 	})
 
-	// launch the api server
+	// queue the api server
 	launcher.Queue(func(ctx context.Context) error {
 		external.Infow("starting api",
-			"address", conf.API.Address,
+			"config", conf.API.Redact(),
 		)
 		return runServer(ctx, srv)
 	})
 
-	// monitor sigint to cancel the context.
-	ctx, cancel := junk.WithSignal(ctx, syscall.SIGINT)
-	defer cancel()
+	// because we don't want to rerun the database on sigint, we launch all of
+	// the services under one launcher with the sigint_ctx, and launch the
+	// database under another launcher with a parent of the sigint_ctx.
+	//
+	// in the case the sigint_ctx launcher returns no error, we run a dump with
+	// a timeout of 60 seconds, before returning and causing all of the other
+	// tasks in the launcher to be canceled.
 
-	// add the database to the queue with it's own launcher and context. we
-	// signal it into the other launcher by sending it's result into a task
-	// that waits for it.
-	db_ctx, db_cancel := context.WithCancel(context.Background())
-	defer db_cancel()
+	var parent junk.Launcher
 
-	// we subtly do not want a buffer on this channel, because if there were
-	// one, we could miss an error from the db.Run call if the cancel call
-	// that the manager goroutine defers causes the launcher goroutine to pick
-	// that select branch instead of the error channel branch. it's safe to
-	// have no buffer because at the end we read from this channel no
-	// matter what, which is fine because we close the channel. !!
-	db_errch := make(chan error)
-
-	go func() {
-		// so that others may know this goroutine exited, and if it has, cancel
-		// all the other services
-		defer close(db_errch)
+	// queue all the other services
+	parent.Queue(func(ctx context.Context) error {
+		sigint_ctx, cancel := junk.WithSignal(ctx, syscall.SIGINT)
 		defer cancel()
 
-		db_errch <- junk.Launch(db_ctx, func(ctx context.Context) error {
-			external.Infow("starting database")
-			return db.Run(ctx)
-		})
-	}()
-
-	launcher.Queue(func(ctx context.Context) error {
-		select {
-		case err := <-db_errch:
+		if err := launcher.Run(sigint_ctx); err != nil {
 			return err
-		case <-ctx.Done():
 		}
+
+		// run with the parent of the sigint_ctx so that we get canceled if
+		// the database Run exits.
+		ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+		defer cancel()
+
+		external.Infow("performing last dump")
+		dumper.Dump(ctx, w)
 		return nil
 	})
 
-	// launch everything else
-	err = launcher.Run(ctx)
+	// queue the database
+	parent.Queue(func(ctx context.Context) error {
+		external.Infow("starting database",
+			"kind", conf.Database.Kind,
+			"config", conf.Database.Config,
+		)
+		return db.Run(ctx)
+	})
 
-	// ensure that the database is canceled, and that its goroutine is
-	// cleaned up.
-	db_cancel()
-	<-db_errch
-
-	return true, errs.Wrap(err)
+	// run our stuff
+	return true, errs.Wrap(parent.Run(ctx))
 }
 
 // runServer runs srv and shuts it down when the context is canceled.
@@ -248,8 +232,10 @@ func runServer(ctx context.Context, srv *http.Server) (err error) {
 	// monitor when we're done and try to shut down the server.
 	go func(ctx context.Context) {
 		<-ctx.Done()
+
 		// give the shutdown one minute to clean up
-		ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		ctx, cancel := context.WithTimeout(
+			context.Background(), 60*time.Second)
 		defer cancel()
 
 		srv.Shutdown(ctx)

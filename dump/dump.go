@@ -57,8 +57,6 @@ func (d *Dumper) Run(ctx context.Context, w *data.Writer) (err error) {
 	for {
 		select {
 		case <-done:
-			external.Infow("performing last dump")
-			d.Dump(ctx, w)
 			return nil
 
 		case <-ticker.C:
@@ -72,27 +70,19 @@ func (d *Dumper) Run(ctx context.Context, w *data.Writer) (err error) {
 // associated with the Dumper.
 func (d *Dumper) Dump(ctx context.Context, w *data.Writer) {
 	var wg sync.WaitGroup
-	metrics := int64(0)
+	writes := int64(0)
+	skips := int64(0)
+	errors := int64(0)
 	now := time.Now()
 	done := ctx.Done()
-
-	canceled := false
-	var canceled_at time.Time
 
 	w.Capture(ctx, func(ctx context.Context, metric string,
 		rec data.Record) bool {
 
-		// check if we're cancelled. if so, bound the rest by one minute.
+		// check if we're cancelled. if so, we're done.
 		select {
 		case <-done:
-			if !canceled {
-				canceled = true
-				canceled_at = time.Now()
-			}
-			if time.Since(canceled_at) > time.Minute {
-				external.Infow("dump timed out")
-				return false
-			}
+			return false
 		default:
 		}
 
@@ -123,26 +113,47 @@ func (d *Dumper) Dump(ctx context.Context, w *data.Writer) {
 					)
 				}
 
+				if written {
+					atomic.AddInt64(&writes, 1)
+				} else {
+					atomic.AddInt64(&skips, 1)
+				}
+				if err != nil {
+					atomic.AddInt64(&errors, 1)
+				}
+
 				d.bufs.Put(data)
 				wg.Done()
-				atomic.AddInt64(&metrics, 1)
+
 			})
 		if err != nil {
 			external.Errorw("error queuing metric",
 				"err", err.Error(),
 			)
+			atomic.AddInt64(&skips, 1)
+			atomic.AddInt64(&errors, 1)
 		}
 
 		return true
 	})
 
+	// TODO(jeff): bound how long we will Wait? wait groups and timeouts are
+	// tricky to manage :(
+
 	wg.Wait()
+
 	duration := time.Since(now)
-	external.Observe("dumped_metrics_time", duration.Seconds())
-	external.Observe("dumped_metrics", float64(metrics))
+
+	external.Observe("metric_dump_duration", duration.Seconds())
+	external.Observe("metric_writes", float64(writes))
+	external.Observe("metric_skips", float64(skips))
+	external.Observe("metric_errors", float64(errors))
+
 	external.Infow("dump finished",
 		"duration", duration,
-		"metrics", metrics,
+		"writes", writes,
+		"skips", skips,
+		"errors", errors,
 	)
 }
 

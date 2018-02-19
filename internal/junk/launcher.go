@@ -49,6 +49,7 @@ func Launch(ctx context.Context, tasks ...func(context.Context) error) error {
 		if err := <-errch; err != nil {
 			return err
 		}
+		cancel() // if any task returns, cancel everything.
 	}
 	return nil
 }

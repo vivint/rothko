@@ -50,6 +50,15 @@ type APIConfig struct {
 	Security APISecurityConfig
 }
 
+// Redact clears out any potentially sensitive data.
+func (a APIConfig) Redact() APIConfig {
+	a.Security.Username = "redacted"
+	a.Security.Password = "redacted"
+	a.TLS.Key = "redacted"
+	a.TLS.Cert = "redacted"
+	return a
+}
+
 // APITLSConfig holds configuration for the api.tls config section.
 type APITLSConfig struct {
 	Key  string

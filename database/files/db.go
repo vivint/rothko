@@ -13,6 +13,7 @@ import (
 	"github.com/spacemonkeygo/rothko/database"
 	"github.com/spacemonkeygo/rothko/database/files/internal/sset"
 	"github.com/spacemonkeygo/rothko/external"
+	"github.com/spacemonkeygo/rothko/internal/junk"
 )
 
 // Options is a set of options to configure a database.
@@ -90,6 +91,9 @@ type DB struct {
 	// value.
 	names_mu sync.Mutex
 	names    atomic.Value
+
+	// ensures that we only have one Run call
+	running junk.Flag
 }
 
 var (
@@ -179,36 +183,48 @@ func (db *DB) newMetric(ctx context.Context, name string, read_only bool) (
 // Run will read values from the Queue and persist them to db. It returns
 // when the context is done.
 func (db *DB) Run(ctx context.Context) error {
+	// ensure only one active Run call.
+	if err := db.running.Start(); err != nil {
+		return Error.Wrap(err)
+	}
+	defer db.running.Stop()
+
 	// load up the current queue to run on
 	queue := db.queue.Load().(chan queuedValue)
 
-	var wg sync.WaitGroup
+	// queue up the workers
+	var launcher junk.Launcher
 
-	// start the workers
-	wg.Add(db.opts.Tuning.Workers)
 	for i := 0; i < db.opts.Tuning.Workers; i++ {
-		go func(i int) {
+		i := i
+		launcher.Queue(func(ctx context.Context) error {
 			db.worker(ctx, i, queue)
-			wg.Done()
-		}(i)
+			return nil
+		})
 	}
 
-	// populate the metric names off disk
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	// queue up populating the metric names
+	launcher.Queue(func(ctx context.Context) error {
+		external.Infow("caching metric names")
 
 		n := time.Now()
-		external.Infow("caching metric names")
 		err := db.PopulateMetrics(ctx)
-		external.Infow("cached metrics",
-			"duration", time.Since(n),
-			"error", err != nil,
-		)
-	}()
 
-	// wait for the workers who will exit when the context is done.
-	wg.Wait()
+		external.Infow("cached metric names",
+			"duration", time.Since(n),
+		)
+		if err != nil {
+			external.Errorw("caching metric names",
+				"error", err.Error(),
+			)
+		}
+
+		<-ctx.Done()
+		return nil
+	})
+
+	// launch and wait for them
+	err := launcher.Run(ctx)
 
 	// clear out any cached files
 	db.fch.Close()
@@ -216,7 +232,8 @@ func (db *DB) Run(ctx context.Context) error {
 	// set a new queue for the next calls to Queue
 	db.queue.Store(make(chan queuedValue, db.opts.Tuning.Buffer))
 
-	// close and empty the old queue
+	// close and empty the old queue. close is safe because all of the callers
+	// writing to it recover any panics.
 	close(queue)
 	for val := range queue {
 		db.bufs.Put(val.data)
@@ -225,5 +242,6 @@ func (db *DB) Run(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	// return any error from launching
+	return err
 }

@@ -15,6 +15,7 @@ log() {
 }
 
 log "building elm code..."
+elm package install
 elm make src/Main.elm --output site/js/Main.js
 
 log "building go code..."
