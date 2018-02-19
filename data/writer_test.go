@@ -22,7 +22,7 @@ func TestWriter(t *testing.T) {
 	w.Add(ctx, "4", 4, nil)
 
 	got := make(map[string]bool)
-	w.Iterate(ctx, func(metric string, rec Record) bool {
+	w.Iterate(ctx, func(ctx context.Context, metric string, rec Record) bool {
 		got[metric] = true
 		return true
 	})
@@ -33,7 +33,7 @@ func TestWriter(t *testing.T) {
 	assert.That(t, got["4"])
 
 	got = make(map[string]bool)
-	w.Capture(ctx, func(metric string, rec Record) bool {
+	w.Capture(ctx, func(ctx context.Context, metric string, rec Record) bool {
 		got[metric] = true
 		return true
 	})
@@ -44,7 +44,7 @@ func TestWriter(t *testing.T) {
 	assert.That(t, got["4"])
 
 	got = make(map[string]bool)
-	w.Capture(ctx, func(metric string, rec Record) bool {
+	w.Capture(ctx, func(ctx context.Context, metric string, rec Record) bool {
 		got[metric] = true
 		return true
 	})
@@ -79,7 +79,7 @@ func BenchmarkWriter(b *testing.B) {
 		w := NewWriter(fakeParams{})
 
 		bytes := int64(0)
-		iterate := func(metric string, rec Record) bool {
+		iterate := func(ctx context.Context, metric string, rec Record) bool {
 			bytes = int64(len(rec.Distribution))
 			return true
 		}
