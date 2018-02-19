@@ -74,8 +74,8 @@ type DB struct {
 
 	// the queue of values and a sync.Pool containing byte slices since we want
 	// to take ownership of the data passed in to Queue.
-	queue chan queuedValue
-	bufs  sync.Pool // contains []byte
+	queue atomic.Value // contains chan queuedValue
+	bufs  sync.Pool    // contains []byte
 	locks *lockPool
 
 	// file handle cache for metrics
@@ -134,6 +134,9 @@ func New(dir string, opts Options) *DB {
 		opts.Tuning.Handles = 0
 	}
 
+	var queue atomic.Value
+	queue.Store(make(chan queuedValue, opts.Tuning.Buffer))
+
 	names_w := make([]*sset.Set, opts.Tuning.Workers)
 	for i := range names_w {
 		names_w[i] = sset.New(0)
@@ -143,7 +146,7 @@ func New(dir string, opts Options) *DB {
 		dir:  dir,
 		opts: opts,
 
-		queue: make(chan queuedValue, opts.Tuning.Buffer),
+		queue: queue,
 		bufs: sync.Pool{
 			New: func() interface{} { return make([]byte, opts.Size) },
 		},
@@ -176,13 +179,16 @@ func (db *DB) newMetric(ctx context.Context, name string, read_only bool) (
 // Run will read values from the Queue and persist them to db. It returns
 // when the context is done.
 func (db *DB) Run(ctx context.Context) error {
+	// load up the current queue to run on
+	queue := db.queue.Load().(chan queuedValue)
+
 	var wg sync.WaitGroup
 
 	// start the workers
 	wg.Add(db.opts.Tuning.Workers)
 	for i := 0; i < db.opts.Tuning.Workers; i++ {
 		go func(i int) {
-			db.worker(ctx, i)
+			db.worker(ctx, i, queue)
 			wg.Done()
 		}(i)
 	}
@@ -206,6 +212,18 @@ func (db *DB) Run(ctx context.Context) error {
 
 	// clear out any cached files
 	db.fch.Close()
+
+	// set a new queue for the next calls to Queue
+	db.queue.Store(make(chan queuedValue, db.opts.Tuning.Buffer))
+
+	// close and empty the old queue
+	close(queue)
+	for val := range queue {
+		db.bufs.Put(val.data)
+		if val.done != nil {
+			val.done(false, nil)
+		}
+	}
 
 	return nil
 }

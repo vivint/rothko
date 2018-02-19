@@ -14,9 +14,28 @@ import (
 func (db *DB) Queue(ctx context.Context, metric string, start int64,
 	end int64, data []byte, cb func(bool, error)) (err error) {
 
+	// get a copy of the data. we hold on to it past the return of the function
+	// so we should be safe to hidden mutations.
 	buf := db.bufs.Get().([]byte)
 	buf = append(buf[:0], data...)
 
+	// always issue the callback and return the buf if we aren't handled.
+	// we have to recover in case someone closes the queue channel while we
+	// have an oustanding send. thanks, Rob Pike! i much prefer using defer
+	// and recover versus having a ,ok form on sends.
+	handled := false
+	defer func() {
+		recover()
+		if !handled {
+			db.bufs.Put(buf)
+			if cb != nil {
+				cb(false, nil)
+			}
+		}
+	}()
+
+	// grab the queue and send the value down it, blocking if necessary.
+	queue := db.queue.Load().(chan queuedValue)
 	value := queuedValue{
 		metric: metric,
 		start:  start,
@@ -27,15 +46,13 @@ func (db *DB) Queue(ctx context.Context, metric string, start int64,
 
 	if db.opts.Tuning.Drop {
 		select {
-		case db.queue <- value:
+		case queue <- value:
+			handled = true
 		default:
-			db.bufs.Put(value.data)
-			if value.done != nil {
-				value.done(false, nil)
-			}
 		}
 	} else {
-		db.queue <- value
+		queue <- value
+		handled = true
 	}
 
 	return nil
@@ -43,7 +60,7 @@ func (db *DB) Queue(ctx context.Context, metric string, start int64,
 
 // worker takes data from the queue and writes it into the appropriate metric
 // file in the appropriate location.
-func (db *DB) worker(ctx context.Context, num int) {
+func (db *DB) worker(ctx context.Context, num int, queue chan queuedValue) {
 	done := ctx.Done()
 
 	// NOTE(jeff): because there are multiple workers and because we do not
@@ -59,7 +76,7 @@ func (db *DB) worker(ctx context.Context, num int) {
 		case <-done:
 			return
 
-		case value := <-db.queue:
+		case value := <-queue:
 			ok, err := db.write(ctx, num, value)
 			db.bufs.Put(value.data)
 			if value.done != nil {

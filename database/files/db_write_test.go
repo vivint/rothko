@@ -45,8 +45,6 @@ func BenchmarkDBWrite(b *testing.B) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// we have a really small cap here because HFS+ doesn't do sparse files.
-	// gonna have to try it on linux!
 	db, cleanup := newTestDB(b, Options{
 		Size:  1024,   // 1K/record
 		Cap:   102400, // 100MB/file
@@ -68,9 +66,11 @@ func BenchmarkDBWrite(b *testing.B) {
 		ctr++
 		mu.Unlock()
 
+		data := make([]byte, 300)
 		i := int64(0)
+
 		for pb.Next() {
-			db.Queue(ctx, metric, i, i+1, make([]byte, 300), nil)
+			db.Queue(ctx, metric, i, i+1, data, nil)
 			i++
 		}
 	})

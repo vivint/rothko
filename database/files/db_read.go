@@ -122,7 +122,10 @@ func (db *DB) Metrics(ctx context.Context,
 // in-memory cache of metric names. It should be called periodically.
 func (db *DB) PopulateMetrics(ctx context.Context) (err error) {
 	dp := newDBPopulator(db.dir)
-	if err := dp.populate(ctx); err != nil {
+	switch err := dp.populate(ctx); {
+	case err == context.Canceled:
+		return nil
+	case err != nil:
 		return err
 	}
 
@@ -155,6 +158,14 @@ func newDBPopulator(dir string) *dbPopulator {
 }
 
 func (dp *dbPopulator) populate(ctx context.Context) (err error) {
+	// check for a context canceled. if so, start returning some errors to
+	// unwind.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// set up path using the pathbuf
 	// NOTE: path and pathbuf MUST NOT be used past this point since this
 	// function is recursive.
