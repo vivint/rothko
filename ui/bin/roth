@@ -7,6 +7,16 @@ SUBCOMMAND=$1
 shift || true
 
 COMMANDS="${SCRIPTDIR}/roth-*"
+STATUS=0
+
+if [ ! -z "${SUBCOMMAND}" ] && [ ! -f "${SCRIPTDIR}/roth-${SUBCOMMAND}" ]; then
+	echo "Unknown command: ${SUBCOMMAND}"
+	echo
+
+	# force the usage part to run, and exit with an error
+	unset SUBCOMMAND
+	STATUS=1
+fi
 
 if [ -z "${SUBCOMMAND}" ]; then
 	echo "Usage: roth <subcommand> [subcommand args...]"
@@ -19,7 +29,7 @@ if [ -z "${SUBCOMMAND}" ]; then
 	done | column -t -s :
 
 	echo
-	exit 0
+	exit $STATUS
 fi
 
 "${SCRIPTDIR}/roth-${SUBCOMMAND}" "$@"

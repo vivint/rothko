@@ -149,6 +149,13 @@ type APIConfig struct {
 
 APIConfig holds configuration for the api config section.
 
+#### func (APIConfig) Redact
+
+```go
+func (a APIConfig) Redact() APIConfig
+```
+Redact clears out any potentially sensitive data.
+
 #### type APISecurityConfig
 
 ```go

@@ -19,9 +19,6 @@ log "Installing node modules..."
 rm -rf node_modules
 npm install --save-dev \
 	elm \
-	elm-live \
-	google-closure-compiler-js \
-	html-minifier \
-	vulcanize
+	elm-live
 
 log "Done."

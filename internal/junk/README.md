@@ -19,6 +19,26 @@ func WithSignal(ctx context.Context, sigs ...os.Signal) (
 	context.Context, func())
 ```
 
+#### type Flag
+
+```go
+type Flag struct {
+}
+```
+
+
+#### func (*Flag) Start
+
+```go
+func (f *Flag) Start() error
+```
+
+#### func (*Flag) Stop
+
+```go
+func (f *Flag) Stop()
+```
+
 #### type Launcher
 
 ```go

@@ -6,18 +6,23 @@
 #
 # inside of packages that contain protobuf files.
 
-PLUGIN=github.com/vivint/rothko/vendor/github.com/gogo/protobuf/protoc-gen-gogo
-PLUGIN_PATH=$(go list -f '{{ .Target }}' ${PLUGIN})
-VENDOR=$(go list -f '{{ .Dir }}' github.com/vivint/rothko)/vendor
+set -e
 
-go install -v $PLUGIN
-protoc --plugin=protoc-gen-gogo="${PLUGIN_PATH}" -I"${VENDOR}" -I. --gogo_out=. ./*.proto
+PLUGIN=github.com/gogo/protobuf/protoc-gen-gogo
+PLUGIN_PATH=$(vgo list -f '{{ .Target }}' "${PLUGIN}")
+INCLUDE=$(dirname "$(vgo list -f '{{ .Dir }}' "${PLUGIN}")")
 
-# strip out the proto imports because we don't need them and they're silly
-SED=sed
+vgo install -v $PLUGIN
+protoc --plugin=protoc-gen-gogo="${PLUGIN_PATH}" -I"${INCLUDE}" -I. --gogo_out=. ./*.proto
+
+# strip out the proto imports because we don't need them and they're silly.
+# we want protobuf as a serialization format, not some api runtime reflection,
+# generic registry whackdoodlery.
+
+SED="sed"
 case $(uname) in
 	Darwin )
-		SED=gsed
+		SED="gsed"
 		;;
 esac
 

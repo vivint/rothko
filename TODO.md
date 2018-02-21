@@ -5,8 +5,5 @@
 - Perhaps some other ones that poll prometheous enabled servers?
 - Exponential decay merging.
 - Multiple agg buffers for scribble for moving distributions.
-- Write docs for all exported things in rothko.
-- Clean/document up dumper code some.
-- The data folder is a bit jumbled and hard to follow.
-- Maybe the disk package should be db.
 - Document the internal/* packages.
+- Make the graph draw with a key for the values

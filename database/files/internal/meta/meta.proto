@@ -5,7 +5,7 @@ syntax = "proto3";
 package sm.rothko.disk.files.internal.meta;
 option go_package = "meta";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;

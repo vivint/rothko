@@ -14,9 +14,9 @@ LIVE="$(npm prefix)/node_modules/.bin/elm-live"
 
 if [ ! -f "$LIVE" ]; then
 	echo
-	echo "(ERROR) elm-live not found. try running:"
-	echo "(ERROR)     npm install --save-dev elm-live"
-	echo "(ERROR) and then this command again."
+	echo "elm-live not found. try running:"
+	echo "	roth onboard"
+	echo "and then this command again."
 	echo
 	exit 1
 fi

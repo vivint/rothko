@@ -10,20 +10,20 @@ fi
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${SCRIPTDIR}/.."
 
+../scripts/check-vgo.sh || exit $?
+
 log() {
 	echo "---" "$@"
 }
 
-declare -A packages=(
-	["github.com/vivint/rothko/draw/graph/js"]="graph.js"
-)
+build() {
+	IMPORT="$1"
+	OUT="$2"
 
-for pkg in "${!packages[@]}"
-do
-	js="${packages[$pkg]}"
-	log "Building $pkg to $js..."
-	gopherjs build -m -o "site/js/$js" "$pkg"
-	rm "site/js/$js.map"
-done
+	log "Building ${IMPORT} to ${OUT}..."
+	gopherjs build -m -o "site/js/${OUT}" "${IMPORT}"
+	rm "site/js/${OUT}.map"
+}
 
+build "github.com/vivint/rothko/draw/graph/js" "graph.js"
 log "Done."

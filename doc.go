@@ -11,4 +11,4 @@
 //
 // See the github.com/vivint/rothko/bin/rothko package for a rothko
 // binary with implementations loaded from this project.
-package rothko
+package rothko // import "github.com/vivint/rothko"
