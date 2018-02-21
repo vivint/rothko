@@ -36,7 +36,6 @@ roth gopher
 
 log "creating tarball..."
 tar czvf ui.tgz -C site .
-trap EXIT rm ui.tgz
 
 log "creating go source..."
 
