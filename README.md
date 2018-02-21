@@ -1,6 +1,6 @@
 # package rothko
 
-`import "github.com/spacemonkeygo/rothko"`
+`import "github.com/vivint/rothko"`
 
 package rothko is a time-distribution system.
 
@@ -11,15 +11,15 @@ metrics when there are many values from multiple hosts.
 This package contains a Main function to be called by the actual main package,
 allowing you to customize the configuration of rothko's operation.
 
-See the github.com/spacemonkeygo/rothko/bin/rothko package for a rothko binary
-with implementations loaded from this project.
+See the github.com/vivint/rothko/bin/rothko package for a rothko binary with
+implementations loaded from this project.
 
 ## Usage
 
 #### func  Main
 
 ```go
-func Main(conf config.Config)
+func Main()
 ```
 Main is the entrypoint to any rothko binary. It is exposed so that it is easy to
 create custom binaries with your own enhancements.

@@ -5,7 +5,7 @@ package merge
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/data"
+	"github.com/vivint/rothko/data"
 	"github.com/zeebo/tdigest"
 )
 

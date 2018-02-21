@@ -6,7 +6,7 @@ import (
 	"context"
 	"runtime"
 
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/draw"
 )
 
 // Options are the things you can specify to control the rendering of a

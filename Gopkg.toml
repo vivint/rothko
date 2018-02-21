@@ -3,7 +3,7 @@ required = [
 ]
 
 ignored = [
-	"github.com/spacemonkeygo/rothko/draw/graph/js",
+	"github.com/vivint/rothko/draw/graph/js",
 ]
 
 [[constraint]]

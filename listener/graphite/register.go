@@ -5,9 +5,9 @@ package graphite
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/internal/typeassert"
-	"github.com/spacemonkeygo/rothko/listener"
-	"github.com/spacemonkeygo/rothko/registry"
+	"github.com/vivint/rothko/internal/typeassert"
+	"github.com/vivint/rothko/listener"
+	"github.com/vivint/rothko/registry"
 )
 
 func init() {

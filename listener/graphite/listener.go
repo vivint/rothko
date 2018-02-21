@@ -5,7 +5,7 @@ package graphite
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/data"
+	"github.com/vivint/rothko/data"
 )
 
 // Listener implements the listener.Listener for the graphite wire protocol.

@@ -1,6 +1,6 @@
 # package load
 
-`import "github.com/spacemonkeygo/rothko/data/load"`
+`import "github.com/vivint/rothko/data/load"`
 
 package load provides a function to load a dist.Dist from a data.Record.
 

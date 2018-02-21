@@ -6,9 +6,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/spacemonkeygo/rothko/database"
-	"github.com/spacemonkeygo/rothko/dist"
-	"github.com/spacemonkeygo/rothko/listener"
+	"github.com/vivint/rothko/database"
+	"github.com/vivint/rothko/dist"
+	"github.com/vivint/rothko/listener"
 	"github.com/zeebo/errs"
 )
 

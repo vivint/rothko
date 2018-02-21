@@ -15,7 +15,7 @@ log() {
 }
 
 declare -A packages=(
-	["github.com/spacemonkeygo/rothko/draw/graph/js"]="graph.js"
+	["github.com/vivint/rothko/draw/graph/js"]="graph.js"
 )
 
 for pkg in "${!packages[@]}"

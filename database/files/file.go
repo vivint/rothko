@@ -6,8 +6,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/spacemonkeygo/rothko/database/files/internal/meta"
-	"github.com/spacemonkeygo/rothko/database/files/internal/system"
+	"github.com/vivint/rothko/database/files/internal/meta"
+	"github.com/vivint/rothko/database/files/internal/system"
 )
 
 //

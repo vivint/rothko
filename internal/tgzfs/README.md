@@ -1,6 +1,6 @@
 # package tgzfs
 
-`import "github.com/spacemonkeygo/rothko/internal/tgzfs"`
+`import "github.com/vivint/rothko/internal/tgzfs"`
 
 package tgzfs provides an http.FileSystem based on a tgz.
 

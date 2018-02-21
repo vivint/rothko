@@ -6,7 +6,7 @@ import (
 	"context"
 	"image"
 
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )

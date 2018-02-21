@@ -4,7 +4,7 @@
 package tdigest
 
 import (
-	"github.com/spacemonkeygo/rothko/dist"
+	"github.com/vivint/rothko/dist"
 	"github.com/zeebo/errs"
 	"github.com/zeebo/tdigest"
 )

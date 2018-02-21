@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/spacemonkeygo/rothko/database/files"
-	_ "github.com/spacemonkeygo/rothko/dist/tdigest"
-	_ "github.com/spacemonkeygo/rothko/listener/graphite"
+	_ "github.com/vivint/rothko/database/files"
+	_ "github.com/vivint/rothko/dist/tdigest"
+	_ "github.com/vivint/rothko/listener/graphite"
 	"github.com/urfave/cli"
 	"github.com/zeebo/errs"
 )

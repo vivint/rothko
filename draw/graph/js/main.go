@@ -4,7 +4,7 @@ package main
 
 import (
 	"github.com/gopherjs/gopherjs/js"
-	_ "github.com/spacemonkeygo/rothko/dist/tdigest"
+	_ "github.com/vivint/rothko/dist/tdigest"
 	"github.com/zeebo/errs"
 )
 

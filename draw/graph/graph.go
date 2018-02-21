@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spacemonkeygo/rothko/dist"
-	"github.com/spacemonkeygo/rothko/draw"
-	"github.com/spacemonkeygo/rothko/draw/axis"
-	"github.com/spacemonkeygo/rothko/draw/heatmap"
-	"github.com/spacemonkeygo/rothko/draw/iosevka"
+	"github.com/vivint/rothko/dist"
+	"github.com/vivint/rothko/draw"
+	"github.com/vivint/rothko/draw/axis"
+	"github.com/vivint/rothko/draw/heatmap"
+	"github.com/vivint/rothko/draw/iosevka"
 	"github.com/zeebo/float16"
 )
 

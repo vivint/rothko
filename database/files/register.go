@@ -5,9 +5,9 @@ package files
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/database"
-	"github.com/spacemonkeygo/rothko/internal/typeassert"
-	"github.com/spacemonkeygo/rothko/registry"
+	"github.com/vivint/rothko/database"
+	"github.com/vivint/rothko/internal/typeassert"
+	"github.com/vivint/rothko/registry"
 )
 
 func init() {

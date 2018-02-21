@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/load"
-	"github.com/spacemonkeygo/rothko/dist/tdigest"
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/data"
+	"github.com/vivint/rothko/data/load"
+	"github.com/vivint/rothko/dist/tdigest"
+	"github.com/vivint/rothko/draw"
 	"github.com/zeebo/errs"
 	"github.com/zeebo/float16"
 )

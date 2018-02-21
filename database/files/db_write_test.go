@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/vivint/rothko/internal/assert"
 )
 
 func TestDBWrite(t *testing.T) {

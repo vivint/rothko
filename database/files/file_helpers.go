@@ -5,7 +5,7 @@ package files
 import (
 	"unsafe"
 
-	"github.com/spacemonkeygo/rothko/database/files/internal/meta"
+	"github.com/vivint/rothko/database/files/internal/meta"
 )
 
 // slice returns a slice of the data with the given length. the data MUST NOT

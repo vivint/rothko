@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spacemonkeygo/rothko/external"
+	"github.com/vivint/rothko/external"
 )
 
 //

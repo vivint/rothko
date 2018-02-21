@@ -5,7 +5,7 @@ package sset
 import (
 	"testing"
 
-	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/vivint/rothko/internal/assert"
 )
 
 func collect(s *Set) (out []string) {

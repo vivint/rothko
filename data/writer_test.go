@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/vivint/rothko/internal/assert"
 )
 
 func TestWriter(t *testing.T) {

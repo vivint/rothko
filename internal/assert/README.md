@@ -1,6 +1,6 @@
 # package assert
 
-`import "github.com/spacemonkeygo/rothko/internal/assert"`
+`import "github.com/vivint/rothko/internal/assert"`
 
 package assert provides helper functions for tests.
 

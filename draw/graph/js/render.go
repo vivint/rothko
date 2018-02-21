@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/data/load"
-	"github.com/spacemonkeygo/rothko/draw"
-	"github.com/spacemonkeygo/rothko/draw/colors"
-	"github.com/spacemonkeygo/rothko/draw/graph"
+	"github.com/vivint/rothko/data"
+	"github.com/vivint/rothko/data/load"
+	"github.com/vivint/rothko/draw"
+	"github.com/vivint/rothko/draw/colors"
+	"github.com/vivint/rothko/draw/graph"
 	"github.com/zeebo/errs"
 )
 

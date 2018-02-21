@@ -1,6 +1,6 @@
 # package typeassert
 
-`import "github.com/spacemonkeygo/rothko/internal/typeassert"`
+`import "github.com/vivint/rothko/internal/typeassert"`
 
 package typeassert provides helper functions type asserting structures.
 

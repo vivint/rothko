@@ -7,9 +7,9 @@ import (
 	"context"
 	"syscall"
 
-	"github.com/spacemonkeygo/rothko/database"
-	"github.com/spacemonkeygo/rothko/database/files/internal/sset"
-	"github.com/spacemonkeygo/rothko/database/files/internal/system"
+	"github.com/vivint/rothko/database"
+	"github.com/vivint/rothko/database/files/internal/sset"
+	"github.com/vivint/rothko/database/files/internal/system"
 )
 
 // Query calls the ResultCallback with all of the data slices that end

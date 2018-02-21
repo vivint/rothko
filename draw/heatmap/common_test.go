@@ -6,7 +6,7 @@ import (
 	"context"
 	"math"
 
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/draw"
 )
 
 var ctx = context.Background()

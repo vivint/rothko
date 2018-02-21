@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spacemonkeygo/rothko/internal/assert"
-	"github.com/spacemonkeygo/rothko/internal/pcg"
+	"github.com/vivint/rothko/internal/assert"
+	"github.com/vivint/rothko/internal/pcg"
 )
 
 // newTestDB constructs a temporary db.

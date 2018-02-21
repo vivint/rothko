@@ -5,7 +5,7 @@ package files
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/database/files/internal/sset"
+	"github.com/vivint/rothko/database/files/internal/sset"
 )
 
 // Queue adds the data for the metric and the given start and end times. If

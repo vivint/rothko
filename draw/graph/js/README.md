@@ -1,6 +1,6 @@
 # package js
 
-`import "github.com/spacemonkeygo/rothko/draw/graph/js"`
+`import "github.com/vivint/rothko/draw/graph/js"`
 
 
 

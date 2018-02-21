@@ -1,6 +1,6 @@
 # package data
 
-`import "github.com/spacemonkeygo/rothko/data"`
+`import "github.com/vivint/rothko/data"`
 
 package data provides types for handling rothko data.
 
@@ -120,7 +120,7 @@ concurrent scenarios, this can lose updates.
 
 ```go
 func (s *Writer) Capture(ctx context.Context,
-	fn func(metric string, rec Record) bool)
+	fn func(ctx context.Context, metric string, rec Record) bool)
 ```
 Capture clears out current set of records for future Add calls and calls the
 provided function with every record. You must not hold on to any fields of the
@@ -130,7 +130,7 @@ record after the callback returns.
 
 ```go
 func (s *Writer) Iterate(ctx context.Context,
-	fn func(metric string, rec Record) bool)
+	fn func(ctx context.Context, metric string, rec Record) bool)
 ```
 Iterate calls the provided function with every record. You must not hold on to
 any fields of the record after the callback returns.

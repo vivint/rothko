@@ -1,6 +1,6 @@
 # package sset
 
-`import "github.com/spacemonkeygo/rothko/database/files/internal/sset"`
+`import "github.com/vivint/rothko/database/files/internal/sset"`
 
 package sset implements a sorted set of strings.
 

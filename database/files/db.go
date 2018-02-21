@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spacemonkeygo/rothko/database"
-	"github.com/spacemonkeygo/rothko/database/files/internal/sset"
-	"github.com/spacemonkeygo/rothko/external"
-	"github.com/spacemonkeygo/rothko/internal/junk"
+	"github.com/vivint/rothko/database"
+	"github.com/vivint/rothko/database/files/internal/sset"
+	"github.com/vivint/rothko/external"
+	"github.com/vivint/rothko/internal/junk"
 )
 
 // Options is a set of options to configure a database.

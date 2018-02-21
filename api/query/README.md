@@ -1,6 +1,6 @@
 # package query
 
-`import "github.com/spacemonkeygo/rothko/api/query"`
+`import "github.com/vivint/rothko/api/query"`
 
 package query provides routines to query out of a set of metrics.
 

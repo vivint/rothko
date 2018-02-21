@@ -1,10 +1,23 @@
 # package junk
 
-`import "github.com/spacemonkeygo/rothko/internal/junk"`
+`import "github.com/vivint/rothko/internal/junk"`
 
 package junk is a drop spot for things with no home.
 
 ## Usage
+
+#### func  Launch
+
+```go
+func Launch(ctx context.Context, tasks ...func(context.Context) error) error
+```
+
+#### func  WithSignal
+
+```go
+func WithSignal(ctx context.Context, sigs ...os.Signal) (
+	context.Context, func())
+```
 
 #### type Launcher
 
@@ -17,7 +30,7 @@ type Launcher struct {
 #### func (*Launcher) Queue
 
 ```go
-func (l *Launcher) Queue(fn func(ctx context.Context, errch chan error))
+func (l *Launcher) Queue(fn func(ctx context.Context) error)
 ```
 
 #### func (*Launcher) Run

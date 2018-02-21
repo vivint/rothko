@@ -5,7 +5,7 @@ package axis
 import (
 	"image"
 
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/draw"
 )
 
 func asImage(m *draw.RGB) *image.RGBA {

@@ -2,7 +2,7 @@
 
 package data
 
-import "github.com/spacemonkeygo/rothko/dist"
+import "github.com/vivint/rothko/dist"
 
 type fakeParams struct{ dist.Params }
 

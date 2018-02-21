@@ -6,10 +6,10 @@
 # oh well.
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PACKAGES=$(go list github.com/spacemonkeygo/rothko/...)
+PACKAGES=$(go list github.com/vivint/rothko/...)
 
 for PACKAGE in $PACKAGES; do
-	if [ "$PACKAGE" == "github.com/spacemonkeygo/rothko" ]; then
+	if [ "$PACKAGE" == "github.com/vivint/rothko" ]; then
 		continue
 	fi
 	DIR=$(go list -f '{{.Dir}}' "$PACKAGE")

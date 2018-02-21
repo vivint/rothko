@@ -5,7 +5,7 @@ package files
 import (
 	"testing"
 
-	"github.com/spacemonkeygo/rothko/internal/assert"
+	"github.com/vivint/rothko/internal/assert"
 )
 
 func TestConvert(t *testing.T) {

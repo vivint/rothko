@@ -3,7 +3,7 @@
 package files
 
 import (
-	"github.com/spacemonkeygo/rothko/internal/pcg"
+	"github.com/vivint/rothko/internal/pcg"
 )
 
 //

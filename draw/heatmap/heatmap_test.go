@@ -5,7 +5,7 @@ package heatmap
 import (
 	"testing"
 
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/draw"
 )
 
 func TestContext(t *testing.T) {

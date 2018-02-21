@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/database"
-	"github.com/spacemonkeygo/rothko/external"
+	"github.com/vivint/rothko/data"
+	"github.com/vivint/rothko/database"
+	"github.com/vivint/rothko/external"
 )
 
 // Options controls the options to the dumper.

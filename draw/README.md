@@ -1,6 +1,6 @@
 # package draw
 
-`import "github.com/spacemonkeygo/rothko/draw"`
+`import "github.com/vivint/rothko/draw"`
 
 package draw provides common types for the drawing packages.
 

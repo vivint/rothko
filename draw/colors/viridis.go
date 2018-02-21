@@ -3,7 +3,7 @@
 package colors
 
 import (
-	"github.com/spacemonkeygo/rothko/draw"
+	"github.com/vivint/rothko/draw"
 )
 
 var Viridis = []draw.Color{

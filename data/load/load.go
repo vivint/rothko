@@ -5,9 +5,9 @@ package load
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/data"
-	"github.com/spacemonkeygo/rothko/dist"
-	"github.com/spacemonkeygo/rothko/registry"
+	"github.com/vivint/rothko/data"
+	"github.com/vivint/rothko/dist"
+	"github.com/vivint/rothko/registry"
 )
 
 // TODO(jeff): this package is in a weird spot.

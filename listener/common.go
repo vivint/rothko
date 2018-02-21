@@ -5,7 +5,7 @@ package listener
 import (
 	"context"
 
-	"github.com/spacemonkeygo/rothko/data"
+	"github.com/vivint/rothko/data"
 )
 
 // Listener is a type that writes from some data source to the privided Writer.

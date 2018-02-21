@@ -1,6 +1,6 @@
 # package iosevka
 
-`import "github.com/spacemonkeygo/rothko/draw/iosevka"`
+`import "github.com/vivint/rothko/draw/iosevka"`
 
 package iosevka contains a basicfont.Face of the ascii range of the iosevka font
 face.

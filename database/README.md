@@ -1,6 +1,6 @@
 # package database
 
-`import "github.com/spacemonkeygo/rothko/database"`
+`import "github.com/vivint/rothko/database"`
 
 package database provides interfaces to storage of records.
 
