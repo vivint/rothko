@@ -5,6 +5,7 @@ package rothko
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/urfave/cli"
 	"github.com/vivint/rothko/api"
 	"github.com/vivint/rothko/config"
 	"github.com/vivint/rothko/data"
@@ -22,7 +24,6 @@ import (
 	"github.com/vivint/rothko/internal/tmplfs"
 	"github.com/vivint/rothko/registry"
 	"github.com/vivint/rothko/ui"
-	"github.com/urfave/cli"
 	"github.com/zeebo/errs"
 )
 
@@ -122,13 +123,20 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	external.Infow("creating api",
 		"config", conf.API.Redact(),
 	)
-	fs, err := tgzfs.New(ui.Tarball)
-	if err != nil {
-		return false, errs.Wrap(err)
+
+	var static http.Handler
+	if ui.Tarball != nil {
+		fs, err := tgzfs.New(ui.Tarball)
+		if err != nil {
+			return false, errs.Wrap(err)
+		}
+		static = tmplfs.New(fs)
+	} else {
+		static = tarballWarning{}
 	}
 	srv := &http.Server{
 		Addr:    conf.API.Address,
-		Handler: api.New(db, tmplfs.New(fs)),
+		Handler: api.New(db, static),
 	}
 
 	// create and queue the listeners
@@ -268,4 +276,38 @@ func (k keepAliveWrapper) Accept() (net.Conn, error) {
 	conn.SetKeepAlive(true)
 	conn.SetKeepAlivePeriod(3 * time.Minute)
 	return conn, nil
+}
+
+// tarballWarning is an http.Handler that is served for the static site if a
+// ui tarball has not been generated.
+type tarballWarning struct{}
+
+// ServeHTTP implements the http.Handler interface, responding with a warning
+// if index.html is requested.
+func (tarballWarning) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	switch req.URL.Path {
+	case "/index.html", "index.html", "/", "":
+	default:
+		http.NotFound(w, req)
+		return
+	}
+
+	io.WriteString(w, `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<title>Rothko</title>
+</head>
+<body>
+	<h1>Rothko</h1>
+	<p>You have not generated the ui in this build of Rothko.</p>
+	<p>If you would like to have a nice ui, run
+	   <span style="font-family: monospace">go generate</span> on the
+	   <span style="font-family: monospace">github.com/vivint/rothko/ui</span>
+	   package, and re-build your binary.
+	</p>
+</body>
+</html>
+`)
 }

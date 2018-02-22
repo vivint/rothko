@@ -46,18 +46,17 @@ cat << EOF > ui.go
 
 package ui
 
-// Tarball contains a gzipped tar archive to be served for the ui.
-var Tarball = tarball
-
-var tarball = []byte{
+func init() {
+	Tarball = []byte{
 EOF
 
 xxd -ps ui.tgz \
 	| sed -e 's/\(..\)/0x\1, /g' \
-	| sed -e 's/^\(.*\) $/	\1/g' \
+	| sed -e 's/^\(.*\) $/		\1/g' \
 	>> ui.go
 
 cat << EOF >> ui.go
+	}
 }
 EOF
 
