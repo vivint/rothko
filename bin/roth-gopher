@@ -8,7 +8,7 @@ if [ ! -z "$ROTH_USAGE" ]; then
 fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${SCRIPTDIR}/.."
+cd "${SCRIPTDIR}/../ui"
 
 ../scripts/check-vgo.sh || exit $?
 
@@ -21,9 +21,9 @@ build() {
 	OUT="$2"
 
 	log "Building ${IMPORT} to ${OUT}..."
-	gopherjs build -m -o "site/js/${OUT}" "${IMPORT}"
-	rm "site/js/${OUT}.map"
+	gopherjs build -m -o "${OUT}" "${IMPORT}"
+	rm "${OUT}.map"
 }
 
-build "github.com/vivint/rothko/draw/graph/js" "graph.js"
+build "github.com/vivint/rothko/draw/graph/js" "site/js/graph.js"
 log "Done."

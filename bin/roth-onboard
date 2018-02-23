@@ -8,7 +8,7 @@ if [ ! -z "$ROTH_USAGE" ]; then
 fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${SCRIPTDIR}/.."
+cd "${SCRIPTDIR}/../ui"
 
 log() {
 	echo "---" "$@"

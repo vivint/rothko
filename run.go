@@ -124,15 +124,13 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		"config", conf.API.Redact(),
 	)
 
-	var static http.Handler
+	var static http.Handler = tarballWarning{}
 	if ui.Tarball != nil {
 		fs, err := tgzfs.New(ui.Tarball)
 		if err != nil {
 			return false, errs.Wrap(err)
 		}
 		static = tmplfs.New(fs)
-	} else {
-		static = tarballWarning{}
 	}
 	srv := &http.Server{
 		Addr:    conf.API.Address,

@@ -8,7 +8,7 @@ if [ ! -z "$ROTH_USAGE" ]; then
 fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${SCRIPTDIR}/.."
+cd "${SCRIPTDIR}/../ui"
 
 LIVE="$(npm prefix)/node_modules/.bin/elm-live"
 
@@ -21,10 +21,16 @@ if [ ! -f "$LIVE" ]; then
 	exit 1
 fi
 
+echo "=== Warning ==="
+echo "=== Rothko added a feature to run go templates in the html files"
+echo "=== The elm-live functionality has not been ported to work with that"
+echo "=== So while it will work somewhat, you'll see some artifacts"
+echo "=== Warning ==="
+
 "$LIVE" \
 	--before-build="roth-gopher" \
 	--dir=./site \
-	--output=site/js/Main.js \
+	--output=./site/js/Main.js \
 	--pushstate \
 	--host=0.0.0.0 \
 	-- \
