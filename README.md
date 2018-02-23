@@ -68,17 +68,20 @@ future.
 
 An attempt to use vgo and contribute to its development has put this project
 in a bit of a weird spot. While building a large part of the project is
-possible with vgo, tools such as godocdown and gopherjs don't yet know how to
-work without a GOPATH. Thus, in order for these tools to work, you must create
-a GOPATH with both the github.com/vivint/rothko and
-github.com/gopherjs/gopherjs repos installed. For example, running
+possible with vgo, tools such as `godocdown` and `gopherjs` don't yet know how
+to work without a GOPATH. Thus, in order for these tools to work, you must
+create a GOPATH with both the `github.com/vivint/rothko` and
+`github.com/gopherjs/gopherjs` repos installed. For example, running
 
 ```
 mkdir rothko
 cd rothko
-export GOPATH=\`pwd\`
-go get github.com/vivint/rothko github.com/gopherjs/gopherjs
-cd src/github.com/vivint/rothko
+export GOPATH=`pwd`
+go get github.com/gopherjs/gopherjs
+mkdir -p src/github.com/vivint
+cd src/github.com/vivint
+git clone https://github.com/vivint/rothko 
+cd rothko
 vgo vendor
 rm -rf vendor/github.com/gopherjs/gopherjs
 ```
