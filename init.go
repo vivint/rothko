@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/vivint/rothko/config"
 	"github.com/urfave/cli"
+	"github.com/vivint/rothko/config"
 	"github.com/zeebo/errs"
 )
 

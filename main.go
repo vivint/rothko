@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/urfave/cli"
 	_ "github.com/vivint/rothko/database/files"
 	_ "github.com/vivint/rothko/dist/tdigest"
 	_ "github.com/vivint/rothko/listener/graphite"
-	"github.com/urfave/cli"
 	"github.com/zeebo/errs"
 )
 
@@ -19,7 +19,7 @@ var handled = errs.Class("")
 // easy to create custom binaries with your own enhancements.
 func Main() {
 	app := cli.NewApp()
-	app.Usage = "a time-database metric store"
+	app.Usage = "a time-distribution metric store"
 	app.Version = "0.0.1"
 
 	app.Commands = []cli.Command{
