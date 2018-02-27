@@ -59,7 +59,10 @@ func (a *agg) Observe(val float64, id []byte) {
 		// we only make the copy if there's a good chance we'll be storing it.
 		// once again, we do this outside of the mutex to avoid as much
 		// critical section as possible.
-		id_copy := append([]byte(nil), id...)
+		var id_copy []byte
+		if id != nil {
+			id_copy = append(id_copy, id...)
+		}
 
 		a.mu.Lock()
 		if obs == 0 || val < a.rec.Min {
