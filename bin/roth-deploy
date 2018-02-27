@@ -31,13 +31,12 @@ log "building elm code..."
 elm package install
 elm make src/Main.elm --output site/js/Main.js
 
-log "building go code..."
 roth gopher
 
-log "creating tarball..."
-tar czvf ui.tgz -C site .
+log "creating ui tarball..."
+tar czf ui.tgz -C site .
 
-log "creating go source..."
+log "creating ui go source..."
 
 cat << EOF > ui.go
 // Copyright (C) 2018. See AUTHORS.
@@ -59,5 +58,3 @@ cat << EOF >> ui.go
 	}
 }
 EOF
-
-log "ui package updated."

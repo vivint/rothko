@@ -16,14 +16,17 @@ log() {
 	echo "---" "$@"
 }
 
+IMPORT=github.com/gopherjs/gopherjs
+GOPHERJS=$(vgo list -f '{{ .Target }}' "${IMPORT}")
+vgo install -v "${IMPORT}"
+
 build() {
 	IMPORT="$1"
 	OUT="$2"
 
-	log "Building ${IMPORT} to ${OUT}..."
-	gopherjs build -m -o "${OUT}" "${IMPORT}"
+	log "building ${IMPORT} to ${OUT}..."
+	"${GOPHERJS}" build -m -o "${OUT}" "${IMPORT}"
 	rm "${OUT}.map"
 }
 
 build "github.com/vivint/rothko/draw/graph/js" "site/js/graph.js"
-log "Done."

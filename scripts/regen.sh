@@ -8,12 +8,18 @@
 
 set -e
 
-PLUGIN=github.com/gogo/protobuf/protoc-gen-gogo
-PLUGIN_PATH=$(vgo list -f '{{ .Target }}' "${PLUGIN}")
-INCLUDE=$(dirname "$(vgo list -f '{{ .Dir }}' "${PLUGIN}")")
+log() {
+	echo "---" "$@"
+}
 
-vgo install -v $PLUGIN
-protoc --plugin=protoc-gen-gogo="${PLUGIN_PATH}" -I"${INCLUDE}" -I. --gogo_out=. ./*.proto
+IMPORT=github.com/gogo/protobuf/protoc-gen-gogo
+PROTOC_GEN_GOGO=$(vgo list -f '{{ .Target }}' "${IMPORT}")
+vgo install -v $IMPORT
+
+log "generating protobufs for $(vgo list .)..."
+
+INCLUDE=$(dirname "$(vgo list -f '{{ .Dir }}' "${IMPORT}")")
+protoc --plugin=protoc-gen-gogo="${PROTOC_GEN_GOGO}" -I"${INCLUDE}" -I. --gogo_out=. ./*.proto
 
 # strip out the proto imports because we don't need them and they're silly.
 # we want protobuf as a serialization format, not some api runtime reflection,

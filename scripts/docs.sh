@@ -7,10 +7,9 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 PACKAGES=$(vgo list github.com/vivint/rothko/...)
 
-IMPORT_PATH=github.com/robertkrimen/godocdown/godocdown
-GODOCDOWN=$(vgo list -f '{{ .Target }}' "${IMPORT_PATH}")
-
-vgo install -v $IMPORT_PATH
+IMPORT=github.com/robertkrimen/godocdown/godocdown
+GODOCDOWN=$(vgo list -f '{{ .Target }}' "${IMPORT}")
+vgo install -v "${IMPORT}"
 
 for PACKAGE in $PACKAGES; do
 	if [ "$PACKAGE" == "github.com/vivint/rothko" ]; then
