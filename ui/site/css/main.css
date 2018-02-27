@@ -1,0 +1,36 @@
+input:focus {
+	outline: none;
+}
+
+.label-aligned {
+  align-items: center;
+}
+
+.auto-menu {
+	border: 1px solid #c5c5c5;
+	background: #ffffff;
+	color: #333333;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	position: absolute;
+}
+
+.auto-menu-item {
+	list-style-image: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+	margin: 0;
+	cursor: pointer;
+}
+
+.auto-menu-item-wrapper {
+	position: relative;
+	padding: 3px 1em 3px .4em;
+}
+
+.auto-menu-item-active {
+	margin: -1px;
+	border: 1px solid #003eff;
+	background: #007fff;
+	font-weight: normal;
+	color: #ffffff;
+}
