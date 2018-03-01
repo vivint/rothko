@@ -10,5 +10,7 @@ fi
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${SCRIPTDIR}/.."
 
+roth generate
+
 mkdir -p _dev
 vgo build -o _dev/rothko github.com/vivint/rothko/bin/rothko 

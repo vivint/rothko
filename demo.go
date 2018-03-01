@@ -125,7 +125,7 @@ func addDemoData(ctx context.Context, params dist.Params, db database.DB) (
 	// random distributions to sample
 	samplers := map[string]func(mean float64) float64{
 		"normal": func(mean float64) float64 {
-			return rand.NormFloat64() + mean
+			return rand.NormFloat64()*50 + mean
 		},
 		"exp": func(mean float64) float64 {
 			return rand.ExpFloat64() * mean
@@ -156,7 +156,7 @@ func addDemoData(ctx context.Context, params dist.Params, db database.DB) (
 			metric := fmt.Sprintf("%s.%s", sampler_name, mdelta_name)
 
 			// start at the start and add the tdelta until we've passed now.
-			t0, t1, mean := start, start.Add(tdelta), 0.0
+			t0, t1, mean := start, start.Add(tdelta), 1.0
 			for t0.Before(now) {
 				// create a record
 				dist, err := params.New()

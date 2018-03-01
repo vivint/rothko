@@ -305,7 +305,14 @@ doView (Model model) =
 
 viewAutocomplete : Maybe Int -> List String -> Html Msg
 viewAutocomplete highlight completions =
-    Html.ul [ Attr.class "auto-menu" ] (viewCompletions highlight completions)
+    case completions of
+        [] ->
+            Html.text ""
+
+        _ ->
+            Html.ul
+                [ Attr.class "auto-menu" ]
+                (viewCompletions highlight completions)
 
 
 viewCompletions : Maybe Int -> List String -> List (Html Msg)
