@@ -1,7 +1,0 @@
-# package {{ .Name }}
-
-`import "{{ .ImportPath }}"`
-
-{{ .EmitSynopsis }}
-
-{{ .EmitUsage }}
