@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ ! -z "$ROTH_USAGE" ]; then
+	echo "runs a development rothko server"
+	exit 0
+fi
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${SCRIPTDIR}/.."
+
+log() {
+	echo "---" "$@"
+}
+
+mkdir -p _dev
+cd _dev
+
+if [ ! -e rothko ]; then
+	log "building rothko server..."
+	roth build
+fi
+
+if [ ! -e rothko.toml ]; then
+	log "initializing rothko.toml..."
+	./rothko init
+fi
+
+if [ ! -e data ]; then
+	log "creating demo data..."
+	./rothko demo rothko.toml
+fi
+
+log "running server..."
+if [ -z "$LIVE" ]; then
+	./rothko run rothko.toml
+else
+	exec ./rothko run rothko.toml
+fi

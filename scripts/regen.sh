@@ -2,7 +2,7 @@
 
 # this script is called by go generate with a line like:
 #
-#	//go:generate bash -c "`go list -f '{{ .Dir }}' github.com/vivint/rothko`/regen.sh"
+#	//go:generate bash -c "`vgo list -f '{{ .Dir }}' github.com/vivint/rothko`/regen.sh"
 #
 # inside of packages that contain protobuf files.
 

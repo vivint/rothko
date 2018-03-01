@@ -1,10 +1,10 @@
 port module Graph
     exposing
-        ( draw
+        ( Config
         , Model
-        , new
-        , Config
         , Msg(Draw)
+        , draw
+        , new
         , subscriptions
         , update
         , view
@@ -13,11 +13,11 @@ port module Graph
 import Api
 import Html exposing (Html)
 import Html.Attributes as Attr
-import Window
-import Task
-import Process
 import Http
+import Process
+import Task
 import Time exposing (Time)
+import Window
 
 
 -- CONFIG
@@ -131,7 +131,7 @@ update config model msg =
 
 delay : Time
 delay =
-    (250 * Time.millisecond)
+    250 * Time.millisecond
 
 
 doUpdate : Config model msg -> Model -> Msg -> ( Model, Cmd Msg )
@@ -150,25 +150,25 @@ doUpdate config (Model model) msg =
                         |> Http.send RenderResponse
                     )
             in
-                case ( model.size, model.state ) of
-                    ( Just { width }, Nothing ) ->
-                        do width
+            case ( model.size, model.state ) of
+                ( Just { width }, Nothing ) ->
+                    do width
 
-                    ( Just { width }, Just (Finished _ _) ) ->
-                        do width
+                ( Just { width }, Just (Finished _ _) ) ->
+                    do width
 
-                    ( Just { width }, Just (Delay _) ) ->
-                        do width
+                ( Just { width }, Just (Delay _) ) ->
+                    do width
 
-                    ( Nothing, _ ) ->
-                        ( Model { model | state = Just <| Delay metric }
-                        , Cmd.none
-                        )
+                ( Nothing, _ ) ->
+                    ( Model { model | state = Just <| Delay metric }
+                    , Cmd.none
+                    )
 
-                    _ ->
-                        ( Model model
-                        , Cmd.none
-                        )
+                _ ->
+                    ( Model model
+                    , Cmd.none
+                    )
 
         RenderResponse response ->
             case ( response, model.state ) of
@@ -182,9 +182,9 @@ doUpdate config (Model model) msg =
                         state =
                             Just <| Finished info (Err <| toString error)
                     in
-                        ( Model { model | state = state }
-                        , Cmd.none
-                        )
+                    ( Model { model | state = state }
+                    , Cmd.none
+                    )
 
                 _ ->
                     ( Model { model | state = Nothing }
@@ -198,9 +198,9 @@ doUpdate config (Model model) msg =
                         state =
                             Just <| Finished info (Ok result)
                     in
-                        ( Model { model | state = state }
-                        , Cmd.none
-                        )
+                    ( Model { model | state = state }
+                    , Cmd.none
+                    )
 
                 _ ->
                     ( Model { model | state = Nothing }
@@ -212,20 +212,20 @@ doUpdate config (Model model) msg =
                 newCounter =
                     model.counter + 1
             in
-                ( Model { model | size = Just size, counter = newCounter }
-                , case ( model.size, model.state ) of
-                    ( _, Just (Delay metric) ) ->
-                        sendMessage (Draw metric)
+            ( Model { model | size = Just size, counter = newCounter }
+            , case ( model.size, model.state ) of
+                ( _, Just (Delay metric) ) ->
+                    sendMessage (Draw metric)
 
-                    ( Just { width }, Just (Finished _ _) ) ->
-                        if width /= size.width then
-                            sendMessageAfter delay (ResizeTimer newCounter)
-                        else
-                            Cmd.none
-
-                    _ ->
+                ( Just { width }, Just (Finished _ _) ) ->
+                    if width /= size.width then
+                        sendMessageAfter delay (ResizeTimer newCounter)
+                    else
                         Cmd.none
-                )
+
+                _ ->
+                    Cmd.none
+            )
 
         ResizeTimer counter ->
             ( Model model

@@ -1,9 +1,9 @@
 module Api exposing (..)
 
-import Http
-import URLQuery exposing (URLQuery)
 import Dict exposing (Dict)
+import Http
 import Json.Decode exposing (list, string)
+import URLQuery exposing (URLQuery)
 
 
 -- HELPERS
@@ -72,15 +72,15 @@ renderRequestURLQuery req =
         ts =
             Maybe.map toString
     in
-        URLQuery.empty
-            |> URLQuery.add "metric" req.metric
-            |> maybeAdd "width" (ts req.width)
-            |> maybeAdd "height" (ts req.height)
-            |> maybeAdd "padding" (ts req.padding)
-            |> maybeAdd "now" (ts req.now)
-            |> maybeAdd "duration" req.duration
-            |> maybeAdd "samples" (ts req.samples)
-            |> maybeAdd "compression" (ts req.compression)
+    URLQuery.empty
+        |> URLQuery.add "metric" req.metric
+        |> maybeAdd "width" (ts req.width)
+        |> maybeAdd "height" (ts req.height)
+        |> maybeAdd "padding" (ts req.padding)
+        |> maybeAdd "now" (ts req.now)
+        |> maybeAdd "duration" req.duration
+        |> maybeAdd "samples" (ts req.samples)
+        |> maybeAdd "compression" (ts req.compression)
 
 
 type alias URLQueryRequest =
@@ -111,6 +111,6 @@ queryRequestURLQuery req =
         ts =
             Maybe.map toString
     in
-        URLQuery.empty
-            |> URLQuery.add "query" req.query
-            |> maybeAdd "results" (ts req.results)
+    URLQuery.empty
+        |> URLQuery.add "query" req.query
+        |> maybeAdd "results" (ts req.results)

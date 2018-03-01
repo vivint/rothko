@@ -10,6 +10,7 @@ import (
 	"github.com/vivint/rothko/database"
 	"github.com/vivint/rothko/database/files/internal/sset"
 	"github.com/vivint/rothko/database/files/internal/system"
+	"github.com/zeebo/errs"
 )
 
 // Query calls the ResultCallback with all of the data slices that end
@@ -174,8 +175,11 @@ func (dp *dbPopulator) populate(ctx context.Context) (err error) {
 	dp.pathbuf = append(dp.pathbuf, dp.dirbuf...)
 	dp.pathbuf = append(dp.pathbuf, 0)
 	fd, err := system.Open(dp.pathbuf)
+	if errs.Unwrap(err) == syscall.Errno(syscall.ENOENT) {
+		return nil
+	}
 	if err != nil {
-		return err
+		return Error.Wrap(err)
 	}
 	defer system.Close(fd)
 
@@ -185,10 +189,12 @@ func (dp *dbPopulator) populate(ctx context.Context) (err error) {
 
 	for {
 		n, err := syscall.ReadDirent(int(fd), dirents)
-		if err == syscall.Errno(syscall.ENOTDIR) {
+		switch err {
+		case nil:
+		case syscall.Errno(syscall.ENOTDIR),
+			syscall.Errno(syscall.EINVAL):
 			return nil
-		}
-		if err != nil {
+		default:
 			return Error.Wrap(err)
 		}
 		if n == 0 {

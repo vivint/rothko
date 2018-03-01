@@ -101,14 +101,14 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		"kind", conf.Dist.Kind,
 		"config", conf.Dist.Config,
 	)
-	dist_params, err := registry.NewDistribution(ctx,
+	params, err := registry.NewDistribution(ctx,
 		conf.Dist.Kind, conf.Dist.Config)
 	if err != nil {
 		return false, errs.Wrap(err)
 	}
 
 	// create the writer
-	w := data.NewWriter(dist_params)
+	w := data.NewWriter(params)
 
 	// create the dumper
 	dumper := dump.New(dump.Options{

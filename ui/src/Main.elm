@@ -2,19 +2,19 @@ module Main exposing (..)
 
 import Api
 import Graph
-import QueryBar
 import Html exposing (Html, text)
 import Html.Attributes as Attr
 import Http
-import Task
-import Process
-import Time exposing (Time)
-import Window
-import Json.Encode as Encode exposing (Value)
 import Json.Decode as Decode
+import Json.Encode as Encode exposing (Value)
 import Navigation
-import UrlParser exposing (parsePath, map, top, stringParam, (<?>))
+import Process
+import QueryBar
+import Task
+import Time exposing (Time)
 import URLQuery exposing (URLQuery)
+import UrlParser exposing ((<?>), map, parsePath, stringParam, top)
+import Window
 
 
 -- MAIN
@@ -60,10 +60,10 @@ parse loc =
             top
                 <?> stringParam "metric"
     in
-        parsePath (map Path parser) loc
-            |> Maybe.withDefault
-                { metric = Nothing
-                }
+    parsePath (map Path parser) loc
+        |> Maybe.withDefault
+            { metric = Nothing
+            }
 
 
 render : Path -> String
@@ -78,9 +78,9 @@ render { metric } =
                 Just val ->
                     URLQuery.add key val query
     in
-        URLQuery.empty
-            |> maybeAdd "metric" metric
-            |> URLQuery.render
+    URLQuery.empty
+        |> maybeAdd "metric" metric
+        |> URLQuery.render
 
 
 
@@ -123,17 +123,17 @@ init flags loc =
         ( graph, cmd ) =
             Graph.new graphConfig
     in
-        ( { graph = graph
-          , queryBar = QueryBar.new metric
-          }
-        , Cmd.batch
-            [ cmd
-            , if metric /= "" then
-                sendMessage <| Draw metric
-              else
-                Cmd.none
-            ]
-        )
+    ( { graph = graph
+      , queryBar = QueryBar.new metric
+      }
+    , Cmd.batch
+        [ cmd
+        , if metric /= "" then
+            sendMessage <| Draw metric
+          else
+            Cmd.none
+        ]
+    )
 
 
 

@@ -48,7 +48,7 @@ func New(opts Options) *Dumper {
 }
 
 // Run dumps periodically, until the context is canceled. When the context is
-// canceled, it dumps one last time but at most for one minute.
+// canceled, it waits for any active Dump and returns.
 func (d *Dumper) Run(ctx context.Context, w *data.Writer) (err error) {
 	done := ctx.Done()
 	ticker := time.NewTicker(d.opts.Period)
@@ -61,7 +61,7 @@ func (d *Dumper) Run(ctx context.Context, w *data.Writer) (err error) {
 
 		case <-ticker.C:
 			external.Infow("performing dump")
-			d.Dump(ctx, w)
+			d.Dump(context.Background(), w)
 		}
 	}
 }
@@ -103,35 +103,36 @@ func (d *Dumper) Dump(ctx context.Context, w *data.Writer) {
 
 		// write the database record and wait for it to come back
 		wg.Add(1)
+		complete := func(written bool, err error) {
+			if !written || err != nil {
+				external.Errorw("metric write problem",
+					"written", written,
+					"err", safeError(err),
+					"metric", metric,
+				)
+			}
 
-		err = d.opts.DB.Queue(ctx, metric, rec.StartTime, rec.EndTime, data,
-			func(written bool, err error) {
-				if !written || err != nil {
-					external.Errorw("metric write problem",
-						"written", written,
-						"err", safeError(err),
-					)
-				}
+			if written {
+				atomic.AddInt64(&writes, 1)
+			} else {
+				atomic.AddInt64(&skips, 1)
+			}
+			if err != nil {
+				atomic.AddInt64(&errors, 1)
+			}
 
-				if written {
-					atomic.AddInt64(&writes, 1)
-				} else {
-					atomic.AddInt64(&skips, 1)
-				}
-				if err != nil {
-					atomic.AddInt64(&errors, 1)
-				}
-
-				d.bufs.Put(data)
-				wg.Done()
-
-			})
+			d.bufs.Put(data)
+			wg.Done()
+		}
+		err = d.opts.DB.Queue(ctx,
+			metric,
+			rec.StartTime,
+			rec.EndTime,
+			data,
+			complete,
+		)
 		if err != nil {
-			external.Errorw("error queuing metric",
-				"err", err.Error(),
-			)
-			atomic.AddInt64(&skips, 1)
-			atomic.AddInt64(&errors, 1)
+			complete(false, err)
 		}
 
 		return true

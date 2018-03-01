@@ -3,14 +3,12 @@
 set -e
 
 if [ ! -z "$ROTH_USAGE" ]; then
-	echo "builds and embeds the ui code into the ui package"
+	echo "generates ui source"
 	exit 0
 fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${SCRIPTDIR}/../ui"
-
-../scripts/check-vgo.sh || exit $?
 
 ELM="$(npm prefix)/node_modules/.bin/elm"
 
@@ -29,9 +27,7 @@ log() {
 
 log "building elm code..."
 elm package install
-elm make src/Main.elm --output site/js/Main.js
-
-roth gopher
+elm make src/Main.elm --output site/js/main.js
 
 log "creating ui tarball..."
 tar czf ui.tgz -C site .

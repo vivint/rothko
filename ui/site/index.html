@@ -14,41 +14,10 @@
   <body>
     <div id="main"></div>
     <script src='/js/flags.js' type='application/javascript'></script>
-    <script src='/js/Main.js' type='application/javascript'></script>
+    <script src='/js/main.js' type='application/javascript'></script>
     <script type="text/javascript">
-      let graph = new Worker('/js/graph.js');
       let main = document.getElementById('main');
       let app = Elm.Main.embed(main, flags);
-
-      app.ports.draw.subscribe(function(request) {
-        let ctx2d = document.querySelector("#canvas").getContext("2d");
-        ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-        graph.postMessage(JSON.parse(request.data));
-      });
-
-      graph.addEventListener("message", function(result) {
-        let ctx2d = document.querySelector("#canvas").getContext("2d");
-
-        if (result.data.error !== "") {
-          app.ports.done.send({
-            "ok": false,
-            "error": result.data.error,
-          });
-          return;
-        }
-
-        let out = result.data.out;
-        ctx2d.canvas.width = out.Width;
-        ctx2d.canvas.height = out.Height;
-        let img = ctx2d.getImageData(0, 0, out.Width, out.Height);
-        img.data.set(out.Pix);
-        ctx2d.putImageData(img, 0, 0);
-
-        app.ports.done.send({
-          "ok": true,
-          "error": "",
-        });
-    });
     </script>
   </body>
 </html>

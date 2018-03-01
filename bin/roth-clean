@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ ! -z "$ROTH_USAGE" ]; then
+	echo "cleans development rothko data"
+	exit 0
+fi
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${SCRIPTDIR}/.."
+
+rm -rf _dev

@@ -2,8 +2,6 @@ github.com/BurntSushi/toml v0.3.0 h1:e1/Ivsx3Z0FVTV0NSOv/aVgbUWyQuzj7DDnFblkRvsY
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/gogo/protobuf v1.0.0 h1:2jyBKDKU/8v3v2xVR2PtiWQviFUyiaGk2rpfyFT8rTM=
-github.com/gopherjs/gopherjs v0.0.0-20180214231123-3926a9f66452 h1:scdYBP1IGubL4YQPtCALHymZDFOG79Du20sjIGNYxAo=
-github.com/gopherjs/gopherjs v0.0.0-20180226192827-4e9f423448a0 h1:C2XTFR4A+rBCmBzw0plXp5XV4s2z/Uf22F52hmncL0g=
 github.com/kisielk/gotool v1.0.0 h1:AV2c/EiW3KqPNT9ZKl07ehoAGi4C5/01Cfbblndcapg=
 github.com/neelance/astrewrite v0.0.0-20160511093645-99348263ae86 h1:D6paGObi5Wud7xg83MaEFyjxQB1W5bz5d0IFppr+ymk=
 github.com/neelance/sourcemap v0.0.0-20151028013722-8c68805598ab h1:eFXv9Nu1lGbrNbj619aWwZfVF5HBrm9Plte8aNptuTI=
@@ -16,6 +14,7 @@ github.com/stretchr/testify v1.2.1 h1:52QO5WkIUcHGIR7EnGagH88x1bUzqGXTC5/1bDTUQ7
 github.com/urfave/cli v1.20.0 h1:fDqGv3UG/4jbVl/QkFwEdddtEDjh/5Ov6X+0B/3bPaw=
 github.com/zeebo/errs v0.1.0 h1:LbQ+/NdHJJ2Fs3TX7DVKjiRkzbnjCmOChvSkP2zayKg=
 github.com/zeebo/float16 v0.1.0 h1:kRqxv5og6z1emEyz5FpW0/BVHe5VfxEAw6b1ljCZlUc=
+github.com/zeebo/live v0.0.0-20180301045707-148ee9a0fa56 h1:DHnCSyC+tAAPI+Y0s7W3w2nfSCzry+jLKb64FQR3uuQ=
 github.com/zeebo/tdigest v0.1.0 h1:OXxU+Zmdobcfr+hUjzjGeuRGBRHUBjeN5C72eUvsKcc=
 go.uber.org/atomic v1.3.1 h1:U8WaWEmp56LGz7PReduqHRVF6zzs9GbMC2NEZ42dxSQ=
 go.uber.org/multierr v1.1.0 h1:HoEmRHQPVSqub6w2z2d2EOVs2fjyFRGyofhKuyDq0QI=

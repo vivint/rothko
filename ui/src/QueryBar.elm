@@ -1,23 +1,23 @@
 module QueryBar
     exposing
-        ( Model
-        , new
+        ( Config
+        , Model
         , Msg
-        , Config
+        , new
         , subscriptions
         , update
         , view
         )
 
 import Api
-import Task
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Ev
+import Http
 import Keyboard
 import Process
+import Task
 import Time
-import Http
 
 
 -- MODEL
@@ -105,12 +105,12 @@ update config model msg =
         ( newModel, cmd, parentCmd ) =
             doUpdate config (config.get model) msg
     in
-        ( config.set model newModel
-        , Cmd.batch
-            [ Cmd.map config.wrap cmd
-            , parentCmd
-            ]
-        )
+    ( config.set model newModel
+    , Cmd.batch
+        [ Cmd.map config.wrap cmd
+        , parentCmd
+        ]
+    )
 
 
 doUpdate : Config model msg -> Model -> Msg -> ( Model, Cmd Msg, Cmd msg )
@@ -164,10 +164,10 @@ doUpdate config (Model model) msg =
                         ( newHighlight, cmd ) =
                             updateKeyCode highlight completions keyCode
                     in
-                        ( Model { model | query = Got newHighlight completions }
-                        , cmd
-                        , Cmd.none
-                        )
+                    ( Model { model | query = Got newHighlight completions }
+                    , cmd
+                    , Cmd.none
+                    )
 
                 -- Enter with no completions triggers a redraw
                 ( 13, _ ) ->
@@ -235,12 +235,12 @@ updateKeyCode highlight completions keyCode =
                 length =
                     List.length completions
             in
-                case ( length, highlight |> Maybe.withDefault -1 ) of
-                    ( 0, _ ) ->
-                        ( Nothing, Cmd.none )
+            case ( length, highlight |> Maybe.withDefault -1 ) of
+                ( 0, _ ) ->
+                    ( Nothing, Cmd.none )
 
-                    ( _, val ) ->
-                        ( Just <| min (val + 1) (length - 1), Cmd.none )
+                ( _, val ) ->
+                    ( Just <| min (val + 1) (length - 1), Cmd.none )
 
         -- ENTER
         13 ->
@@ -248,12 +248,12 @@ updateKeyCode highlight completions keyCode =
                 select completions index =
                     (List.drop index >> List.head) completions
             in
-                case highlight |> Maybe.andThen (select completions) of
-                    Just selected ->
-                        ( highlight, sendMessage <| Select selected )
+            case highlight |> Maybe.andThen (select completions) of
+                Just selected ->
+                    ( highlight, sendMessage <| Select selected )
 
-                    Nothing ->
-                        ( highlight, Cmd.none )
+                Nothing ->
+                    ( highlight, Cmd.none )
 
         -- ESCAPE
         27 ->
@@ -300,7 +300,7 @@ doView (Model model) =
                 ++ input
                 ++ autocomplete
     in
-        Html.div [] children
+    Html.div [] children
 
 
 viewAutocomplete : Maybe Int -> List String -> Html Msg
@@ -330,11 +330,11 @@ viewCompletion highlight index completion =
             ]
                 ++ activeAttrs
     in
-        Html.li attrs
-            [ Html.div
-                [ Attr.class "auto-menu-item-wrapper" ]
-                [ Html.text completion ]
-            ]
+    Html.li attrs
+        [ Html.div
+            [ Attr.class "auto-menu-item-wrapper" ]
+            [ Html.text completion ]
+        ]
 
 
 

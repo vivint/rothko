@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ ! -z "$ROTH_USAGE" ]; then
+	echo "builds a development rothko binary"
+	exit 0
+fi
+
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "${SCRIPTDIR}/.."
+
+vgo generate github.com/vivint/rothko/...
+
+mkdir -p _dev
+vgo build -o _dev/rothko github.com/vivint/rothko/bin/rothko 

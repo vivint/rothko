@@ -198,6 +198,9 @@ func (db *DB) Run(ctx context.Context) error {
 	for i := 0; i < db.opts.Tuning.Workers; i++ {
 		i := i
 		launcher.Queue(func(ctx context.Context) error {
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+
 			db.worker(ctx, i, queue)
 			return nil
 		})

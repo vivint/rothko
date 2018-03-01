@@ -4,7 +4,6 @@ require (
 	"github.com/BurntSushi/toml" v0.3.0
 	"github.com/fsnotify/fsnotify" v1.4.7
 	"github.com/gogo/protobuf" v1.0.0
-	"github.com/gopherjs/gopherjs" v0.0.0-20180226192827-4e9f423448a0
 	"github.com/kisielk/gotool" v1.0.0
 	"github.com/neelance/astrewrite" v0.0.0-20160511093645-99348263ae86
 	"github.com/neelance/sourcemap" v0.0.0-20151028013722-8c68805598ab
@@ -16,6 +15,7 @@ require (
 	"github.com/urfave/cli" v1.20.0
 	"github.com/zeebo/errs" v0.1.0
 	"github.com/zeebo/float16" v0.1.0
+	"github.com/zeebo/live" v0.0.0-20180301045707-148ee9a0fa56
 	"github.com/zeebo/tdigest" v0.1.0
 	"go.uber.org/atomic" v1.3.1
 	"go.uber.org/multierr" v1.1.0

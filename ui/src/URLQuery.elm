@@ -1,7 +1,7 @@
-module URLQuery exposing (URLQuery, empty, add, render)
+module URLQuery exposing (URLQuery, add, empty, render)
 
-import Http exposing (encodeUri)
 import Dict exposing (Dict)
+import Http exposing (encodeUri)
 
 
 type URLQuery
@@ -33,7 +33,7 @@ render (URLQuery query) =
         flatten ( key, values ) =
             List.map (encode key) values
     in
-        Dict.toList query
-            |> List.concatMap flatten
-            |> String.join "&"
-            |> (++) "?"
+    Dict.toList query
+        |> List.concatMap flatten
+        |> String.join "&"
+        |> (++) "?"
