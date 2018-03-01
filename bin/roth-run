@@ -34,7 +34,7 @@ fi
 
 log "running server..."
 if [ -z "$LIVE" ]; then
-	./rothko run rothko.toml
+	ROTHKO_DEV=y ./rothko run rothko.toml
 else
-	exec ./rothko run rothko.toml
+	ROTHKO_DEV=y exec ./rothko run rothko.toml
 fi

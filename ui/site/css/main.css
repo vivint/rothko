@@ -34,3 +34,7 @@ input:focus {
 	font-weight: normal;
 	color: #ffffff;
 }
+
+body {
+	background: #ffffff;
+}

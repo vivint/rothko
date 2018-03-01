@@ -70,7 +70,9 @@ func (w *wrapper) Open(name string) (f http.File, err error) {
 
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, map[string]interface{}{
+		"query":  w.req.URL.RawQuery,
 		"metric": w.req.FormValue("metric"),
+		"dev":    os.Getenv("ROTHKO_DEV") != "",
 	})
 	if err != nil {
 		return nil, err

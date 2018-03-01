@@ -36,7 +36,7 @@ with the Dumper.
 func (d *Dumper) Run(ctx context.Context, w *data.Writer) (err error)
 ```
 Run dumps periodically, until the context is canceled. When the context is
-canceled, it dumps one last time but at most for one minute.
+canceled, it waits for any active Dump and returns.
 
 #### type Options
 

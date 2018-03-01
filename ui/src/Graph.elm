@@ -1,9 +1,8 @@
-port module Graph
+module Graph
     exposing
         ( Config
         , Model
         , Msg(Draw)
-        , draw
         , new
         , subscriptions
         , update
@@ -17,6 +16,7 @@ import Http
 import Process
 import Task
 import Time exposing (Time)
+import URLQuery exposing (URLQuery)
 import Window
 
 
@@ -35,24 +35,22 @@ type alias Config model msg =
 
 
 type alias Info =
-    -- Info keeps track of state required to redraw a graph on changes of width
     { metric : String
     , width : Int
     }
 
 
 type State
-    = Delay String -- no size yet
-    | Requesting Info -- requesting data from api
-    | Drawing Info -- drawing the data
-    | Finished Info (Result String DrawResult) -- done
+    = Nothing
+    | Delay String
+    | Image Info
 
 
 type Model
     = Model
-        { state : Maybe State -- drawing state
+        { state : State
         , size : Maybe Window.Size -- size of the window
-        , counter : Int -- how many resizes
+        , counter : Int
         }
 
 
@@ -60,10 +58,11 @@ new : Config model msg -> ( Model, Cmd msg )
 new config =
     ( Model
         { state = Nothing
-        , size = Nothing
+        , size = Maybe.Nothing
         , counter = 0
         }
-    , Cmd.map config.wrap <| Task.perform Resize Window.size
+    , Cmd.map config.wrap <|
+        Task.perform Resize Window.size
     )
 
 
@@ -73,31 +72,8 @@ new config =
 
 type Msg
     = Draw String
-    | RenderResponse (Result Http.Error String)
-    | Done DrawResult
     | Resize Window.Size
     | ResizeTimer Int
-
-
-
--- PORTS
-
-
-type alias DrawRequest =
-    { data : String
-    }
-
-
-port draw : DrawRequest -> Cmd msg
-
-
-type alias DrawResult =
-    { ok : Bool
-    , error : String
-    }
-
-
-port done : (DrawResult -> msg) -> Sub msg
 
 
 
@@ -112,10 +88,7 @@ subscriptions config model =
 
 doSubscriptions : Model -> Sub Msg
 doSubscriptions (Model model) =
-    Sub.batch
-        [ done Done
-        , Window.resizes Resize
-        ]
+    Window.resizes Resize
 
 
 
@@ -138,74 +111,14 @@ doUpdate : Config model msg -> Model -> Msg -> ( Model, Cmd Msg )
 doUpdate config (Model model) msg =
     case msg of
         Draw metric ->
-            let
-                info width =
-                    { metric = metric, width = width }
+            ( case model.size of
+                Maybe.Nothing ->
+                    Model { model | state = Delay metric }
 
-                do width =
-                    ( Model { model | state = Just <| Requesting (info width) }
-                    , Api.renderRequest metric
-                        |> (\request -> { request | width = Just (width - 30) })
-                        |> Api.render
-                        |> Http.send RenderResponse
-                    )
-            in
-            case ( model.size, model.state ) of
-                ( Just { width }, Nothing ) ->
-                    do width
-
-                ( Just { width }, Just (Finished _ _) ) ->
-                    do width
-
-                ( Just { width }, Just (Delay _) ) ->
-                    do width
-
-                ( Nothing, _ ) ->
-                    ( Model { model | state = Just <| Delay metric }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( Model model
-                    , Cmd.none
-                    )
-
-        RenderResponse response ->
-            case ( response, model.state ) of
-                ( Ok data, Just (Requesting info) ) ->
-                    ( Model { model | state = Just <| Drawing info }
-                    , draw { data = data }
-                    )
-
-                ( Err error, Just (Requesting info) ) ->
-                    let
-                        state =
-                            Just <| Finished info (Err <| toString error)
-                    in
-                    ( Model { model | state = state }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( Model { model | state = Nothing }
-                    , Cmd.none
-                    )
-
-        Done result ->
-            case model.state of
-                Just (Drawing info) ->
-                    let
-                        state =
-                            Just <| Finished info (Ok result)
-                    in
-                    ( Model { model | state = state }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( Model { model | state = Nothing }
-                    , Cmd.none
-                    )
+                Just { width } ->
+                    Model { model | state = Image (Info metric width) }
+            , Cmd.none
+            )
 
         Resize size ->
             let
@@ -213,31 +126,20 @@ doUpdate config (Model model) msg =
                     model.counter + 1
             in
             ( Model { model | size = Just size, counter = newCounter }
-            , case ( model.size, model.state ) of
-                ( _, Just (Delay metric) ) ->
-                    sendMessage (Draw metric)
-
-                ( Just { width }, Just (Finished _ _) ) ->
-                    if width /= size.width then
-                        sendMessageAfter delay (ResizeTimer newCounter)
-                    else
-                        Cmd.none
-
-                _ ->
-                    Cmd.none
+            , sendMessageAfter delay (ResizeTimer newCounter)
             )
 
         ResizeTimer counter ->
-            ( Model model
-            , case ( counter == model.counter, model.state, model.size ) of
-                ( True, Just (Finished info _), Just { width } ) ->
-                    if info.width /= width then
-                        sendMessage (Draw info.metric)
-                    else
-                        Cmd.none
+            ( case ( counter == model.counter, model.state, model.size ) of
+                ( True, Delay metric, Just { width } ) ->
+                    Model { model | state = Image (Info metric width) }
+
+                ( True, Image info, Just { width } ) ->
+                    Model { model | state = Image (Info info.metric width) }
 
                 _ ->
-                    Cmd.none
+                    Model model
+            , Cmd.none
             )
 
 
@@ -253,8 +155,20 @@ view config model =
 
 doView : Model -> Html Msg
 doView (Model model) =
-    Html.div [ Attr.id "canvas-container" ]
-        [ Html.canvas [ Attr.id "canvas" ] [] ]
+    case model.state of
+        Image { metric, width } ->
+            let
+                query =
+                    URLQuery.empty
+                        |> URLQuery.add "metric" metric
+                        |> URLQuery.add "width" (toString (width - 10))
+                        |> URLQuery.add "padding" "5"
+                        |> URLQuery.render
+            in
+            Html.img [ Attr.src <| "/api/render" ++ query ] []
+
+        _ ->
+            Html.text ""
 
 
 

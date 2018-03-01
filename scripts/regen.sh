@@ -32,6 +32,6 @@ case $(uname) in
 		;;
 esac
 
-$SED -i '/proto\./d' -- *.pb.go
-$SED -i '/^import proto/d' -- *.pb.go
-$SED -i '/gogoproto/d' -- *.pb.go
+"$SED" -i '/proto\./d' -- *.pb.go
+"$SED" -i '/^import proto/d' -- *.pb.go
+"$SED" -i '/gogoproto/d' -- *.pb.go

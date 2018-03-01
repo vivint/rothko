@@ -4,10 +4,13 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
+	"io"
 	"net/http"
 	"time"
 
@@ -27,13 +30,17 @@ import (
 type Server struct {
 	db     database.DB
 	static http.Handler
+	nonce  string
 }
 
 // New returns a new Server.
 func New(db database.DB, static http.Handler) *Server {
+	nonce := make([]byte, 16)
+	rand.Read(nonce)
 	return &Server{
 		db:     db,
 		static: static,
+		nonce:  hex.EncodeToString(nonce),
 	}
 }
 
@@ -51,6 +58,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(getStatusCode(err))
 			fmt.Fprintf(w, "%+v\n", err)
 		}
+	}
+
+	// squelch requests for the nonce
+	if req.URL.Path == "/api/nonce" {
+		return
 	}
 
 	external.Infow("http request",
@@ -75,6 +87,9 @@ func (s *Server) serveHTTP(ctx context.Context, w http.ResponseWriter,
 
 	case "/api/query":
 		return s.serveQuery(ctx, w, req)
+
+	case "/api/nonce":
+		return s.serveNonce(ctx, w, req)
 
 	default:
 		if s.static != nil {
@@ -221,4 +236,12 @@ func (s *Server) serveQuery(ctx context.Context, w http.ResponseWriter,
 
 	w.Header().Set("Content-Type", "application/json")
 	return errs.Wrap(json.NewEncoder(w).Encode(search.Matched()))
+}
+
+// serveNonce returns a nonce associated to the server instance.
+func (s *Server) serveNonce(ctx context.Context, w http.ResponseWriter,
+	req *http.Request) (err error) {
+
+	io.WriteString(w, s.nonce)
+	return nil
 }
