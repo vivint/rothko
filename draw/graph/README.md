@@ -57,6 +57,9 @@ type Measured struct {
 	// Bottom measured axis.
 	Bottom axis.Measured
 
+	// Observation measured axis.
+	Obs observations.Measured
+
 	// Right measured axis. Only valid if Earliest was passed with the
 	// MeasureOptions.
 	Right axis.Measured
@@ -73,7 +76,7 @@ type Measured struct {
 #### func  Measure
 
 ```go
-func Measure(ctx context.Context, opts MeasureOptions) Measured
+func Measure(ctx context.Context, opts MeasureOptions) (Measured, bool)
 ```
 Measure determines the sizes of the graph for the given parameters.
 

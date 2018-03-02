@@ -161,7 +161,7 @@ doView (Model model) =
                 query =
                     URLQuery.empty
                         |> URLQuery.add "metric" metric
-                        |> URLQuery.add "width" (toString (width - 10))
+                        |> URLQuery.add "width" (toString (width - 38))
                         |> URLQuery.add "padding" "5"
                         |> URLQuery.render
             in

@@ -33,11 +33,13 @@ Color is a simple 8 bits per channel color.
 type Column struct {
 	X, W int
 	Data []float64
+	Obs  int64
 }
 ```
 
 Column represents a column to draw in a context. Data is expected to be sorted,
-non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
+non-empty, and contain typical floats (no NaNs/denormals/Inf/etc). Obs is the
+number of observations.
 
 #### type RGB
 
@@ -60,6 +62,12 @@ supporting code, and no alpha channel.
 func NewRGB(w, h int) *RGB
 ```
 NewRGB contstructs an RGB with space for the width and height.
+
+#### func (*RGB) AsImage
+
+```go
+func (m *RGB) AsImage() *image.RGBA
+```
 
 #### func (*RGB) Raw
 

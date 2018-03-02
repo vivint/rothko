@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"image"
 	"image/png"
 	"io"
 	"net/http"
@@ -112,7 +111,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 	}
 
 	width := getInt(req.FormValue("width"), 1000)
-	height := getInt(req.FormValue("height"), 329)
+	height := getInt(req.FormValue("height"), 350)
 	padding := getInt(req.FormValue("padding"), 0)
 	now := getInt64(req.FormValue("now"), time.Now().UnixNano())
 	dur := getDuration(req.FormValue("duration"), 24*time.Hour)
@@ -137,6 +136,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 		Duration: dur,
 		Params:   tdigest.Params{Compression: compression},
 	})
+	var ok bool
 
 	// run the query
 	err = s.db.Query(ctx, metric, now, nil,
@@ -158,7 +158,10 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 
 				earliest = append(earliest[:0], buf...)
 				measure_opts.Earliest = dist
-				measured = graph.Measure(ctx, measure_opts)
+				measured, ok = graph.Measure(ctx, measure_opts)
+				if !ok {
+					return false, nil
+				}
 				merger.SetWidth(measured.Width)
 			}
 
@@ -172,6 +175,9 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 		})
 	if err != nil {
 		return errs.Wrap(err)
+	}
+	if !ok {
+		return errs.New("too small")
 	}
 
 	// grab the columns
@@ -199,7 +205,10 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 	// if we never got an earliest, we need to measure without it to get the
 	// axes ready.
 	if measure_opts.Earliest == nil {
-		measured = graph.Measure(ctx, measure_opts)
+		measured, ok = graph.Measure(ctx, measure_opts)
+		if !ok {
+			return errs.New("too small")
+		}
 	}
 
 	// draw the graph
@@ -211,11 +220,7 @@ func (s *Server) serveRender(ctx context.Context, w http.ResponseWriter,
 
 	// encode it out as a png
 	w.Header().Set("Content-Type", "image/png")
-	return errs.Wrap(png.Encode(w, &image.RGBA{
-		Pix:    out.Pix,
-		Stride: out.Stride,
-		Rect:   image.Rect(0, 0, out.Width, out.Height),
-	}))
+	return errs.Wrap(png.Encode(w, out.AsImage()))
 }
 
 // serveQuery returns a set of metrics that match the query as a json list.

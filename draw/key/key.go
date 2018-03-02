@@ -31,7 +31,7 @@ func Draw(canvas *draw.RGB, opts Options) (out *draw.RGB) {
 
 	scale := float64(len(opts.Colors)-1) / float64(opts.Height-1)
 	for y := 0; y < opts.Height; y++ {
-		index := int(float64(opts.Height-y) * scale)
+		index := int(float64(opts.Height-1-y) * scale)
 		color := opts.Colors[index]
 		for x := 0; x < opts.Width; x++ {
 			canvas.Set(x, y, color)

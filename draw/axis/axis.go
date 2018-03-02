@@ -161,7 +161,7 @@ func (m Measured) drawVertical(ctx context.Context, canvas *draw.RGB) (
 
 	// set up the drawer
 	d := font.Drawer{
-		Dst:  asImage(canvas),
+		Dst:  canvas.AsImage(),
 		Src:  image.Black,
 		Face: m.opts.Face,
 	}
@@ -279,7 +279,7 @@ func (m Measured) drawHorizontal(ctx context.Context, canvas *draw.RGB) (
 
 	// set up the drawer
 	d := font.Drawer{
-		Dst:  asImage(canvas),
+		Dst:  canvas.AsImage(),
 		Src:  image.Black,
 		Face: m.opts.Face,
 	}

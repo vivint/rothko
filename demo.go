@@ -164,8 +164,9 @@ func addDemoData(ctx context.Context, params dist.Params, db database.DB) (
 					return errs.Wrap(err)
 				}
 
+				obs := observations + rand.Intn(observations)
 				min, max := math.Inf(1), math.Inf(-1)
-				for i := 0; i < observations; i++ {
+				for i := 0; i < obs; i++ {
 					val := sampler(mean)
 					dist.Observe(val)
 					if val < min {
@@ -179,7 +180,7 @@ func addDemoData(ctx context.Context, params dist.Params, db database.DB) (
 				rec := data.Record{
 					StartTime:    t0.UnixNano(),
 					EndTime:      t1.UnixNano(),
-					Observations: observations,
+					Observations: int64(obs),
 					Distribution: dist.Marshal(nil),
 					Kind:         dist.Kind(),
 					Min:          min,

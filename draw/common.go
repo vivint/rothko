@@ -2,6 +2,11 @@
 
 package draw
 
+import (
+	"bytes"
+	"image"
+)
+
 // Canvas is the type of things that can be drawn onto.
 type Canvas interface {
 	Set(x, y int, c Color)
@@ -10,9 +15,11 @@ type Canvas interface {
 
 // Column represents a column to draw in a context. Data is expected to be
 // sorted, non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
+// Obs is the number of observations.
 type Column struct {
 	X, W int
 	Data []float64
+	Obs  int64
 }
 
 // Color is a simple 8 bits per channel color.
@@ -33,7 +40,7 @@ type RGB struct {
 // NewRGB contstructs an RGB with space for the width and height.
 func NewRGB(w, h int) *RGB {
 	return &RGB{
-		Pix:    make([]uint8, 4*w*h),
+		Pix:    bytes.Repeat([]byte{255}, 4*w*h),
 		Stride: 4 * w,
 		Width:  w,
 		Height: h,
@@ -70,4 +77,14 @@ func (m RGB) View(x, y, w, h int) *RGB {
 	m.Width = w
 	m.Height = h
 	return &m
+}
+
+func (m *RGB) AsImage() *image.RGBA {
+	return &image.RGBA{
+		Pix:    m.Pix,
+		Stride: m.Stride,
+		// TODO(jeff): i highly suspect m.Width and m.Height is wrong here.
+		// add a test around boundary conditions.
+		Rect: image.Rect(-m.X, -m.Y, m.Width, m.Height),
+	}
 }

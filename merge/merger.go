@@ -204,6 +204,7 @@ func (m *Merger) emit(ctx context.Context, start, end int64,
 		X:    int(start),
 		W:    int(end - start + 1),
 		Data: make([]float64, 0, m.opts.Samples+1),
+		Obs:  out.Observations / out.Merged,
 	}
 	f64_samples := float64(m.opts.Samples)
 	for i := float64(0); i <= f64_samples; i++ {

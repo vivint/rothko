@@ -3,7 +3,6 @@
 package key
 
 import (
-	"image"
 	"image/png"
 	"os"
 	"testing"
@@ -22,7 +21,7 @@ func saveImage(t *testing.T, name string, out *draw.RGB) {
 	assert.NoError(t, err)
 	defer fh.Close()
 
-	assert.NoError(t, png.Encode(fh, asImage(out)))
+	assert.NoError(t, png.Encode(fh, out.AsImage()))
 }
 
 func TestDraw(t *testing.T) {
@@ -31,14 +30,4 @@ func TestDraw(t *testing.T) {
 		Width:  10,
 		Height: 300,
 	}))
-}
-
-func asImage(m *draw.RGB) *image.RGBA {
-	return &image.RGBA{
-		Pix:    m.Pix,
-		Stride: m.Stride,
-		// TODO(jeff): i highly suspect m.Width and m.Height is wrong here.
-		// add a test around boundary conditions.
-		Rect: image.Rect(-m.X, -m.Y, m.Width, m.Height),
-	}
 }

@@ -9,21 +9,10 @@ package observations provides drawing of an observations axis.
 #### func  Draw
 
 ```go
-func Draw(ctx context.Context, opts Options) *draw.RGB
+func Draw(ctx context.Context, cols []draw.Column, opts Options) *draw.RGB
 ```
 Draw renders the axis and returns a canvas allocated for the appopriate size.
 See Measure if you want to control where and how it is drawn.
-
-#### type Column
-
-```go
-type Column struct {
-	X, W int
-	Obs  int64
-}
-```
-
-Column represents a column on the heatmap with a number of observations.
 
 #### type Measured
 
@@ -37,6 +26,7 @@ type Measured struct {
 }
 ```
 
+Measured represents a measured observations axis.
 
 #### func  Measure
 
@@ -49,7 +39,8 @@ on to some canvas.
 #### func (Measured) Draw
 
 ```go
-func (m Measured) Draw(ctx context.Context, canvas *draw.RGB) *draw.RGB
+func (m Measured) Draw(ctx context.Context, cols []draw.Column,
+	canvas *draw.RGB) *draw.RGB
 ```
 Draw performs the drawing of the data on to the canvas. The canvas is expected
 to be large enough to handle the drawing. If the canvas is nil, one is
@@ -67,9 +58,6 @@ type Options struct {
 
 	// Height is the height of the bar
 	Height int
-
-	// Columns describes the columns values
-	Columns []Column
 }
 ```
 
