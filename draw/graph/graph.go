@@ -12,10 +12,15 @@ import (
 	"github.com/vivint/rothko/draw/axis"
 	"github.com/vivint/rothko/draw/heatmap"
 	"github.com/vivint/rothko/draw/iosevka"
+	"github.com/vivint/rothko/draw/key"
 	"github.com/zeebo/float16"
 )
 
-const labelGap = 30
+const (
+	labelGap   = 30
+	keyWidth   = 10
+	keyPadding = 5
+)
 
 type Measured struct {
 	// Bottom measured axis.
@@ -164,11 +169,13 @@ func tryMeasure(ctx context.Context, opts MeasureOptions,
 		labels[i], labels[si] = labels[si], labels[i]
 	}
 
+	heatmapWidth := opts.Width - left.Width - right.Width - keyWidth - keyPadding
+
 	bottom := axis.Measure(ctx, axis.Options{
 		Face:      iosevka.Iosevka,
 		Labels:    labels,
 		Vertical:  false,
-		Length:    opts.Width - left.Width - right.Width + 2,
+		Length:    heatmapWidth + 2,
 		DontBleed: true,
 	})
 
@@ -176,7 +183,7 @@ func tryMeasure(ctx context.Context, opts MeasureOptions,
 		Bottom: bottom,
 		Right:  right,
 		Left:   left,
-		Width:  opts.Width - left.Width - right.Width,
+		Width:  heatmapWidth,
 		Height: height,
 
 		opts: opts,
@@ -223,9 +230,19 @@ func (m Measured) Draw(ctx context.Context, opts DrawOptions) *draw.RGB {
 			hm.Draw(ctx, col)
 		}
 
+		key.Draw(opts.Canvas.View(
+			m.opts.Padding+m.Left.Width+m.Width+keyPadding, m.opts.Padding,
+			keyWidth, m.Height),
+			key.Options{
+				Width:  keyWidth,
+				Height: m.Height,
+				Colors: opts.Colors,
+			})
+
 		m.Right.Draw(ctx, opts.Canvas.View(
-			m.Left.Width+m.Width+m.opts.Padding, m.opts.Padding,
+			m.opts.Padding+m.Left.Width+m.Width+keyPadding+keyWidth, m.opts.Padding,
 			m.Right.Width, m.Right.Height))
+
 	}
 
 	m.Bottom.Draw(ctx, opts.Canvas.View(

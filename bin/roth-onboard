@@ -8,19 +8,24 @@ if [ ! -z "$ROTH_USAGE" ]; then
 fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${SCRIPTDIR}/../ui"
+cd "${SCRIPTDIR}/.."
+cd "$(pwd -P)"
 
 log() {
 	echo "---" "$@"
 }
 
-log "installing node modules..."
+(
+	cd ui
 
-rm -rf node_modules
-npm install --save-dev elm
+	log "installing node modules..."
 
-log "installing elm modules..."
+	rm -rf node_modules
+	npm install --save-dev elm
 
-ELM="$(npm prefix)/node_modules/.bin/elm"
-rm -rf elm-stuff
-"${ELM}" package install -y
+	log "installing elm modules..."
+
+	ELM="$(npm prefix)/node_modules/.bin/elm"
+	rm -rf elm-stuff
+	"${ELM}" package install -y
+)

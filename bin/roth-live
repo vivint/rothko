@@ -9,6 +9,7 @@ fi
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "${SCRIPTDIR}/.."
+cd "$(pwd -P)"
 
 IMPORT=github.com/zeebo/live
 LIVE=$(vgo list -f '{{ .Target }}' "${IMPORT}")
