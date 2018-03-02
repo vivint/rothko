@@ -21,7 +21,7 @@ func Load(data []byte) (*Config, error) {
 		Dist      map[string]interface{}   `toml:"dist"`
 		API       struct {
 			Address string `toml:"address"`
-			Domain  string `toml:"domain"`
+			Origin  string `toml:"origin"`
 			TLS     struct {
 				Key  string `toml:"key"`
 				Cert string `toml:"cert"`
@@ -54,7 +54,7 @@ func Load(data []byte) (*Config, error) {
 		},
 		API: APIConfig{
 			Address:  tomlConfig.API.Address,
-			Domain:   tomlConfig.API.Domain,
+			Origin:   tomlConfig.API.Origin,
 			TLS:      APITLSConfig(tomlConfig.API.TLS),
 			Security: APISecurityConfig(tomlConfig.API.Security),
 		},

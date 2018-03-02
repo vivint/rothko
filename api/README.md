@@ -6,6 +6,23 @@ package api provides apis for interacting with a rothko server
 
 ## Usage
 
+#### type Options
+
+```go
+type Options struct {
+	// Origin is sent back in Access-Control-Allow-Origin. If not set, sends
+	// back '*'.
+	Origin string
+
+	// Username and Password control basic auth to the server. If unset, no
+	// basic auth will be required.
+	Username string
+	Password string
+}
+```
+
+Options for the server.
+
 #### type Server
 
 ```go
@@ -18,7 +35,7 @@ Server is an http.Handler that can serve responses for a frontend.
 #### func  New
 
 ```go
-func New(db database.DB, static http.Handler) *Server
+func New(db database.DB, static http.Handler, opts Options) *Server
 ```
 New returns a new Server.
 

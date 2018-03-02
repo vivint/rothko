@@ -24,6 +24,7 @@ const (
 	obsHeight  = 5
 )
 
+// Measured is a measured graph ready to be drawn when given data.
 type Measured struct {
 	// Bottom measured axis.
 	Bottom axis.Measured
@@ -41,10 +42,14 @@ type Measured struct {
 	// Width, Height of the heatmap
 	Width, Height int
 
+	// The X,Y coordinates of the top left corner of the heatmap.
+	X, Y int
+
 	// internal state
 	opts MeasureOptions
 }
 
+// MeasureOptions are options for the graph to be measured.
 type MeasureOptions struct {
 	// Earliest is the distribution for the earliest (closest to Now) column.
 	Earliest dist.Dist
@@ -206,6 +211,8 @@ func tryMeasure(ctx context.Context, opts MeasureOptions,
 		Left:   left,
 		Width:  heatmapWidth,
 		Height: height,
+		X:      opts.Padding + left.Width,
+		Y:      opts.Padding + obs.Height,
 
 		opts: opts,
 	}, true

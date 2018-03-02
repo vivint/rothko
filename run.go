@@ -117,9 +117,6 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 	})
 
 	// create the api server
-	// TODO(jeff): basic auth
-	// TODO(jeff): tls
-	// TODO(jeff): proper CORS
 	external.Infow("creating api",
 		"config", conf.API.Redact(),
 	)
@@ -133,8 +130,12 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		static = tmplfs.New(fs)
 	}
 	srv := &http.Server{
-		Addr:    conf.API.Address,
-		Handler: api.New(db, static),
+		Addr: conf.API.Address,
+		Handler: api.New(db, static, api.Options{
+			Origin:   conf.API.Origin,
+			Username: conf.API.Security.Username,
+			Password: conf.API.Security.Password,
+		}),
 	}
 
 	// create and queue the listeners
@@ -170,7 +171,7 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 		external.Infow("starting api",
 			"config", conf.API.Redact(),
 		)
-		return runServer(ctx, srv)
+		return runServer(ctx, srv, conf.API.TLS.Cert, conf.API.TLS.Key)
 	})
 
 	// because we don't want to rerun the database on sigint, we launch all of
@@ -216,7 +217,9 @@ func run(ctx context.Context, conf *config.Config) (started bool, err error) {
 }
 
 // runServer runs srv and shuts it down when the context is canceled.
-func runServer(ctx context.Context, srv *http.Server) (err error) {
+func runServer(ctx context.Context, srv *http.Server, cert, key string) (
+	err error) {
+
 	// I must be going goofy or something, but I see absolutely no way to
 	// safely use srv.ListenAndServe() with srv.Shutdown(ctx), because you
 	// can't be sure that the ListenAndServe call has started enough for the
@@ -253,7 +256,12 @@ func runServer(ctx context.Context, srv *http.Server) (err error) {
 		lis.Close()
 	}(ctx)
 
-	err = srv.Serve(keepAliveWrapper{lis.(*net.TCPListener)})
+	ke_lis := keepAliveWrapper{lis.(*net.TCPListener)}
+	if cert != "" || key != "" {
+		err = srv.ServeTLS(ke_lis, cert, key)
+	} else {
+		err = srv.Serve(ke_lis)
+	}
 	if err == http.ErrServerClosed {
 		err = nil
 	}
@@ -301,9 +309,9 @@ func (tarballWarning) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	<h1>Rothko</h1>
 	<p>You have not generated the ui in this build of Rothko.</p>
 	<p>If you would like to have a nice ui, run
-	   <span style="font-family: monospace">go generate</span> on the
-	   <span style="font-family: monospace">github.com/vivint/rothko/ui</span>
-	   package, and re-build your binary.
+	   <span style="font-family: monospace">roth generate</span> after sourcing
+	   <span style="font-family: monospace">.setup</span> in your shell, and
+	   rebuild the binary.
 	</p>
 </body>
 </html>

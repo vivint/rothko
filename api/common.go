@@ -15,6 +15,7 @@ var (
 	errNotFound         = errs.Class("not found")
 	errMethodNotAllowed = errs.Class("method not allowed")
 	errBadRequest       = errs.Class("bad request")
+	errUnauthorized     = errs.Class("unauthorized")
 )
 
 type statusCode struct{}
@@ -23,6 +24,7 @@ func init() {
 	errdata.Set(&errNotFound, statusCode{}, http.StatusNotFound)
 	errdata.Set(&errMethodNotAllowed, statusCode{}, http.StatusMethodNotAllowed)
 	errdata.Set(&errBadRequest, statusCode{}, http.StatusBadRequest)
+	errdata.Set(&errUnauthorized, statusCode{}, http.StatusUnauthorized)
 }
 
 func getStatusCode(err error) int {

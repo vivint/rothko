@@ -98,12 +98,13 @@ var InitialConfig = strings.TrimSpace(`
 #
 # The server runs an API for querying the metrics, as well as a web interface
 # for rendering and interacting. The address is the port that the server will
-# listen on, and the domain is used to handle CORS.
+# listen on, and the origin is used to handle CORS. You may want to limit it
+# in a production deploy.
 #
 
 [api]
 	address = ":8080"
-	domain = "localhost"
+	origin = "*"
 
 #
 # If the api.tls section is specified, it will listen with TLS using the

@@ -49,6 +49,7 @@ type MeasureOptions struct {
 }
 ```
 
+MeasureOptions are options for the graph to be measured.
 
 #### type Measured
 
@@ -69,9 +70,13 @@ type Measured struct {
 
 	// Width, Height of the heatmap
 	Width, Height int
+
+	// The X,Y coordinates of the top left corner of the heatmap.
+	X, Y int
 }
 ```
 
+Measured is a measured graph ready to be drawn when given data.
 
 #### func  Measure
 

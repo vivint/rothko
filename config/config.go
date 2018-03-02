@@ -45,7 +45,7 @@ type Entity struct {
 // APIConfig holds configuration for the api config section.
 type APIConfig struct {
 	Address  string
-	Domain   string
+	Origin   string
 	TLS      APITLSConfig
 	Security APISecurityConfig
 }

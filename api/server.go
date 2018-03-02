@@ -5,6 +5,8 @@ package api
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -25,21 +27,44 @@ import (
 	"github.com/zeebo/errs"
 )
 
+// Options for the server.
+type Options struct {
+	// Origin is sent back in Access-Control-Allow-Origin. If not set, sends
+	// back '*'.
+	Origin string
+
+	// Username and Password control basic auth to the server. If unset, no
+	// basic auth will be required.
+	Username string
+	Password string
+}
+
 // Server is an http.Handler that can serve responses for a frontend.
 type Server struct {
 	db     database.DB
 	static http.Handler
-	nonce  string
+	opts   Options
+
+	username_hash [sha256.Size]byte
+	password_hash [sha256.Size]byte
+	nonce         string
 }
 
 // New returns a new Server.
-func New(db database.DB, static http.Handler) *Server {
+func New(db database.DB, static http.Handler, opts Options) *Server {
 	nonce := make([]byte, 16)
 	rand.Read(nonce)
+	if opts.Origin == "" {
+		opts.Origin = "*"
+	}
 	return &Server{
 		db:     db,
 		static: static,
-		nonce:  hex.EncodeToString(nonce),
+		opts:   opts,
+
+		username_hash: sha256.Sum256([]byte(opts.Username)),
+		password_hash: sha256.Sum256([]byte(opts.Password)),
+		nonce:         hex.EncodeToString(nonce),
 	}
 }
 
@@ -48,8 +73,7 @@ func New(db database.DB, static http.Handler) *Server {
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	now := time.Now()
 
-	// TODO(jeff): do a stupid thing for now
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", s.opts.Origin)
 
 	tracker := &respTracker{ResponseWriter: w, wrote: false, code: 0}
 	if err := s.serveHTTP(req.Context(), tracker, req); err != nil {
@@ -72,9 +96,32 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	)
 }
 
+// validAuth returns true if the auth provided is valid.
+func (s *Server) validAuth(ctx context.Context,
+	username, password string) bool {
+
+	username_hash := sha256.Sum256([]byte(username))
+	username_good := subtle.ConstantTimeCompare(
+		username_hash[:], s.username_hash[:])
+
+	password_hash := sha256.Sum256([]byte(password))
+	password_good := subtle.ConstantTimeCompare(
+		password_hash[:], s.password_hash[:])
+
+	return username_good&password_good == 1
+}
+
 // serveHTTP is a little wrapper for making error handling easier.
 func (s *Server) serveHTTP(ctx context.Context, w http.ResponseWriter,
 	req *http.Request) (err error) {
+
+	if s.opts.Username != "" {
+		username, password, ok := req.BasicAuth()
+		if !ok || !s.validAuth(ctx, username, password) {
+			w.Header().Set("WWW-Authenticate", `Basic realm="rothko"`)
+			return errUnauthorized.New("")
+		}
+	}
 
 	if req.Method != "GET" {
 		return errMethodNotAllowed.New("%s", req.Method)

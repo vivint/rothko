@@ -1,10 +1,7 @@
 # TODO
 
-- Some default implementation of listeners.
-- Perhaps some other ones that poll prometheus?
-- Perhaps some other ones that poll prometheous enabled servers?
 - Exponential decay merging.
-- Multiple agg buffers for scribble for moving distributions.
+- Multiple agg buffers for writer for moving distributions.
 - Document the internal/* packages.
-- Make the graph draw with a key for the values
-- Draw a transparent bar for number of observations with a number for baseline
+- LetsEncrypt?
+- Draw package is kinda janky now. Maybe just use image/draw.
