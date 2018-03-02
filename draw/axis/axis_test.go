@@ -64,7 +64,7 @@ func saveImage(t *testing.T, name string, out *draw.RGB) {
 	assert.NoError(t, err)
 	defer fh.Close()
 
-	assert.NoError(t, png.Encode(fh, asImage(out)))
+	assert.NoError(t, png.Encode(fh, out.AsImage()))
 }
 
 func TestDraw(t *testing.T) {

@@ -50,7 +50,7 @@ func Draw(ctx context.Context, cols []draw.Column, opts Options) *draw.RGB {
 // Measure measures the axis sizes, and returns some state that can be used
 // to draw on to some canvas.
 func Measure(ctx context.Context, opts Options) Measured {
-	bounds, _ := font.BoundString(opts.Face, "max: 0.00e-00")
+	bounds, _ := font.BoundString(opts.Face, "obs/sec: 0.00e-00")
 	label_height := (bounds.Max.Y - bounds.Min.Y).Ceil()
 
 	return Measured{
@@ -76,21 +76,21 @@ func (m Measured) Draw(ctx context.Context, cols []draw.Column,
 		canvas = draw.NewRGB(m.Width, m.Height)
 	}
 
-	max := int64(-1)
+	max := float64(0)
 	x := 0
 	for _, col := range cols {
-		if col.Obs > max {
-			max = col.Obs
+		if col.ObsSec > max {
+			max = col.ObsSec
 			x = col.X
 		}
 	}
 
-	label_text := fmt.Sprintf("max: %#.3g", float64(max))
+	label_text := fmt.Sprintf("obs/sec: %#.3g", float64(max))
 	label_height := (m.bounds.Max.Y - m.bounds.Min.Y).Ceil()
 	label_width := (m.bounds.Max.X - m.bounds.Min.X).Ceil()
 
 	for _, col := range cols {
-		sat := 255 - byte(float64(col.Obs)/float64(max)*255)
+		sat := 255 - byte(float64(col.ObsSec)/float64(max)*255)
 		c := draw.Color{sat, sat, sat}
 		for y := 0; y < m.opts.Height; y++ {
 			for x := 0; x < col.W; x++ {

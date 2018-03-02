@@ -17,9 +17,9 @@ type Canvas interface {
 // sorted, non-empty, and contain typical floats (no NaNs/denormals/Inf/etc).
 // Obs is the number of observations.
 type Column struct {
-	X, W int
-	Data []float64
-	Obs  int64
+	X, W   int
+	Data   []float64
+	ObsSec float64
 }
 
 // Color is a simple 8 bits per channel color.

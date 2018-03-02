@@ -31,9 +31,9 @@ Color is a simple 8 bits per channel color.
 
 ```go
 type Column struct {
-	X, W int
-	Data []float64
-	Obs  int64
+	X, W   int
+	Data   []float64
+	ObsSec float64
 }
 ```
 

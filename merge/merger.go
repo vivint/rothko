@@ -25,6 +25,11 @@ func debugPrint(vals ...interface{}) {
 	}
 }
 
+type mergeRecord struct {
+	rec        data.Record
+	start, end int64
+}
+
 // MergerOptions are the options the Merger needs to operate.
 type MergerOptions struct {
 	Samples  int
@@ -42,7 +47,7 @@ type Merger struct {
 	width      int
 
 	completed_px int64
-	records      []data.Record
+	records      []mergeRecord
 	columns      []draw.Column
 }
 
@@ -78,13 +83,16 @@ func (m *Merger) Push(ctx context.Context, rec data.Record) error {
 		return Error.New("invalid: must call SetWidth before Push")
 	}
 
-	rec.StartTime = m.timeToPixel(rec.StartTime)
-	rec.EndTime = m.timeToPixel(rec.EndTime)
-	debugPrint("adding", rec.StartTime, rec.EndTime)
-	if err := m.completed(ctx, rec.EndTime+1); err != nil {
+	mrec := mergeRecord{
+		rec:   rec,
+		start: m.timeToPixel(rec.StartTime),
+		end:   m.timeToPixel(rec.EndTime),
+	}
+	debugPrint("adding", mrec.start, mrec.end)
+	if err := m.completed(ctx, mrec.end+1); err != nil {
 		return err
 	}
-	m.records = append(m.records, rec)
+	m.records = append(m.records, mrec)
 	return nil
 }
 
@@ -107,14 +115,14 @@ func (m *Merger) completed(ctx context.Context, completed_px int64) error {
 		to_emit_end_px int64
 		to_emit        []int
 		cand_emit      []int
-		emit_recs      []data.Record
+		emit_recs      []mergeRecord
 	)
 
 	for px := m.completed_px - 1; px >= completed_px; px-- {
 		// create a slice of records to emit
 		cand_emit = cand_emit[:0]
-		for i, rec := range m.records {
-			if rec.StartTime <= px && px <= rec.EndTime {
+		for i, mrec := range m.records {
+			if mrec.start <= px && px <= mrec.end {
 				cand_emit = append(cand_emit, i)
 			}
 		}
@@ -157,8 +165,8 @@ func (m *Merger) completed(ctx context.Context, completed_px int64) error {
 	// of the records we want to remove.
 	var to_remove []int
 	for i := range m.records {
-		if m.records[i].StartTime > completed_px &&
-			m.records[i].EndTime > completed_px {
+		if m.records[i].start > completed_px &&
+			m.records[i].end > completed_px {
 
 			to_remove = append(to_remove, i)
 		}
@@ -169,13 +177,13 @@ func (m *Merger) completed(ctx context.Context, completed_px int64) error {
 	// over the slice of to_remove.
 	current := m.records
 	m.records = m.records[:0]
-	for i, rec := range current {
+	for i, mrec := range current {
 		if len(to_remove) > 0 && to_remove[0] == i {
-			debugPrint("removing", rec.StartTime, rec.EndTime)
+			debugPrint("removing", mrec.start, mrec.end)
 			to_remove = to_remove[1:]
 			continue
 		}
-		m.records = append(m.records, rec)
+		m.records = append(m.records, mrec)
 	}
 
 	// yay we've completed up to the pixel now.
@@ -185,9 +193,18 @@ func (m *Merger) completed(ctx context.Context, completed_px int64) error {
 
 // emit constructs a column out of the records for the start and end pixels.
 func (m *Merger) emit(ctx context.Context, start, end int64,
-	recs []data.Record) error {
+	mrecs []mergeRecord) error {
 
 	debugPrint("emit", start, end)
+
+	obs_sec := 0.0
+	recs := make([]data.Record, 0, len(mrecs))
+	for _, mrec := range mrecs {
+		recs = append(recs, mrec.rec)
+		obs_sec += float64(mrec.rec.Observations) / float64(mrec.rec.Merged) /
+			time.Duration(mrec.rec.EndTime-mrec.rec.StartTime).Seconds()
+	}
+	obs_sec /= float64(len(mrecs))
 
 	out, err := Merge(ctx, MergeOptions{
 		Params:  m.opts.Params,
@@ -201,10 +218,10 @@ func (m *Merger) emit(ctx context.Context, start, end int64,
 		return errs.Wrap(err)
 	}
 	col := draw.Column{
-		X:    int(start),
-		W:    int(end - start + 1),
-		Data: make([]float64, 0, m.opts.Samples+1),
-		Obs:  out.Observations / out.Merged,
+		X:      int(start),
+		W:      int(end - start + 1),
+		Data:   make([]float64, 0, m.opts.Samples+1),
+		ObsSec: obs_sec,
 	}
 	f64_samples := float64(m.opts.Samples)
 	for i := float64(0); i <= f64_samples; i++ {
