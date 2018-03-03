@@ -30,7 +30,7 @@ defaults should be good. You can then add some demo data by running
 
 ```
 rothko demo rothko.toml
-``
+```
 
 and then run the server with
 
