@@ -47,8 +47,10 @@ which by default listens on localhost:8080.
 Source the .setup script to add some values to your path (run `. .setup`). Be
 sure to have `vgo` installed in your `$PATH`. If you are working on the ui, 
 you can run `roth onboard` to have it install the required set of npm 
-dependencies, and `roth live` to have it spin up a live server. You can then
-visit a demo site with some demo data at localhost:8080.
+dependencies, and `roth live` to have it spin up a live server. Any changes to
+the Go or Elm code will cause the code to be rebuilt and any open web pages
+to reload. You can then visit a demo site with some demo data at
+localhost:8080.
 
 ## In general
 
@@ -70,8 +72,7 @@ visit a demo site with some demo data at localhost:8080.
 
 ## In Elm
 
-- Check out ui/README.md for details on how that's set up.
-- Make sure to run elm-format on everything.
+- Make sure to run elm-format on everything. I use `elm-format-0.18 0.7.0-exp`.
 
 ## Misc
 

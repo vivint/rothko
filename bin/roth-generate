@@ -129,7 +129,7 @@ docs() {
 	DIR="$2"
 
 	case "${PACKAGE}" in
-		"github.com/vivint/rothko" | "github.com/vivint/rothko/ui" )
+		"github.com/vivint/rothko" )
 			return
 			;;
 	esac
