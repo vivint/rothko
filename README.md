@@ -26,25 +26,29 @@ rothko init
 
 to have it create a `rothko.toml` in that directory. The file contains some
 directives and comments about what they mean. Edit it to your liking, but the
-defaults should be good. You can then run the server with
+defaults should be good. You can then add some demo data by running
+
+```
+rothko demo rothko.toml
+``
+
+and then run the server with
 
 ```
 rothko run rothko.toml
 ```
 
+which by default listens on localhost:8080.
+
 # Contributing
 
 ## Set up
 
-Source the .setup script to add some values to your path (run `. .setup`).
-If you are working on the ui, you can run `roth onboard` to have it install the
-required set of npm dependencies, and `roth live` to have it spin up a live
-server. Working on the Go code does not require this, though it might in the
-future.
-
-> I'm generally a wierdo and don't know how other people work with
-> Javascript or Elm, so this is what I've settled on, and I'm open to
-> suggestions.
+Source the .setup script to add some values to your path (run `. .setup`). Be
+sure to have `vgo` installed in your `$PATH`. If you are working on the ui, 
+you can run `roth onboard` to have it install the required set of npm 
+dependencies, and `roth live` to have it spin up a live server. You can then
+visit a demo site with some demo data at localhost:8080.
 
 ## In general
 
@@ -63,32 +67,6 @@ future.
 - Run ./scripts/docs.sh to update package documentation when you modify any
   exported symbols or their documentation.
 - Breaking changes are still acceptible for now.
-
-### Vgo
-
-An attempt to use vgo and contribute to its development has put this project
-in a bit of a weird spot. While building a large part of the project is
-possible with vgo, tools such as `godocdown` and `gopherjs` don't yet know how
-to work without a GOPATH. Thus, in order for these tools to work, you must
-create a GOPATH with both the `github.com/vivint/rothko` and
-`github.com/gopherjs/gopherjs` repos installed. For example, running
-
-```
-mkdir rothko
-cd rothko
-export GOPATH=`pwd`
-go get github.com/gopherjs/gopherjs
-mkdir -p src/github.com/vivint
-cd src/github.com/vivint
-git clone https://github.com/vivint/rothko 
-cd rothko
-vgo vendor
-rm -rf vendor/github.com/gopherjs/gopherjs
-```
-
-will get you into an appropriate state.
-
-Sorry for the inconvenience.
 
 ## In Elm
 

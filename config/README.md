@@ -4,8 +4,6 @@
 
 package config provides methods to load/create the configs.
 
-TODO(jeff): write a bunch of docs around the config toml.
-
 ## Usage
 
 ```go
