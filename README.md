@@ -4,42 +4,6 @@ Rothko stores and allows interaction with distributions of a metric that vary
 through time. This allows you to collect insight about the overall values of
 metrics when there are many values from multiple hosts.
 
-# Installing
-
-If you don't mind getting the latest dependencies, you can run
-
-```
-go get github.com/vivint/rothko/bin/rothko
-```
-
-If you want to use vgo, you can clone this repo, and run
-
-```
-vgo build github.com/vivint/rothko/bin/rothko
-```
-
-After you have obtained a binary, it has a number of commands. Run
-
-```
-rothko init
-```
-
-to have it create a `rothko.toml` in that directory. The file contains some
-directives and comments about what they mean. Edit it to your liking, but the
-defaults should be good. You can then add some demo data by running
-
-```
-rothko demo rothko.toml
-```
-
-and then run the server with
-
-```
-rothko run rothko.toml
-```
-
-which by default listens on localhost:8080.
-
 # Contributing
 
 ## Set up
