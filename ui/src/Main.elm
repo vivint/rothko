@@ -39,7 +39,7 @@ type alias Flags =
 
 type Msg
     = Location Navigation.Location
-    | Draw String
+    | Draw String Bool
     | GraphMsg Graph.Msg
     | QueryBarMsg QueryBar.Msg
 
@@ -88,8 +88,10 @@ render { metric } =
 
 
 type alias Model =
-    { graph : Graph.Model
+    { flags : Flags
+    , graph : Graph.Model
     , queryBar : QueryBar.Model
+    , loc : Navigation.Location
     }
 
 
@@ -106,7 +108,7 @@ queryBarConfig =
     { get = .queryBar
     , set = \model queryBar -> { model | queryBar = queryBar }
     , wrap = QueryBarMsg
-    , select = Draw
+    , select = \metric -> Draw metric True
     }
 
 
@@ -123,13 +125,15 @@ init flags loc =
         ( graph, cmd ) =
             Graph.new graphConfig
     in
-    ( { graph = graph
+    ( { flags = flags
+      , graph = graph
       , queryBar = QueryBar.new metric
+      , loc = loc
       }
     , Cmd.batch
         [ cmd
         , if metric /= "" then
-            sendMessage <| Draw metric
+            sendMessage <| Draw metric False
           else
             Cmd.none
         ]
@@ -144,13 +148,23 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Location loc ->
-            ( model, Cmd.none )
+            if loc /= model.loc then
+                init model.flags loc
+            else
+                ( model, Cmd.none )
 
-        Draw metric ->
+        Draw metric push ->
+            let
+                pushHistory =
+                    if push then
+                        Navigation.newUrl (render { metric = Just metric })
+                    else
+                        Cmd.none
+            in
             ( model
             , Cmd.batch
                 [ sendMessage <| GraphMsg <| Graph.Draw metric
-                , Navigation.newUrl (render { metric = Just metric })
+                , pushHistory
                 ]
             )
 
