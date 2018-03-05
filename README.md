@@ -28,7 +28,7 @@ working on the ui, you can run `roth onboard` to have it install the
 required set of npm and Elm dependencies, and `roth live` to have it spin up a
 live server (`fswatch` is required). Any changes to the Go or Elm code will
 cause the code to be rebuilt and any open web pages to reload. You can then 
-visit a demo site with some demo data at [localhost:8080](localhost:8080).
+visit a demo site with some demo data at [http://localhost:8080](http://localhost:8080).
 
 ## In general
 
