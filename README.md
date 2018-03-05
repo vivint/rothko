@@ -44,30 +44,44 @@ which by default listens on localhost:8080.
 
 ## Set up
 
-Source the .setup script to add some values to your path (run `. .setup`). Be
-sure to have `vgo` installed in your `$PATH`. If you are working on the ui, 
-you can run `roth onboard` to have it install the required set of npm 
-dependencies, and `roth live` to have it spin up a live server. Any changes to
-the Go or Elm code will cause the code to be rebuilt and any open web pages
-to reload. You can then visit a demo site with some demo data at
-localhost:8080.
+Source the `.setup` script to add the `bin` folder to your `$PATH`
+(run `. .setup`) which adds the `roth` command. Running `roth` has
+output like
+
+```
+Usage: roth <subcommand> [subcommand args...]
+
+	build     builds a development rothko binary
+	clean     cleans development rothko data
+	generate  generates all the code/documentation
+	live      runs a live server that rebuilds on code changes
+	onboard   sets up the developer environment to build and run the ui
+	run       runs a development rothko server
+```
+
+Be sure to have `vgo` installed in your `$PATH` as well. If you are
+working on the ui, you can run `roth onboard` to have it install the
+required set of npm and Elm dependencies, and `roth live` to have it spin up a
+live server (`fswatch` is required). Any changes to the Go or Elm code will
+cause the code to be rebuilt and any open web pages to reload. You can then 
+visit a demo site with some demo data at [localhost:8080](localhost:8080).
 
 ## In general
 
 - Pull requests are fine and dandy.
 - Try to make the code you add "look like" the code around it. Style and
   consistency matter.
-- Expect some code review and maybe a bit of back and forth.
 - Open an issue to talk about any major changes you'd like to see. Maybe it's
   already being worked on.
 
 ## In Go
 
 - Try to add unit tests for any new functionality you add or any bugs you fix.
-  There are some internal packages for doing assertions, etc.
+  There are some internal packages for doing assertions, etc. Check out other
+  tests for guidance.
 - Be sure to document any exported public interfaces. Documentation matters.
-- Run ./scripts/docs.sh to update package documentation when you modify any
-  exported symbols or their documentation.
+- Run `roth generate` as it commits documentation to the README's at the
+  package directories.
 - Breaking changes are still acceptible for now.
 
 ## In Elm
@@ -80,5 +94,5 @@ localhost:8080.
 
 ## Finally
 
-Be sure to add yourself to AUTHORS so that you can get credit for your hard
+Be sure to add yourself to `AUTHORS` so that you can get credit for your hard
 work!

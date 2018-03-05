@@ -3,7 +3,7 @@
 set -e
 
 if [ ! -z "$ROTH_USAGE" ]; then
-	echo "generates all the code"
+	echo "generates all the code/documentation"
 	exit 0
 fi
 
@@ -67,12 +67,12 @@ ui() {(
 	fi
 
 	log "building elm code..."
-	elm package install
-	DEBUG=""
+	"${ELM}" package install
 	if [ -n "$LIVE" ]; then
-		DEBUG="--debug"
+		"${ELM}" make src/Main.elm --output site/js/main.js --debug
+	else
+		"${ELM}" make src/Main.elm --output site/js/main.js
 	fi
-	elm make src/Main.elm --output site/js/main.js "${DEBUG}"
 
 	log "creating ui tarball..."
 	tar czf ui.tgz -C site .

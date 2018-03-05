@@ -19,6 +19,5 @@ add_path() {
 }
 
 add_path PATH "${SCRIPTDIR}/bin"
-add_path PATH "$(npm prefix)/ui/node_modules/.bin"
 
 unset -f log add_path
