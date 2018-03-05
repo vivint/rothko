@@ -59,6 +59,7 @@ new value =
 
 type Msg
     = SetValue String
+    | Focus
     | Timer String
     | QueryResponse String (Result Http.Error (List String))
     | Dismiss
@@ -120,8 +121,14 @@ doUpdate config (Model model) msg =
             ( Model { model | value = value, query = None }
             , Process.sleep (250 * Time.millisecond)
                 |> Task.perform (always (Timer value))
-                |> when (value /= "")
-                |> Maybe.withDefault Cmd.none
+            , Cmd.none
+            )
+
+        Focus ->
+            ( Model model
+            , Api.queryRequest model.value
+                |> Api.query
+                |> Http.send (QueryResponse model.value)
             , Cmd.none
             )
 
@@ -283,6 +290,8 @@ doView (Model model) =
                 , Attr.type_ "text"
                 , Attr.spellcheck False
                 , Ev.onInput SetValue
+                , Ev.onFocus Focus
+                , Ev.onBlur Dismiss
                 ]
                 []
             ]
@@ -333,7 +342,7 @@ viewCompletion highlight index completion =
             [ Attr.class "auto-menu-item"
             , Ev.onMouseOver (MouseOver index)
             , Ev.onMouseLeave (MouseLeave index)
-            , Ev.onClick (Select completion)
+            , Ev.onMouseDown (Select completion)
             ]
                 ++ activeAttrs
     in

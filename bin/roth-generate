@@ -68,7 +68,11 @@ ui() {(
 
 	log "building elm code..."
 	elm package install
-	elm make src/Main.elm --output site/js/main.js
+	DEBUG=""
+	if [ -n "$LIVE" ]; then
+		DEBUG="--debug"
+	fi
+	elm make src/Main.elm --output site/js/main.js "${DEBUG}"
 
 	log "creating ui tarball..."
 	tar czf ui.tgz -C site .

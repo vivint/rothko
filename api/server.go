@@ -276,9 +276,6 @@ func (s *Server) serveQuery(ctx context.Context, w http.ResponseWriter,
 
 	// get the render parameters
 	_query := req.FormValue("query")
-	if _query == "" {
-		return errBadRequest.New("query required")
-	}
 	results := getInt(req.FormValue("results"), 10)
 
 	search := query.New(_query, results)
