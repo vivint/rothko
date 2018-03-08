@@ -28,16 +28,6 @@ type Query
     | Got (Maybe Int) (List String)
 
 
-queryToMaybe : Query -> Maybe ( Maybe Int, List String )
-queryToMaybe query =
-    case query of
-        None ->
-            Nothing
-
-        Got highlight completions ->
-            Just ( highlight, completions )
-
-
 type Model
     = Model
         { value : String
