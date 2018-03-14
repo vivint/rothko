@@ -6,6 +6,8 @@ Rothko stores and allows interaction with distributions of a metric that vary
 through time. This allows you to collect insight about the overall values of
 metrics when there are many values from multiple hosts.
 
+[Learn more about Rothko in our introductory blog post.](https://innovation.vivint.com/time-series-histograms-with-rothko-observability-for-iot-ce39a09c35fc)
+
 # Contributing
 
 ## Set up
