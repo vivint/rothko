@@ -1,3 +1,5 @@
+<img align="right" src="https://raw.githubusercontent.com/vivint/rothko/master/_resources/logo.png">
+
 # Rothko
 
 Rothko stores and allows interaction with distributions of a metric that vary
