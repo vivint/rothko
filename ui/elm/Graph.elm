@@ -1,23 +1,23 @@
-module Graph
-    exposing
-        ( Config
-        , Model
-        , Msg(Draw)
-        , new
-        , subscriptions
-        , update
-        , view
-        )
+module Graph exposing
+    ( Config
+    , Model
+    , Msg(..)
+    , new
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
+import Browser.Dom as Dom
+import Browser.Events as Bev
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Http
 import Process
 import Task
-import Time exposing (Time)
-import URLQuery exposing (URLQuery)
-import Window
+import Url.Builder as Builder
+
 
 
 -- CONFIG
@@ -49,7 +49,7 @@ type State
 type Model
     = Model
         { state : State
-        , size : Maybe Window.Size -- size of the window
+        , width : Maybe Int
         , counter : Int
         }
 
@@ -58,11 +58,11 @@ new : Config model msg -> ( Model, Cmd msg )
 new config =
     ( Model
         { state = Nothing
-        , size = Maybe.Nothing
+        , width = Maybe.Nothing
         , counter = 0
         }
     , Cmd.map config.wrap <|
-        Task.perform Resize Window.size
+        Task.perform viewportToMsg Dom.getViewport
     )
 
 
@@ -72,8 +72,13 @@ new config =
 
 type Msg
     = Draw String
-    | Resize Window.Size
+    | Resize Int Int
     | ResizeTimer Int
+
+
+viewportToMsg : Dom.Viewport -> Msg
+viewportToMsg { viewport } =
+    Resize (truncate viewport.width) (truncate viewport.height)
 
 
 
@@ -88,7 +93,7 @@ subscriptions config model =
 
 doSubscriptions : Model -> Sub Msg
 doSubscriptions (Model model) =
-    Window.resizes Resize
+    Bev.onResize Resize
 
 
 
@@ -102,39 +107,34 @@ update config model msg =
         |> Tuple.mapSecond (Cmd.map config.wrap)
 
 
-delay : Time
-delay =
-    250 * Time.millisecond
-
-
 doUpdate : Config model msg -> Model -> Msg -> ( Model, Cmd Msg )
 doUpdate config (Model model) msg =
     case msg of
         Draw metric ->
-            ( case model.size of
+            ( case model.width of
                 Maybe.Nothing ->
                     Model { model | state = Delay metric }
 
-                Just { width } ->
+                Just width ->
                     Model { model | state = Image (Info metric width) }
             , Cmd.none
             )
 
-        Resize size ->
+        Resize width _ ->
             let
                 newCounter =
                     model.counter + 1
             in
-            ( Model { model | size = Just size, counter = newCounter }
-            , sendMessageAfter delay (ResizeTimer newCounter)
+            ( Model { model | width = Just width, counter = newCounter }
+            , sendDelayedMessage (ResizeTimer newCounter)
             )
 
         ResizeTimer counter ->
-            ( case ( counter == model.counter, model.state, model.size ) of
-                ( True, Delay metric, Just { width } ) ->
+            ( case ( counter == model.counter, model.state, model.width ) of
+                ( True, Delay metric, Just width ) ->
                     Model { model | state = Image (Info metric width) }
 
-                ( True, Image info, Just { width } ) ->
+                ( True, Image info, Just width ) ->
                     Model { model | state = Image (Info info.metric width) }
 
                 _ ->
@@ -158,12 +158,15 @@ doView (Model model) =
     case model.state of
         Image { metric, width } ->
             let
+                add key val params =
+                    Builder.string key val :: params
+
                 query =
-                    URLQuery.empty
-                        |> URLQuery.add "metric" metric
-                        |> URLQuery.add "width" (toString (width - 38))
-                        |> URLQuery.add "padding" "5"
-                        |> URLQuery.render
+                    []
+                        |> add "metric" metric
+                        |> add "width" (String.fromInt (width - 38))
+                        |> add "padding" "5"
+                        |> Builder.toQuery
             in
             Html.img [ Attr.src <| "/api/render" ++ query ] []
 
@@ -180,6 +183,6 @@ sendMessage msg =
     Task.perform (always msg) (Task.succeed ())
 
 
-sendMessageAfter : Time -> msg -> Cmd msg
-sendMessageAfter delay msg =
-    Task.perform (always msg) (Process.sleep delay)
+sendDelayedMessage : msg -> Cmd msg
+sendDelayedMessage msg =
+    Task.perform (always msg) (Process.sleep 250)

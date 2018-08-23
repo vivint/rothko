@@ -1,31 +1,54 @@
-module Main exposing (..)
+module Main exposing
+    ( Flags
+    , Model
+    , Msg(..)
+    , Path
+    , graphConfig
+    , init
+    , main
+    , parse
+    , queryBarConfig
+    , render
+    , sendMessage
+    , subscriptions
+    , update
+    , view
+    , viewFullRow
+    , viewGraph
+    , viewHeader
+    , viewQuery
+    )
 
 import Api
+import Browser
+import Browser.Navigation as Navigation
 import Graph
 import Html exposing (Html, text)
 import Html.Attributes as Attr
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
-import Navigation
 import Process
 import QueryBar
 import Task
-import Time exposing (Time)
-import URLQuery exposing (URLQuery)
-import UrlParser exposing ((<?>), map, parsePath, stringParam, top)
-import Window
+import Url exposing (Url)
+import Url.Builder as Builder exposing (QueryParameter)
+import Url.Parser as Parser exposing ((<?>))
+import Url.Parser.Query as Query
+
 
 
 -- MAIN
 
 
 main =
-    Navigation.programWithFlags Location
+    Browser.application
         { init = init
+        , view = view
         , update = update
         , subscriptions = subscriptions
-        , view = view
+        , onUrlRequest = OnUrlRequest
+        , onUrlChange = OnUrlChange
         }
 
 
@@ -38,10 +61,11 @@ type alias Flags =
 
 
 type Msg
-    = Location Navigation.Location
-    | Draw String Bool
+    = Draw String Bool
     | GraphMsg Graph.Msg
     | QueryBarMsg QueryBar.Msg
+    | OnUrlRequest Browser.UrlRequest
+    | OnUrlChange Url
 
 
 
@@ -53,34 +77,31 @@ type alias Path =
     }
 
 
-parse : Navigation.Location -> Path
-parse loc =
+parse : Url -> Path
+parse url =
     let
         parser =
-            top
-                <?> stringParam "metric"
+            Parser.top <?> Query.string "metric"
     in
-    parsePath (map Path parser) loc
-        |> Maybe.withDefault
-            { metric = Nothing
-            }
+    Parser.parse (Parser.map Path parser) url
+        |> Maybe.withDefault { metric = Nothing }
 
 
 render : Path -> String
 render { metric } =
     let
-        maybeAdd : String -> Maybe String -> URLQuery -> URLQuery
-        maybeAdd key val query =
+        maybeAdd : String -> Maybe String -> List QueryParameter -> List QueryParameter
+        maybeAdd key val params =
             case val of
                 Nothing ->
-                    query
+                    params
 
-                Just val ->
-                    URLQuery.add key val query
+                Just val_ ->
+                    Builder.string key val_ :: params
     in
-    URLQuery.empty
+    []
         |> maybeAdd "metric" metric
-        |> URLQuery.render
+        |> Builder.toQuery
 
 
 
@@ -89,9 +110,10 @@ render { metric } =
 
 type alias Model =
     { flags : Flags
+    , key : Navigation.Key
+    , url : Url
     , graph : Graph.Model
     , queryBar : QueryBar.Model
-    , loc : Navigation.Location
     }
 
 
@@ -116,24 +138,26 @@ queryBarConfig =
 -- INIT
 
 
-init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
-init flags loc =
+init : Flags -> Url -> Navigation.Key -> ( Model, Cmd Msg )
+init flags url key =
     let
         metric =
-            parse loc |> .metric |> Maybe.withDefault ""
+            parse url |> .metric |> Maybe.withDefault ""
 
         ( graph, cmd ) =
             Graph.new graphConfig
     in
     ( { flags = flags
+      , key = key
+      , url = url
       , graph = graph
       , queryBar = QueryBar.new metric
-      , loc = loc
       }
     , Cmd.batch
         [ cmd
         , if metric /= "" then
             sendMessage <| Draw metric False
+
           else
             Cmd.none
         ]
@@ -147,32 +171,38 @@ init flags loc =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Location loc ->
-            if loc /= model.loc then
-                init model.flags loc
+        OnUrlChange url ->
+            if url /= model.url then
+                init model.flags url model.key
+
             else
                 ( model, Cmd.none )
 
+        OnUrlRequest request ->
+            case request of
+                Browser.Internal url ->
+                    ( model, Navigation.load (Url.toString url) )
+
+                Browser.External url ->
+                    ( model, Navigation.load url )
+
         Draw metric push ->
-            let
-                pushHistory =
-                    if push then
-                        Navigation.newUrl (render { metric = Just metric })
-                    else
-                        Cmd.none
-            in
             ( model
             , Cmd.batch
                 [ sendMessage <| GraphMsg <| Graph.Draw metric
-                , pushHistory
+                , if push then
+                    Navigation.pushUrl model.key (render { metric = Just metric })
+
+                  else
+                    Cmd.none
                 ]
             )
 
-        GraphMsg msg ->
-            Graph.update graphConfig model msg
+        GraphMsg graphMsg ->
+            Graph.update graphConfig model graphMsg
 
-        QueryBarMsg msg ->
-            QueryBar.update queryBarConfig model msg
+        QueryBarMsg queryBarMsg ->
+            QueryBar.update queryBarConfig model queryBarMsg
 
 
 
@@ -191,15 +221,17 @@ subscriptions model =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    Html.div []
+    { title = "Rothko"
+    , body =
         [ viewHeader
         , Html.div [ Attr.class "container" ]
             [ viewFullRow [ viewQuery model ]
             , viewFullRow [ viewGraph model ]
             ]
         ]
+    }
 
 
 viewHeader : Html Msg
@@ -211,7 +243,7 @@ viewHeader =
 
 viewFullRow : List (Html msg) -> Html msg
 viewFullRow children =
-    Html.div [ Attr.class "row", Attr.style [ ( "padding-top", "10px" ) ] ]
+    Html.div [ Attr.class "row", Attr.style "padding-top" "10px" ]
         [ Html.div [ Attr.class "col-sm-12" ] children
         ]
 

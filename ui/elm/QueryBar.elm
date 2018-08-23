@@ -1,23 +1,24 @@
-module QueryBar
-    exposing
-        ( Config
-        , Model
-        , Msg
-        , new
-        , subscriptions
-        , update
-        , view
-        )
+module QueryBar exposing
+    ( Config
+    , Model
+    , Msg
+    , new
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
+import Browser.Events as Bev
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Ev
 import Http
-import Keyboard
+import Json.Decode as Decode
 import Process
 import Task
 import Time
+
 
 
 -- MODEL
@@ -54,7 +55,7 @@ type Msg
     | QueryResponse String (Result Http.Error (List String))
     | Dismiss
     | Select String
-    | KeyDown Keyboard.KeyCode
+    | KeyDown String
     | MouseOver Int
     | MouseLeave Int
 
@@ -83,7 +84,13 @@ subscriptions config model =
 
 doSubscriptions : Model -> Sub Msg
 doSubscriptions (Model model) =
-    Keyboard.downs KeyDown
+    let
+        decoder =
+            Decode.string
+                |> Decode.field "key"
+                |> Decode.map KeyDown
+    in
+    Bev.onKeyDown decoder
 
 
 
@@ -109,7 +116,7 @@ doUpdate config (Model model) msg =
     case msg of
         SetValue value ->
             ( Model { model | value = value, query = None }
-            , Process.sleep (250 * Time.millisecond)
+            , Process.sleep 250
                 |> Task.perform (always (Timer value))
             , Cmd.none
             )
@@ -117,7 +124,7 @@ doUpdate config (Model model) msg =
         Focus ->
             ( Model model
             , Api.queryRequest model.value
-                |> Api.query
+                |> Api.doQuery
                 |> Http.send (QueryResponse model.value)
             , Cmd.none
             )
@@ -125,7 +132,7 @@ doUpdate config (Model model) msg =
         Timer value ->
             ( Model model
             , Api.queryRequest value
-                |> Api.query
+                |> Api.doQuery
                 |> Http.send (QueryResponse value)
                 |> when (value == model.value)
                 |> Maybe.withDefault Cmd.none
@@ -167,7 +174,7 @@ doUpdate config (Model model) msg =
                     )
 
                 -- Enter with no completions triggers a redraw
-                ( 13, _ ) ->
+                ( "Enter", _ ) ->
                     ( Model model
                     , Cmd.none
                     , sendMessage (config.select model.value)
@@ -201,6 +208,7 @@ doUpdate config (Model model) msg =
                         , Cmd.none
                         , Cmd.none
                         )
+
                     else
                         ( Model model
                         , Cmd.none
@@ -214,11 +222,10 @@ doUpdate config (Model model) msg =
                     )
 
 
-updateKeyCode : Maybe Int -> List String -> Keyboard.KeyCode -> ( Maybe Int, Cmd Msg )
+updateKeyCode : Maybe Int -> List String -> String -> ( Maybe Int, Cmd Msg )
 updateKeyCode highlight completions keyCode =
     case keyCode of
-        -- UP
-        38 ->
+        "ArrowUp" ->
             case highlight of
                 Nothing ->
                     ( Nothing, Cmd.none )
@@ -226,8 +233,7 @@ updateKeyCode highlight completions keyCode =
                 Just val ->
                     ( Just <| max (val - 1) 0, Cmd.none )
 
-        -- DOWN
-        40 ->
+        "ArrowDown" ->
             let
                 length =
                     List.length completions
@@ -239,21 +245,19 @@ updateKeyCode highlight completions keyCode =
                 ( _, val ) ->
                     ( Just <| min (val + 1) (length - 1), Cmd.none )
 
-        -- ENTER
-        13 ->
+        "Enter" ->
             let
-                select completions index =
+                select index =
                     (List.drop index >> List.head) completions
             in
-            case highlight |> Maybe.andThen (select completions) of
+            case highlight |> Maybe.andThen select of
                 Just selected ->
                     ( highlight, sendMessage <| Select selected )
 
                 Nothing ->
                     ( highlight, Cmd.none )
 
-        -- ESCAPE
-        27 ->
+        "Escape" ->
             ( highlight, sendMessage Dismiss )
 
         _ ->
@@ -276,7 +280,7 @@ doView (Model model) =
         input =
             [ Html.input
                 [ Attr.value model.value
-                , Attr.style [ ( "width", "100%" ) ]
+                , Attr.style "width" "100%"
                 , Attr.type_ "text"
                 , Attr.spellcheck False
                 , Ev.onInput SetValue
@@ -325,6 +329,7 @@ viewCompletion highlight index completion =
         activeAttrs =
             if Just index == highlight then
                 [ Attr.class "auto-menu-item-active" ]
+
             else
                 []
 
@@ -356,5 +361,6 @@ when : Bool -> a -> Maybe a
 when cond val =
     if cond then
         Just val
+
     else
         Nothing

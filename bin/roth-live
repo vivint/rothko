@@ -12,7 +12,7 @@ cd "${SCRIPTDIR}/.."
 cd "$(pwd -P)"
 
 IMPORT=github.com/zeebo/live
-LIVE=$(vgo list -f '{{ .Target }}' "${IMPORT}")
+LIVE=$(go list -f '{{ .Target }}' "${IMPORT}")
 go install -v $IMPORT
 
 "$LIVE" \

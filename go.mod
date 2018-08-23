@@ -7,6 +7,7 @@ require (
 	github.com/urfave/cli v1.20.0
 	github.com/zeebo/errs v0.2.0
 	github.com/zeebo/float16 v0.1.0
+	github.com/zeebo/live v1.0.0 // indirect
 	github.com/zeebo/tdigest v0.1.0
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect

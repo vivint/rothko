@@ -22,10 +22,4 @@ log() {
 
 	rm -rf node_modules
 	npm install --save-dev elm
-
-	log "installing elm modules..."
-
-	ELM="$(npm prefix)/node_modules/.bin/elm"
-	rm -rf elm-stuff
-	"${ELM}" package install -y
 )

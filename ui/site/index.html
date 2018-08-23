@@ -1,26 +1,22 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <title>Rothko</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    {{- if .metric }}
-    <meta property="og:title" content="{{ .metric }}">
-    <meta property="og:image" content="/api/render?{{ .query }}&padding=5">
-    {{- end }}
-    <link rel="stylesheet" href="/css/mini.min.css">
-    <link rel="stylesheet" href="/css/main.css">
-  </head>
-  <body>
-    <div id="main"></div>
-    <script src='/js/flags.js' type='application/javascript'></script>
-    <script src='/js/main.js' type='application/javascript'></script>
-    {{- if .dev }}
-    <script src='/js/reload.js' type='application/javascript'></script>
-    {{- end }}
-    <script type="text/javascript">
-      let main = document.getElementById('main');
-      let app = Elm.Main.embed(main, flags);
-    </script>
-  </body>
+
+<head>
+  <title>Rothko</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> {{- if .metric }}
+  <meta property="og:title" content="{{ .metric }}">
+  <meta property="og:image" content="/api/render?{{ .query }}&padding=5"> {{- end }}
+  <link rel="stylesheet" href="/css/mini.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+  <div id="main"></div>
+  <script src='/js/flags.js' type='application/javascript'></script>
+  <script src='/js/main.js' type='application/javascript'></script> {{- if .dev }}
+  <script src='/js/reload.js' type='application/javascript'></script> {{- end }}
+  <script>var app = Elm.Main.init();</script>
+</body>
+
 </html>
