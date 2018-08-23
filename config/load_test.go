@@ -47,7 +47,7 @@ func TestLoad(t *testing.T) {
 		},
 		API: APIConfig{
 			Address: ":8080",
-			Domain:  "localhost",
+			Origin:  "*",
 		},
 	})
 }
