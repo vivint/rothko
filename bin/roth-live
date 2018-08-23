@@ -13,7 +13,7 @@ cd "$(pwd -P)"
 
 IMPORT=github.com/zeebo/live
 LIVE=$(vgo list -f '{{ .Target }}' "${IMPORT}")
-vgo install -v $IMPORT
+go install -v $IMPORT
 
 "$LIVE" \
 	-run=roth-run \

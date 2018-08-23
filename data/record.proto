@@ -14,6 +14,8 @@ option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.goproto_stringer_all) = false;
 option (gogoproto.goproto_enum_stringer_all) = false;
 option (gogoproto.enum_stringer_all) = true;
+option (gogoproto.goproto_unrecognized_all) = false;
+option (gogoproto.goproto_registration) = false;
 
 // Record is an observed distribution over some time period with some
 // additional data about observed minimums and maximums.

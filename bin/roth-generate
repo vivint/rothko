@@ -44,14 +44,14 @@ EOF
 
 # build the godocdown tool
 IMPORT=github.com/robertkrimen/godocdown/godocdown
-GODOCDOWN=$(vgo list -f '{{ .Target }}' "${IMPORT}")
-vgo install -v "${IMPORT}"
+GODOCDOWN=$(go list -f '{{ .Target }}' "${IMPORT}")
+go install -v "${IMPORT}"
 
 # build the protoc-gen-gogo tool
 IMPORT=github.com/gogo/protobuf/protoc-gen-gogo
-INCLUDE=$(dirname "$(vgo list -f '{{ .Dir }}' "${IMPORT}")")
-PROTOC_GEN_GOGO=$(vgo list -f '{{ .Target }}' "${IMPORT}")
-vgo install -v $IMPORT
+INCLUDE=$(dirname "$(go list -f '{{ .Dir }}' "${IMPORT}")")
+PROTOC_GEN_GOGO=$(go list -f '{{ .Target }}' "${IMPORT}")
+go install -v $IMPORT
 
 # generates the ui elm code and put it in a tarball
 ui() {(
@@ -91,8 +91,8 @@ ui() {(
 	EOF
 
 	xxd -ps ui.tgz \
-		| sed -e 's/\(..\)/0x\1, /g' \
-		| sed -e 's/^\(.*\) $/		\1/g' \
+		| "${SED}" -e 's/\(..\)/0x\1, /g' \
+		| "${SED}" -e 's/^\(.*\) $/		\1/g' \
 		>> ui.go
 
 	cat <<- EOF >> ui.go
@@ -122,9 +122,14 @@ proto() {
 	# strip out the proto imports because we don't need them and they're silly.
 	# we want protobuf as a serialization format, not some api runtime
 	# reflection, generic registry whackdoodlery.
-	"${SED}" -i '/proto\./d'       -- "${DIR}"/*.pb.go
-	"${SED}" -i '/^import proto/d' -- "${DIR}"/*.pb.go
-	"${SED}" -i '/gogoproto/d'     -- "${DIR}"/*.pb.go
+	"${SED}" -i '/^import proto/d'   -- "${DIR}"/*.pb.go
+	"${SED}" -i '/gogoproto/d'       -- "${DIR}"/*.pb.go
+	"${SED}" -i '/\tXXX/d'           -- "${DIR}"/*.pb.go
+	"${SED}" -i '/XXX/,/^}/d'        -- "${DIR}"/*.pb.go
+	"${SED}" -i '/proto\./d'         -- "${DIR}"/*.pb.go
+	"${SED}" -i '/ProtoMessage/d'    -- "${DIR}"/*.pb.go
+	"${SED}" -i '/Descriptor/,/^}/d' -- "${DIR}"/*.pb.go
+	go fmt "${DIR}"/*.pb.go > /dev/null
 }
 
 # generates docs for a package
@@ -148,7 +153,7 @@ docs() {
 }
 
 # generate all the packages
-PACKAGES=$(vgo list -f '{{ .ImportPath }}|{{ .Dir }}' github.com/vivint/rothko/...)
+PACKAGES=$(go list -f '{{ .ImportPath }}|{{ .Dir }}' github.com/vivint/rothko/...)
 for DESC in ${PACKAGES}; do
 	PACKAGE="$(echo "${DESC}" | cut -d '|' -f 1)"
 	DIR="$(echo "${DESC}" | cut -d '|' -f 2)"

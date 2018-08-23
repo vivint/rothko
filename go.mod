@@ -2,6 +2,8 @@ module github.com/vivint/rothko
 
 require (
 	github.com/BurntSushi/toml v0.3.0
+	github.com/gogo/protobuf v1.1.1
+	github.com/robertkrimen/godocdown v0.0.0-20130622164427-0bfa04905481
 	github.com/urfave/cli v1.20.0
 	github.com/zeebo/errs v0.2.0
 	github.com/zeebo/float16 v0.1.0

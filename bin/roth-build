@@ -14,4 +14,4 @@ cd "$(pwd -P)"
 roth generate
 
 mkdir -p _dev
-vgo build -o _dev/rothko github.com/vivint/rothko/bin/rothko 
+go build -o _dev/rothko github.com/vivint/rothko/bin/rothko

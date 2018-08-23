@@ -2,15 +2,7 @@
 
 `import "github.com/vivint/rothko/database/files/internal/meta"`
 
-Package meta is a generated protocol buffer package.
 
-It is generated from these files:
-
-    meta.proto
-
-It has these top-level messages:
-
-    Metadata
 
 ## Usage
 
@@ -38,12 +30,6 @@ type Metadata struct {
 
 Metadata contains information about a file.
 
-#### func (*Metadata) Descriptor
-
-```go
-func (*Metadata) Descriptor() ([]byte, []int)
-```
-
 #### func (*Metadata) Marshal
 
 ```go
@@ -54,12 +40,6 @@ func (m *Metadata) Marshal() (dAtA []byte, err error)
 
 ```go
 func (m *Metadata) MarshalTo(dAtA []byte) (int, error)
-```
-
-#### func (*Metadata) ProtoMessage
-
-```go
-func (*Metadata) ProtoMessage()
 ```
 
 #### func (*Metadata) Reset

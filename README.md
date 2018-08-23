@@ -27,13 +27,11 @@ Usage: roth <subcommand> [subcommand args...]
 	run       runs a development rothko server
 ```
 
-Be sure to have [`vgo`](https://research.swtch.com/vgo) installed in your
-`$PATH` as well. If you are working on the ui, you can run `roth onboard` to
-have it install the required set of npm and Elm dependencies, and `roth live`
-to have it spin up a live server (`fswatch` is required). Any changes to the Go
-or Elm code will cause the code to be rebuilt and any open web pages to reload.
-You can then  visit a demo site with some demo data at
-[http://localhost:8080](http://localhost:8080).
+If you are working on the ui, you can run `roth onboard` to have it install the
+required set of npm and Elm dependencies, and `roth live` to have it spin up a
+live server (`fswatch` is required). Any changes to the Go or Elm code will cause
+the code to be rebuilt and any open web pages to reload. You can then visit a demo
+site with some demo data at [http://localhost:8080](http://localhost:8080).
 
 ## In general
 

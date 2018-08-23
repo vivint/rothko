@@ -4,14 +4,6 @@
 
 package data provides types for handling rothko data.
 
-    Package data is a generated protocol buffer package.
-
-    It is generated from these files:
-    	record.proto
-
-    It has these top-level messages:
-    	Record
-
 ## Usage
 
 ```go
@@ -47,12 +39,6 @@ type Record struct {
 Record is an observed distribution over some time period with some additional
 data about observed minimums and maximums.
 
-#### func (*Record) Descriptor
-
-```go
-func (*Record) Descriptor() ([]byte, []int)
-```
-
 #### func (*Record) Marshal
 
 ```go
@@ -63,12 +49,6 @@ func (m *Record) Marshal() (dAtA []byte, err error)
 
 ```go
 func (m *Record) MarshalTo(dAtA []byte) (int, error)
-```
-
-#### func (*Record) ProtoMessage
-
-```go
-func (*Record) ProtoMessage()
 ```
 
 #### func (*Record) Reset
